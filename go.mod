@@ -1,3 +1,7 @@
-module github.com/YOUR-USER-OR-ORG-NAME/YOUR-REPO-NAME
+module minik8s
 
-go 1.19
+go 1.22.2
+
+require (
+    // github.com/spf13/cobra v1.2.1
+)
