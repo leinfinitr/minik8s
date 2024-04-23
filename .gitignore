@@ -22,3 +22,6 @@ vendor/
 
 # VS Code files
 .vscode/
+
+# idea files
+.idea/
