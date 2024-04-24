@@ -1,3 +1,6 @@
+// 描述: replicaSet对象的定义
+// 参考：https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/apps/v1/types.go
+
 package apiObject
 
 type ReplicaSet struct {
