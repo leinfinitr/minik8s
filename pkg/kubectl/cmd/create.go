@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"minik8s/configs/config"
+	"minik8s/pkg/config"
 	"minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"github.com/spf13/cobra"

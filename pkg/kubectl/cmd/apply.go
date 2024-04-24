@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"minik8s/configs/config"
+	"minik8s/pkg/config"
 	"minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/kubectl/translator"
