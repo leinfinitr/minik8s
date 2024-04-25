@@ -52,25 +52,34 @@ func CreatePod(name string, image string, namespace string) {
 
 // createHandler interprets the command line arguments and invokes the CreatePod function.
 func createHandler(cmd *cobra.Command, args []string) {
-	if len(args) != 1 {
+	if len(args) != 2 {
 		fmt.Println("Error: You must specify a name for the pod.")
 		os.Exit(1)
 	}
-
-	name := args[0]
-	image, _ := cmd.Flags().GetString("image")
-	if image == "" {
-		fmt.Println("Error: You must specify an image for the pod to use.")
+	kind := args[0]
+	switch kind {
+	case "pod":
+		name := args[1]
+		if name == "" {
+			fmt.Println("Error: You must specify a name for the pod.")
+			os.Exit(1)
+		}
+		image, _ := cmd.Flags().GetString("image")
+		if image == "" {
+			fmt.Println("Error: You must specify an image for the pod to use.")
+			os.Exit(1)
+		}
+		namespace, _ := cmd.Flags().GetString("namespace")
+		if namespace == "" {
+			namespace = "default" // Set a default namespace if not specified
+		}
+	
+		CreatePod(name, image, namespace)
+	default:
+		fmt.Println("Error: The resource type specified is not supported.")
 		os.Exit(1)
 	}
-	namespace, _ := cmd.Flags().GetString("namespace")
-	if namespace == "" {
-		namespace = "default" // Set a default namespace if not specified
-	}
-
-	CreatePod(name, image, namespace)
 }
-
 func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().String("image", "", "Specify the image of the pod")

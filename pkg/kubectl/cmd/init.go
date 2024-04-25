@@ -1,8 +1,10 @@
 package cmd
-import(
+
+import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 var rootCmd = &cobra.Command{
 	Use: "kubectl",
@@ -10,6 +12,7 @@ var rootCmd = &cobra.Command{
 	Long: "Kubernetes CLI",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Kubernetes CLI")
+		fmt.Println(cmd.UsageString())
 	},
 }
 func init() {
