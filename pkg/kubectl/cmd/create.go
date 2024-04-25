@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"minik8s/pkg/config"
-	"minik8s/internal/pkg/httpRequest"
+	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -39,14 +40,14 @@ func CreatePod(name string, image string, namespace string) {
 			RestartPolicy: "Always",
 		},
 	}
-	
+
 	url := config.APIServerUrl() + "/api/v1/namespaces/" + namespace + "/pods"
 	resp, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		fmt.Println("Error: Could not create the pod.")
 		os.Exit(1)
 	}
-	ResultDisplay("Pod", resp)
+	ApplyResultDisplay("Pod", resp)
 }
 
 // createHandler interprets the command line arguments and invokes the CreatePod function.
@@ -55,7 +56,7 @@ func createHandler(cmd *cobra.Command, args []string) {
 		fmt.Println("Error: You must specify a name for the pod.")
 		os.Exit(1)
 	}
-	
+
 	name := args[0]
 	image, _ := cmd.Flags().GetString("image")
 	if image == "" {
@@ -66,7 +67,7 @@ func createHandler(cmd *cobra.Command, args []string) {
 	if namespace == "" {
 		namespace = "default" // Set a default namespace if not specified
 	}
-	
+
 	CreatePod(name, image, namespace)
 }
 

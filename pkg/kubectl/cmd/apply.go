@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"minik8s/pkg/config"
-	"minik8s/internal/pkg/httpRequest"
+	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
 	"net/http"
 	"os"
@@ -84,7 +84,7 @@ func PodHandler(content []byte) {
 		fmt.Println("Error: Could not post the object message.")
 		os.Exit(1)
 	}
-	ResultDisplay(Pod, resp)
+	ApplyResultDisplay(Pod, resp)
 }
 
 func ServiceHandler(content []byte) {
@@ -94,14 +94,14 @@ func ServiceHandler(content []byte) {
 	// 	fmt.Println("Error: Could not unmarshal the yaml file.")
 	// 	os.Exit(1)
 	// }
-	
-}
-
-func DeploymentHandler(content []byte){
 
 }
 
-func ResultDisplay(kind ApplyObject, resp *http.Response) {
+func DeploymentHandler(content []byte) {
+
+}
+
+func ApplyResultDisplay(kind ApplyObject, resp *http.Response) {
 	if resp.StatusCode == http.StatusCreated {
 		fmt.Printf("%s created\n", kind)
 	} else if resp.StatusCode == http.StatusOK {
