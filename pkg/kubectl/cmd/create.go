@@ -6,7 +6,7 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"os"
-
+	"strings"
 	"github.com/spf13/cobra"
 )
 
@@ -41,8 +41,10 @@ func CreatePod(name string, image string, namespace string) {
 		},
 	}
 
-	url := config.APIServerUrl() + "/api/v1/namespaces/" + namespace + "/pods"
+	url := config.APIServerUrl()+config.PodsURI
+	url = strings.Replace(url,config.NameSpaceReplace,namespace,-1)
 	resp, err := httprequest.PostObjMsg(url, pod)
+	fmt.Println("Post",url)
 	if err != nil {
 		fmt.Println("Error: Could not create the pod.")
 		os.Exit(1)

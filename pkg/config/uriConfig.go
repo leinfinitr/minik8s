@@ -12,3 +12,8 @@ const (
 	PodsURI                   = "/api/v1/namespaces/:namespace/pods"
 	PodsGlobalURI             = "/api/v1/pods"
 )
+
+const (
+	NameSpaceReplace = ":namespace"
+	NameReplace      = ":name"
+)
