@@ -8,11 +8,11 @@ type Job struct {
 	// 对象的类型元数据
 	TypeMeta
 	// 对象的元数据
-	ObjectMeta
+	Metadata ObjectMeta `json:"metadata" yaml:"metadata"`
 	// Job的规格
-	Spec JobSpec
+	Spec JobSpec `json:"spec" yaml:"spec"`
 	// Job的状态
-	Status JobStatus
+	Status JobStatus `json:"status" yaml:"status"`
 }
 
 // JobSpec 定义了Job的行为规范，如重启策略、并行度限制等。

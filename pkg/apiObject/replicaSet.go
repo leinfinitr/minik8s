@@ -7,11 +7,11 @@ type ReplicaSet struct {
 	// 对象的类型元数据
 	TypeMeta
 	// 对象的元数据
-	ObjectMeta
+	Metadata ObjectMeta `json:"metadata" yaml:"metadata"`
 	// ReplicaSet的规格
-	Spec ReplicaSetSpec
+	Spec ReplicaSetSpec `json:"spec" yaml:"spec"`
 	// ReplicaSet的状态
-	Status ReplicaSetStatus
+	Status ReplicaSetStatus `json:"status" yaml:"status"`
 }
 
 type ReplicaSetSpec struct {

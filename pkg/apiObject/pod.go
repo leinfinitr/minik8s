@@ -13,11 +13,11 @@ type Pod struct {
 	// 对象的类型元数据
 	TypeMeta
 	// 对象的元数据
-	ObjectMeta
+	Metadata ObjectMeta `json:"metadata" yaml:"metadata"`
 	// Pod的规格
-	Spec PodSpec
+	Spec PodSpec `json:"spec" yaml:"spec"`
 	// Pod的状态
-	Status PodStatus
+	Status PodStatus `json:"status" yaml:"status"`
 }
 
 type PodSpec struct {

@@ -7,11 +7,11 @@ type Node struct {
 	// 对象的类型元数据
 	TypeMeta
 	// 对象的元数据
-	ObjectMeta
+	Metadata ObjectMeta `json:"metadata" yaml:"metadata"`
 	// Node的规格
-	Spec NodeSpec
+	Spec NodeSpec `json:"spec" yaml:"spec"`
 	// Node的状态
-	Status NodeStatus
+	Status NodeStatus `json:"status" yaml:"status"`
 }
 
 type NodeSpec struct {

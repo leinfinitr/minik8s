@@ -26,7 +26,7 @@ func CreatePod(name string, image string, namespace string) {
 			Kind:       "Pod",
 			APIVersion: "v1",
 		},
-		ObjectMeta: apiObject.ObjectMeta{
+		Metadata: apiObject.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
