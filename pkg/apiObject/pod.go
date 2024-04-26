@@ -84,3 +84,7 @@ type PodStatus struct {
 	// 最后更新时间
 	LastUpdateTime time.Time `json:"lastUpdateTime" yaml:"lastUpdateTime"`
 }
+
+func (p *Pod) GetPodUUID() string {
+	return p.Metadata.UID
+}
