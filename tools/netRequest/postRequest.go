@@ -1,4 +1,4 @@
-package netrequest
+package netRequest
 
 import (
 	"bytes"

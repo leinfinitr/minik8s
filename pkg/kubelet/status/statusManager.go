@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/kubelet/runtime"
-	"minik8s/tools/netrequest"
+	"minik8s/tools/netRequest"
 )
 
 /* statusManager 功能介绍
@@ -76,7 +76,7 @@ func (s *statusManagerImpl) RegisterNode() error {
 
 	url := "http://" + s.apiServerURL + "/api/v1/nodes"
 
-	netrequest.PostRequestByTarget(url, node)
+	netRequest.PostRequestByTarget(url, node)
 
 	fmt.Println("Register node successfully\n")
 
