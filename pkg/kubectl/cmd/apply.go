@@ -78,7 +78,7 @@ func PodHandler(content []byte) {
 		fmt.Println("Error: Could not unmarshal the yaml file.")
 		os.Exit(1)
 	}
-	url := config.APIServerUrl() + "/api/v1/namespaces/" + pod.ObjectMeta.Namespace + "/pods"
+	url := config.APIServerUrl() + "/api/v1/namespaces/" + pod.Metadata.Namespace + "/pods"
 	resp, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		fmt.Println("Error: Could not post the object message.")
