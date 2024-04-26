@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"minik8s/pkg/config"
 	"minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
 	"net/http"
 	"os"
@@ -94,10 +94,10 @@ func ServiceHandler(content []byte) {
 	// 	fmt.Println("Error: Could not unmarshal the yaml file.")
 	// 	os.Exit(1)
 	// }
-	
+
 }
 
-func DeploymentHandler(content []byte){
+func DeploymentHandler(content []byte) {
 
 }
 

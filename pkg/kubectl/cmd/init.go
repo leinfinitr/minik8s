@@ -1,17 +1,20 @@
 package cmd
-import(
+
+import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
 )
+
 var rootCmd = &cobra.Command{
-	Use: "kubectl",
+	Use:   "kubectl",
 	Short: "Kubernetes CLI",
-	Long: "Kubernetes CLI",
+	Long:  "Kubernetes CLI",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Kubernetes CLI")
 	},
 }
+
 func init() {
 	rootCmd.AddCommand(deletedCmd)
 	rootCmd.AddCommand(createCmd)

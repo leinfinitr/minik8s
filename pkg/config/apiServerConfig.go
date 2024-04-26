@@ -1,7 +1,9 @@
 // 描述：ip配置
 
 package config
+
 import "strconv"
+
 const (
 	// LocalServerAddress api server的本地服务器地址
 	LocalServerAddress = "127.0.0.1"

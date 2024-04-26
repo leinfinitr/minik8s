@@ -1,8 +1,8 @@
 package translator
 
 import (
-	"gopkg.in/yaml.v3"
 	"fmt"
+	"gopkg.in/yaml.v3"
 )
 
 func FetchApiObjFromYaml(yamlBytes []byte) (string, error) {

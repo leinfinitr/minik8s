@@ -1,8 +1,9 @@
 package httprequest
+
 import (
 	"bytes"
-	"net/http"
 	"encoding/json"
+	"net/http"
 )
 
 func PostObjMsg(url string, obj interface{}) (*http.Response, error) {
