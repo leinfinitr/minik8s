@@ -11,6 +11,10 @@ const (
 	PodStatusURI              = "/api/v1/namespaces/:namespace/pods/:name/status"
 	PodsURI                   = "/api/v1/namespaces/:namespace/pods"
 	PodsGlobalURI             = "/api/v1/pods"
+
+	ServicesURI      = "/api/v1/namespaces/:namespace/services"
+	ServiceURI       = "/api/v1/namespaces/:namespace/services/:name"
+	ServiceStatusURI = "/api/v1/namespaces/:namespace/services/:name/status"
 )
 
 const (
