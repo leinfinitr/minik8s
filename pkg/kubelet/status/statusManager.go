@@ -78,7 +78,7 @@ func (s *statusManagerImpl) RegisterNode() error {
 
 	netRequest.PostRequestByTarget(url, node)
 
-	fmt.Println("Register node successfully\n")
+	fmt.Println("Register node successfully")
 
 	return nil
 }
