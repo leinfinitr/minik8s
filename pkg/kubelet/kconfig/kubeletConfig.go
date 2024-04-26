@@ -21,7 +21,7 @@ func KubeletConfigDefault() *KubeletConfig {
 	return &KubeletConfig{
 		APIServerIP:             apiLocalIP,
 		APIServerPort:           apiServerPort,
-		APIServerURL:            "",
+		APIServerURL:            "127.0.0.1:7000",
 		APIServerClientCertFile: "",
 	}
 }

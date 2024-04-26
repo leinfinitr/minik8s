@@ -26,12 +26,12 @@ type Kubelet struct {
 	// podUpdateChan chan *entity.PodUpdateCmd
 }
 
-func (*Kubelet) Run() {
-	registerNode()
+func (k *Kubelet) Run() {
+	k.registerNode()
 
 }
 
 /* 需要到apiServer那边去注册相关信息，规定相关的数据结构和接口 */
-func registerNode() {
-
+func (k *Kubelet) registerNode() {
+	k.StatusManager.RegisterNode()
 }

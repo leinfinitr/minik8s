@@ -3,6 +3,7 @@ package netrequest
 import (
 	"bytes"
 	"encoding/json"
+	"minik8s/pkg/k8stype"
 	"net/http"
 )
 
@@ -17,7 +18,7 @@ func PutRequestByTarget(uri string, target interface{}) (int, interface{}, error
 	if err != nil {
 		return 0, nil, err
 	}
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Type", k8stype.ContentType)
 
 	client := &http.Client{}
 	response, err := client.Do(request)

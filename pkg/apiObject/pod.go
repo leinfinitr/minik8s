@@ -86,5 +86,5 @@ type PodStatus struct {
 }
 
 func (p *Pod) GetPodUUID() string {
-	return p.Metadata.UID
+	return p.Metadata.UUID
 }

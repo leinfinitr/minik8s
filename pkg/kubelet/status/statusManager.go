@@ -1,8 +1,10 @@
 package status
 
 import (
+	"fmt"
+	"minik8s/pkg/apiObject"
 	"minik8s/pkg/kubelet/runtime"
-	// "minik8s/pkg/apiObject"
+	"minik8s/tools/netrequest"
 )
 
 /* statusManager 功能介绍
@@ -46,8 +48,37 @@ func GetStatusManager(apiServerURL string, apiServerIP string) (StatusManager, e
 func (s *statusManagerImpl) RegisterNode() error {
 	// TODO: check if this node has been registered
 
-	// node := &apiObject.Node{
+	node := &apiObject.Node{
+		TypeMeta: apiObject.TypeMeta{
+			Kind:       "",
+			APIVersion: "",
+		},
+		Metadata: apiObject.ObjectMeta{
+			Name:        "",
+			Namespace:   "",
+			Labels:      make(map[string]string),
+			Annotations: make(map[string]string),
+			UUID:        "", // 之后使用UUID生成器来随机生成
+		},
+		Spec: apiObject.NodeSpec{
+			PodCIDR:       "",
+			ProviderID:    "",
+			Unschedulable: true,
+		},
+		Status: apiObject.NodeStatus{
+			Capacity:    make(map[string]string),
+			Allocatable: make(map[string]string),
+			Phase:       "running",
+			Conditions:  nil,
+			Addresses:   nil,
+		},
+	}
 
-	// }
+	url := "http://" + s.apiServerURL + "/api/v1/nodes"
+
+	netrequest.PostRequestByTarget(url, node)
+
+	fmt.Println("Register node successfully\n")
+
 	return nil
 }
