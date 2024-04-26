@@ -23,3 +23,16 @@ func PostObjMsg(url string, obj interface{}) (*http.Response, error) {
 	}
 	return resp, nil
 }
+
+func DelObjMsg(url string) (*http.Response, error) {
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
