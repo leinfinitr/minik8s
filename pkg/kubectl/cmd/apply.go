@@ -79,7 +79,7 @@ func PodHandler(content []byte) {
 		os.Exit(1)
 	}
 	url:= config.APIServerUrl()+config.PodsURI
-	url = strings.Replace(url,config.NameSpaceReplace,pod.ObjectMeta.Namespace,-1)
+	url = strings.Replace(url,config.NameSpaceReplace,pod.Metadata.Namespace,-1)
 	fmt.Println("Post",url)
 	resp, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
