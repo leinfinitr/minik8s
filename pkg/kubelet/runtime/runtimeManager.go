@@ -1,13 +1,12 @@
 package runtime
 
 import (
-	"minik8s/pkg/kubelet/runtime/container"
-	"minik8s/pkg/kubelet/runtime/image"
+	"minik8s/pkg/kubelet/runtime/dockerUtils"
 )
 
 type RuntimeManager struct {
-	containerManager container.ContainerManager
-	imageManager     image.ImageManager
+	containerManager dockerUtils.ContainerManager
+	imageManager     dockerUtils.ImageManager
 }
 
 /* Singleton pattern */
@@ -16,8 +15,8 @@ var runtimeManager *RuntimeManager = nil
 func GetRuntimeManager() *RuntimeManager {
 	if runtimeManager == nil {
 		runtimeManager = &RuntimeManager{
-			containerManager: container.ContainerManager{},
-			imageManager:     image.ImageManager{},
+			containerManager: dockerUtils.GetContainerManager(),
+			imageManager:     dockerUtils.GetImageManager(),
 		}
 	}
 

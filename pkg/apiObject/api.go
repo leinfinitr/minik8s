@@ -3,11 +3,20 @@
 
 package apiObject
 
+type Metadata struct {
+	UUID        string            `json:"uuid" yaml:"uuid"`
+	Name        string            `json:"name" yaml:"name"`
+	Namespace   string            `json:"namespace" yaml:"namespace" default:"default"`
+	Labels      map[string]string `json:"labels" yaml:"labels"`
+	Annotations map[string]string `json:"annotations" yaml:"annotations"`
+}
+
 type TypeMeta struct {
 	// Kind: 对象的类型，如Pod、Service、ReplicationController
 	Kind string `json:"kind" yaml:"kind"`
 	// APIVersion: API版本
 	APIVersion string `json:"apiVersion" yaml:"apiVersion"`
+	Metadata   Metadata
 }
 
 type ObjectMeta struct {

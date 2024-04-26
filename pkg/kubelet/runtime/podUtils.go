@@ -5,16 +5,19 @@ import (
 )
 
 type PodUtils interface {
-	createPod(pod *apiObject.Pod) error
-	startPod(pod *apiObject.Pod) error
-	restartPod(pod *apiObject.Pod) error
-	stopPod(pod *apiObject.Pod) error
-	deletePod(pod *apiObject.Pod) error
-	recreatePodContainer(pod *apiObject.Pod) error
-	execPodContainer(pod *apiObject.Pod) error
+	CreatePod(pod *apiObject.Pod) error
+	StartPod(pod *apiObject.Pod) error
+	RestartPod(pod *apiObject.Pod) error
+	StopPod(pod *apiObject.Pod) error
+	DeletePod(pod *apiObject.Pod) error
+	RecreatePodContainer(pod *apiObject.Pod) error
+	ExecPodContainer(pod *apiObject.Pod) error
 }
 
 func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
+	/* Step-1: Build pause container*/
+
+	/* Step-2: Build pod中所需的所有container*/
 	return nil
 }
 

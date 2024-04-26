@@ -8,10 +8,10 @@ import (
 
 /* Kubelet需要与API Server进行交互，所以记录API Server的相关信息 */
 type KubeletConfig struct {
-	apiServerIP             string
-	apiServerPort           int
-	apiServerCAFile         string
-	apiServerClientCertFile string
+	APIServerIP             string
+	APIServerPort           int
+	APIServerURL            string
+	APIServerClientCertFile string
 }
 
 func KubeletConfigDefault() *KubeletConfig {
@@ -19,9 +19,9 @@ func KubeletConfigDefault() *KubeletConfig {
 	apiServerPort := ipconfig.APIServerPort
 
 	return &KubeletConfig{
-		apiServerIP:             apiLocalIP,
-		apiServerPort:           apiServerPort,
-		apiServerCAFile:         "",
-		apiServerClientCertFile: "",
+		APIServerIP:             apiLocalIP,
+		APIServerPort:           apiServerPort,
+		APIServerURL:            "",
+		APIServerClientCertFile: "",
 	}
 }

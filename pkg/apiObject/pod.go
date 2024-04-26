@@ -11,9 +11,9 @@ import (
 
 type Pod struct {
 	// TypeMeta: 对象的类型元数据
-	TypeMeta
+	typeMeta TypeMeta
 	// ObjectMeta: 对象的元数据
-	ObjectMeta
+	objectMeta ObjectMeta
 	// Spec: Pod的规格
 	Spec PodSpec
 	// Status: Pod的状态
@@ -84,4 +84,8 @@ type PodStatus struct {
 	ContainerStatuses []types.ContainerState `json:"containerStatuses" yaml:"containerStatuses"`
 	// LastUpdateTime: 最后更新时间
 	LastUpdateTime time.Time `json:"lastUpdateTime" yaml:"lastUpdateTime"`
+}
+
+func (pod *Pod) GetPodUUID() string {
+	return pod.typeMeta.Metadata.UUID
 }
