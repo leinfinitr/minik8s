@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"minik8s/internal/pkg/httpRequest"
+	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
 	"net/http"
 	"os"
-
+	"strings"
 	"github.com/spf13/cobra"
 )
 
@@ -78,13 +78,15 @@ func PodHandler(content []byte) {
 		fmt.Println("Error: Could not unmarshal the yaml file.")
 		os.Exit(1)
 	}
-	url := config.APIServerUrl() + "/api/v1/namespaces/" + pod.Metadata.Namespace + "/pods"
+	url:= config.APIServerUrl()+config.PodsURI
+	url = strings.Replace(url,config.NameSpaceReplace,pod.Metadata.Namespace,-1)
+	fmt.Println("Post",url)
 	resp, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		fmt.Println("Error: Could not post the object message.")
 		os.Exit(1)
 	}
-	ResultDisplay(Pod, resp)
+	ApplyResultDisplay(Pod, resp)
 }
 
 func ServiceHandler(content []byte) {
@@ -101,7 +103,7 @@ func DeploymentHandler(content []byte) {
 
 }
 
-func ResultDisplay(kind ApplyObject, resp *http.Response) {
+func ApplyResultDisplay(kind ApplyObject, resp *http.Response) {
 	if resp.StatusCode == http.StatusCreated {
 		fmt.Printf("%s created\n", kind)
 	} else if resp.StatusCode == http.StatusOK {
