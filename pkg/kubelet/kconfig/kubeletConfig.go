@@ -14,7 +14,7 @@ type KubeletConfig struct {
 	apiServerClientCertFile string
 }
 
-func kubeletConfigDefault() *KubeletConfig {
+func KubeletConfigDefault() *KubeletConfig {
 	apiLocalIP := ipconfig.APILocalIP
 	apiServerPort := ipconfig.APIServerPort
 
