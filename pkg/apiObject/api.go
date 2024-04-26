@@ -4,17 +4,21 @@
 package apiObject
 
 type TypeMeta struct {
-	// Kind: 对象的类型，如Pod、Service、ReplicationController
+	// 对象的类型，如Pod、Service、ReplicationController
 	Kind string `json:"kind" yaml:"kind"`
-	// APIVersion: API版本
+	// API版本
 	APIVersion string `json:"apiVersion" yaml:"apiVersion"`
 }
 
 type ObjectMeta struct {
-	// Name: 对象的名称
+	// 对象的名称
 	Name string `json:"name" yaml:"name"`
-	// Namespace: 对象所在的命名空间
+	// 对象所在的命名空间
 	Namespace string `json:"namespace" yaml:"namespace"`
-	// Labels: 对象的标签
+	// 对象的标签
 	Labels map[string]string `json:"labels" yaml:"labels"`
+	// 对象的注解
+	Annotations map[string]string `json:"annotations" yaml:"annotations"`
+	// 此对象在时间和空间上唯一的值。它通常由成功创建资源时的服务器生成，并且不允许在PUT上的更改操作。
+	UID string `json:"uid" yaml:"uid"`
 }
