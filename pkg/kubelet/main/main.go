@@ -9,15 +9,15 @@ import (
 )
 
 func main() {
-	// apiserver那边的配置暂时采用默认值
-	newKubletConfig := kconfig.KubeletConfigDefault()
+	// apiServer那边的配置暂时采用默认值
+	newKubeletConfig := kconfig.KubeletConfigDefault()
 
-	kubelet, err := newKubeletInit(newKubletConfig)
+	kubeletInit, err := newKubeletInit(newKubeletConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	kubelet.Run()
+	kubeletInit.Run()
 }
 
 // 包括调用各种模块的初始化函数，并在Kubelet中组装注册
