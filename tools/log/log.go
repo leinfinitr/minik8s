@@ -31,31 +31,34 @@ func init() {
 }
 
 // WriteLogToFile 将日志写入到文件中
-func WriteLogToFile(component string, msg string) string {
+func WriteLogToFile(msg string) string {
 	// 1. 获取当前的时间
 	t := time.Now()
 	currentTimeStr := t.Format("2006-01-02 15:04:05")
 	// 2. 获取发起调用的函数名，文件名，行号
 	funcName, file, line, _ := runtime.Caller(2)
 	// 3. 组装成字符串
-	logStr := fmt.Sprintf("[%s] %s %s %s %d: %s\n", currentTimeStr, file, component, runtime.FuncForPC(funcName).Name(), line, msg)
+	logStr := fmt.Sprintf("[%s] %s %s %d: %s\n", currentTimeStr, file, runtime.FuncForPC(funcName).Name(), line, msg)
 	// 4. 将字符串写入到文件中
-	File.WriteString(logStr)
+	_, err := File.WriteString(logStr)
+	if err != nil {
+		return ""
+	}
 	return logStr
 }
 
 // InfoLog 基本的日志信息
-func InfoLog(component string, msg string) {
-	logStr := WriteLogToFile(component, msg)
+func InfoLog(msg string) {
+	logStr := WriteLogToFile(msg)
 	if ifPrint {
 		color.Green(logStr)
 	}
 }
 
 // DebugLog Debug日志
-func DebugLog(component string, msg string) {
+func DebugLog(msg string) {
 	if ifDebug {
-		logStr := WriteLogToFile(component, msg)
+		logStr := WriteLogToFile(msg)
 		if ifPrint {
 			color.Blue(logStr)
 		}
@@ -63,16 +66,16 @@ func DebugLog(component string, msg string) {
 }
 
 // WarnLog 警告日志
-func WarnLog(component string, msg string) {
-	logStr := WriteLogToFile(component, msg)
+func WarnLog(msg string) {
+	logStr := WriteLogToFile(msg)
 	if ifPrint {
 		color.Yellow(logStr)
 	}
 }
 
 // ErrorLog 错误日志
-func ErrorLog(component string, msg string) {
-	logStr := WriteLogToFile(component, msg)
+func ErrorLog(msg string) {
+	logStr := WriteLogToFile(msg)
 	if ifPrint {
 		color.Red(logStr)
 	}

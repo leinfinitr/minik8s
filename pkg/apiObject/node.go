@@ -1,5 +1,6 @@
 // 描述: Node对象的封装
 // 参考：https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api/core/v1/types.go
+//		https://kubernetes.io/zh-cn/docs/reference/kubernetes-api/cluster-resources/node-v1/#NodeSpec
 
 package apiObject
 
@@ -17,7 +18,7 @@ type Node struct {
 type NodeSpec struct {
 	// 分配给该Node的Pod IP范围
 	PodCIDR string `json:"podCIDR" yaml:"podCIDR"`
-	// Node的提供者标识符
+	// 云提供商分配的节点ID，格式为：<ProviderName>://<ProviderSpecificNodeID>
 	ProviderID string `json:"providerID" yaml:"providerID"`
 	// 是否可以被调度
 	Unschedulable bool `json:"unschedulable" yaml:"unschedulable"`
@@ -25,8 +26,10 @@ type NodeSpec struct {
 
 type NodeStatus struct {
 	// Node节点的资源容量
+	// 	包括：内存
 	Capacity map[string]string `json:"capacity" yaml:"capacity"`
-	// Node的可分配资源
+	// Node的可分配资源,其数值为使用率
+	// 	包括：内存、CPU
 	Allocatable map[string]string `json:"allocatable" yaml:"allocatable"`
 	// Node最近观测到的生命周期阶段，包括：Pending、Running、Terminating
 	// 	Pending: Node已经被系统创建，但是还没有被配置

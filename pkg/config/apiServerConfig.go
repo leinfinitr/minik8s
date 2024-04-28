@@ -9,8 +9,6 @@ const (
 	LocalServerAddress = "127.0.0.1"
 	// LocalServerPort api server的本地服务器端口
 	LocalServerPort = 7000
-
-	HttpSchema = "http://"
 )
 
 func APIServerUrl() string {

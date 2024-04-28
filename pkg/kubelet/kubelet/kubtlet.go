@@ -11,7 +11,6 @@ import (
 	// "minik8s/pkg/kubelet/syncLoop"
 )
 
-/* Kubelet数据结构主要集成了该组件的其他模块信息 */
 type Kubelet struct {
 	Config *kconfig.KubeletConfig
 	// syncLoopHandler *syncLoop.SyncLoopHandler
@@ -28,10 +27,9 @@ type Kubelet struct {
 
 func (k *Kubelet) Run() {
 	k.registerNode()
-
 }
 
 /* 需要到apiServer那边去注册相关信息，规定相关的数据结构和接口 */
 func (k *Kubelet) registerNode() {
-	k.StatusManager.RegisterNode()
+	_ = k.StatusManager.RegisterNode()
 }

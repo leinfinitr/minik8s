@@ -3,6 +3,8 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
 )
 
 // 一个临时的用于存储 node 信息的 map
@@ -11,7 +13,7 @@ var nodes = make(map[string]apiObject.Node)
 // GetNodes 获取所有节点
 func GetNodes(c *gin.Context) {
 
-	println("GetNodes")
+	log.InfoLog("GetNodes")
 }
 
 // CreateNode 创建节点
@@ -19,24 +21,25 @@ func CreateNode(c *gin.Context) {
 	var node apiObject.Node
 	err := c.ShouldBindJSON(&node)
 	if err != nil {
-		println("CreateNode error: " + err.Error())
+		log.ErrorLog("CreateNode error: " + err.Error())
 	}
 	nodes[node.Metadata.Name] = node
 
-	println("CreateNode: " + node.Metadata.Name)
+	log.InfoLog("CreateNode: " + node.Metadata.Name)
+	c.JSON(config.SuccessCode, "")
 }
 
 // DeleteNodes 删除所有节点
 func DeleteNodes(c *gin.Context) {
 
-	println("DeleteNodes")
+	log.InfoLog("DeleteNodes")
 }
 
 // GetNode 获取指定节点
 func GetNode(c *gin.Context) {
 	name := c.Param("name")
 
-	println("GetNode: " + name)
+	log.InfoLog("GetNode: " + name)
 	c.JSON(200, nodes[name])
 }
 
@@ -45,12 +48,12 @@ func UpdateNode(c *gin.Context) {
 	var node apiObject.Node
 	err := c.ShouldBindJSON(&node)
 	if err != nil {
-		println("UpdateNode error: " + err.Error())
+		log.ErrorLog("UpdateNode error: " + err.Error())
 	}
 	name := c.Param("name")
 	nodes[name] = node
 
-	println("UpdateNode: " + name)
+	log.InfoLog("UpdateNode: " + name)
 	c.JSON(200, nodes[name])
 }
 
@@ -58,19 +61,19 @@ func UpdateNode(c *gin.Context) {
 func DeleteNode(c *gin.Context) {
 	name := c.Param("name")
 
-	println("DeleteNode: " + name)
+	log.InfoLog("DeleteNode: " + name)
 }
 
 // GetNodeStatus 获取指定节点的状态
 func GetNodeStatus(c *gin.Context) {
 	name := c.Param("name")
 
-	println("GetNodeStatus: " + name)
+	log.InfoLog("GetNodeStatus: " + name)
 }
 
 // UpdateNodeStatus 更新指定节点的状态
 func UpdateNodeStatus(c *gin.Context) {
 	name := c.Param("name")
 
-	println("UpdateNodeStatus: " + name)
+	log.InfoLog("UpdateNodeStatus: " + name)
 }

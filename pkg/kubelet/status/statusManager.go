@@ -1,10 +1,12 @@
 package status
 
 import (
-	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/kubelet/runtime"
+	"minik8s/tools/host"
+	"minik8s/tools/log"
 	"minik8s/tools/netRequest"
+	"strconv"
 )
 
 /* statusManager 功能介绍
@@ -16,7 +18,7 @@ import (
 type StatusManager interface {
 	// GerPodInfoFromCRI()
 
-	// 注册节点
+	// RegisterNode 注册节点
 	RegisterNode() error
 }
 
@@ -45,8 +47,21 @@ func GetStatusManager(apiServerURL string, apiServerIP string) (StatusManager, e
 //
 //	通过发送POST请求的方式去注册，默认API："/api/v1/nodes"
 func (s *statusManagerImpl) RegisterNode() error {
-	// TODO: check if this node has been registered
 	// 注册所需的参数
+	HostName, err := host.GetHostname()
+	HostIP, err := host.GetHostIP()
+
+	// 获取主机的内存大小
+	capacity := make(map[string]string)
+	totalMemory, err := host.GetTotalMemory()
+	capacity["memory"] = strconv.FormatUint(totalMemory, 10)
+
+	// 获取主机的内存和CPU使用率
+	allocatable := make(map[string]string)
+	MemoryUsage, err := host.GetMemoryUsageRate()
+	CPUUsage, err := host.GetCPULoad()
+	allocatable["memory"] = strconv.FormatFloat(MemoryUsage, 'f', -1, 64)
+	allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
 
 	node := &apiObject.Node{
 		TypeMeta: apiObject.TypeMeta{
@@ -54,34 +69,47 @@ func (s *statusManagerImpl) RegisterNode() error {
 			APIVersion: "v1",
 		},
 		Metadata: apiObject.ObjectMeta{
-			Name:        "",
-			Namespace:   "",
+			Name:        HostName,
+			Namespace:   "", // 该字段为空
 			Labels:      make(map[string]string),
 			Annotations: make(map[string]string),
-			UUID:        "", // 之后使用UUID生成器来随机生成
+			UUID:        "", //	由API Server生成
 		},
 		Spec: apiObject.NodeSpec{
-			PodCIDR:       "",
-			ProviderID:    "",
+			PodCIDR:       "", // 未使用
+			ProviderID:    "", // 未使用
 			Unschedulable: true,
 		},
 		Status: apiObject.NodeStatus{
-			Capacity:    make(map[string]string),
-			Allocatable: make(map[string]string),
+			Capacity:    capacity,
+			Allocatable: allocatable,
 			Phase:       "running",
-			Conditions:  nil,
-			Addresses:   nil,
+			Conditions: []apiObject.NodeCondition{
+				{
+					Type:   "Ready", // Ready: kubelet准备好接受Pod
+					Status: "True",
+				},
+			},
+			Addresses: []apiObject.NodeAddress{
+				{
+					Type:    "InternalIP",
+					Address: HostIP,
+				},
+			},
 		},
 	}
 
 	url := "http://" + s.apiServerURL + "/api/v1/nodes"
 
-	_, _, err := netRequest.PostRequestByTarget(url, node)
+	statusCode, _, err := netRequest.PostRequestByTarget(url, node)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Register node successfully")
+	if statusCode != 200 {
+		log.ErrorLog("register node failed")
+	}
+	log.InfoLog("register node success")
 
 	return nil
 }

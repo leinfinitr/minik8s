@@ -5,17 +5,17 @@ import (
 )
 
 func TestInfoLog(t *testing.T) {
-	InfoLog("test", "test")
+	InfoLog("test")
 }
 
 func TestDebugLog(t *testing.T) {
-	DebugLog("test", "test")
+	DebugLog("test")
 }
 
 func TestWarnLog(t *testing.T) {
-	WarnLog("test", "test")
+	WarnLog("test")
 }
 
 func TestErrorLog(t *testing.T) {
-	ErrorLog("test", "test")
+	ErrorLog("test")
 }
