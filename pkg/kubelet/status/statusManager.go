@@ -2,6 +2,7 @@ package status
 
 import (
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
 	"minik8s/pkg/kubelet/runtime"
 	"minik8s/tools/host"
 	"minik8s/tools/log"
@@ -9,38 +10,28 @@ import (
 	"strconv"
 )
 
-/* statusManager 功能介绍
- * 1. 是用来记录pod各种状态信息的模块
- * 2. 该模块负责提供获取相关信息的接口，会有其他组件通过接口来监控pod的状态
- * 3. 定时发送pod的状态消息给apiServer，该信息同样会被当作心跳
- */
-
 type StatusManager interface {
-	// GerPodInfoFromCRI()
-
 	// RegisterNode 注册节点
 	RegisterNode() error
 }
 
 type statusManagerImpl struct {
 	runtimeMgr   *runtime.RuntimeManager
-	apiServerIP  string
 	apiServerURL string
 }
 
 var statusManager *statusManagerImpl = nil
 
 // GetStatusManager 返回的是接口类型
-func GetStatusManager(apiServerURL string, apiServerIP string) (StatusManager, error) {
+func GetStatusManager(apiServerURL string) StatusManager {
 	if statusManager == nil {
 		statusManager = &statusManagerImpl{
 			runtimeMgr:   runtime.GetRuntimeManager(),
-			apiServerIP:  apiServerIP,
 			apiServerURL: apiServerURL,
 		}
 	}
 
-	return statusManager, nil
+	return statusManager
 }
 
 // RegisterNode 在kubelet刚开始创建时，需要到apiServer的work node去注册
@@ -106,7 +97,7 @@ func (s *statusManagerImpl) RegisterNode() error {
 		return err
 	}
 
-	if statusCode != 200 {
+	if statusCode != config.HttpSuccessCode {
 		log.ErrorLog("register node failed")
 	}
 	log.InfoLog("register node success")

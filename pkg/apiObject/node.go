@@ -63,3 +63,8 @@ type NodeAddress struct {
 	// 地址
 	Address string `json:"address" yaml:"address"`
 }
+
+// UpdateNodeStatus 更新Node的状态
+func (n *Node) UpdateNodeStatus(status NodeStatus) {
+	n.Status = status
+}

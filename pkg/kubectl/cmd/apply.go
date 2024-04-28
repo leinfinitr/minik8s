@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/cobra"
 	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
@@ -9,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"github.com/spf13/cobra"
 )
 
 var applyCmd = &cobra.Command{
@@ -78,9 +78,9 @@ func PodHandler(content []byte) {
 		fmt.Println("Error: Could not unmarshal the yaml file.")
 		os.Exit(1)
 	}
-	url:= config.APIServerUrl()+config.PodsURI
-	url = strings.Replace(url,config.NameSpaceReplace,pod.Metadata.Namespace,-1)
-	fmt.Println("Post",url)
+	url := config.APIServerURL() + config.PodsURI
+	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+	fmt.Println("Post", url)
 	resp, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		fmt.Println("Error: Could not post the object message.")
