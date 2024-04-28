@@ -7,8 +7,9 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"os"
-	"github.com/jedib0t/go-pretty/v6/text"
+	"strings"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 )
 
@@ -46,6 +47,16 @@ func getHandler(cmd *cobra.Command, args []string) {
 			}
 			printNodesResult(nodes)
 		}
+		namespace, _ := cmd.Flags().GetString("namespace")
+		if namespace == "" {
+			namespace = "deafault"
+		}
+		switch resourceType {
+		case "Pod":
+			getPodHandler(namespace)
+		case "Service":
+		case "Deployment":
+		}
 	}
 }
 
@@ -72,7 +83,6 @@ func printNodeResult(node apiObject.Node, writer table.Writer) {
 	// 应用颜色到Status
 	coloredStatus := statusColor.Sprint(node.Status.Conditions[0].Type)
 
-	// 应用颜色到Role，这里只是一个例子，实际应用时你需要根据实际情况来判断
 	var roleColor text.Colors
 	switch node.Metadata.Labels["kubernetes.io/role"] {
 	case "master":
@@ -92,5 +102,56 @@ func printNodeResult(node apiObject.Node, writer table.Writer) {
 		coloredStatus, // 使用包装了颜色的status
 		node.Status.Addresses[0].Address,
 		coloredRole, // 使用包装了颜色的role
+	})
+}
+
+func getPodHandler(namespace string) {
+	url := config.APIServerUrl() + config.PodsURI
+	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+	pods := []apiObject.Pod{}
+	code, err := httprequest.GetObjMsg(url, &pods, "data")
+	if err != nil {
+		fmt.Println("Error: ", err)
+		os.Exit(1)
+	}
+	if code.StatusCode != 200 {
+		fmt.Println("Error: Failed to get pods")
+		os.Exit(1)
+	}
+	printPodsResult(pods)
+}
+
+func printPodsResult(pods []apiObject.Pod) {
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Kind", "Name", "Status", "Node"})
+	for _, pod := range pods {
+		printPodResult(pod, writer)
+	}
+	writer.Render()
+}
+
+func printPodResult(pod apiObject.Pod, writer table.Writer) {
+	// 根据状态为Status单元格选择颜色
+	var statusColor text.Colors
+	switch pod.Status.Phase {
+	case "Running":
+		statusColor = text.Colors{text.FgGreen}
+	case "Pending":
+		statusColor = text.Colors{text.FgYellow}
+	case "Failed":
+		statusColor = text.Colors{text.FgRed}
+	default:
+		statusColor = text.Colors{text.FgWhite}
+	}
+
+	// 应用颜色到Status
+	coloredStatus := statusColor.Sprint(pod.Status.Phase)
+
+	writer.AppendRow(table.Row{
+		"Pod",
+		pod.Metadata.Name,
+		coloredStatus, // 使用包装了颜色的status
+		pod.Spec.NodeName,
 	})
 }
