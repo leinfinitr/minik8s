@@ -28,7 +28,7 @@ type statusManagerImpl struct {
 
 var statusManager *statusManagerImpl = nil
 
-// 返回的是接口类型
+// GetStatusManager 返回的是接口类型
 func GetStatusManager(apiServerURL string, apiServerIP string) (StatusManager, error) {
 	if statusManager == nil {
 		statusManager = &statusManagerImpl{
@@ -41,17 +41,17 @@ func GetStatusManager(apiServerURL string, apiServerIP string) (StatusManager, e
 	return statusManager, nil
 }
 
-/* 在kubelet刚开始创建时，需要到apiServer的work node去注册
- * 通过发送POST请求的方式去注册
- * 默认API："/api/v1/nodes"
- */
+// RegisterNode 在kubelet刚开始创建时，需要到apiServer的work node去注册
+//
+//	通过发送POST请求的方式去注册，默认API："/api/v1/nodes"
 func (s *statusManagerImpl) RegisterNode() error {
 	// TODO: check if this node has been registered
+	// 注册所需的参数
 
 	node := &apiObject.Node{
 		TypeMeta: apiObject.TypeMeta{
-			Kind:       "",
-			APIVersion: "",
+			Kind:       "Node",
+			APIVersion: "v1",
 		},
 		Metadata: apiObject.ObjectMeta{
 			Name:        "",
@@ -76,7 +76,10 @@ func (s *statusManagerImpl) RegisterNode() error {
 
 	url := "http://" + s.apiServerURL + "/api/v1/nodes"
 
-	netRequest.PostRequestByTarget(url, node)
+	_, _, err := netRequest.PostRequestByTarget(url, node)
+	if err != nil {
+		return err
+	}
 
 	fmt.Println("Register node successfully")
 

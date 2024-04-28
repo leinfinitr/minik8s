@@ -4,9 +4,18 @@ import (
 	"testing"
 )
 
-func TestPrintln(t *testing.T) {
-	SetLog(true)
-	Println("open test")
-	SetLog(false)
-	Println("close test")
+func TestInfoLog(t *testing.T) {
+	InfoLog("test", "test")
+}
+
+func TestDebugLog(t *testing.T) {
+	DebugLog("test", "test")
+}
+
+func TestWarnLog(t *testing.T) {
+	WarnLog("test", "test")
+}
+
+func TestErrorLog(t *testing.T) {
+	ErrorLog("test", "test")
 }

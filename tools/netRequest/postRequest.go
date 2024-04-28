@@ -7,15 +7,15 @@ import (
 	"net/http"
 )
 
-/* 发送Post请求的工具函数，其中target可以是任意的数据类*/
-func PostRequestByTarget(uri string, target interface{}) (int, interface{}, error) {
+// PostRequestByTarget 发送Post请求的工具函数，其中target可以是任意的数据类
+func PostRequestByTarget(url string, target interface{}) (int, interface{}, error) {
 	// 将目标对象序列化
 	jsonData, err := json.Marshal(target)
 	if err != nil {
 		return 0, nil, err
 	}
 
-	response, err := http.Post(uri, k8stype.ContentType, bytes.NewBuffer(jsonData))
+	response, err := http.Post(url, k8stype.ContentType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return 0, nil, err
 	}
