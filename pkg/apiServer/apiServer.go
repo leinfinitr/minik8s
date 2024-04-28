@@ -105,8 +105,8 @@ func (a *ApiServer) Register() {
 // NewApiServer 使用配置文件创建并返回一个新的ApiServer
 func NewApiServer() *ApiServer {
 	return &ApiServer{
-		Address: config.LocalServerAddress,
-		Port:    config.LocalServerPort,
+		Address: config.APIServerLocalAddress,
+		Port:    config.APIServerLocalPort,
 		Router:  gin.Default(),
 	}
 }

@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/cobra"
 	httprequest "minik8s/internal/pkg/httpRequest"
 	reflectprop "minik8s/internal/pkg/reflectProp"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
+	"net/http"
 	"os"
 	"reflect"
-	"net/http"
-	"github.com/spf13/cobra"
 )
 
 var deletedCmd = &cobra.Command{
@@ -77,19 +77,19 @@ func deleteHandler(cmd *cobra.Command, args []string) {
 			fmt.Println("Error: Could not get the name of the resource.")
 			os.Exit(1)
 		}
-		url := config.APIServerUrl() + "/api/v1/namespaces/" + namespace + "/" + kind + "/" + name
+		url := config.APIServerURL() + "/api/v1/namespaces/" + namespace + "/" + kind + "/" + name
 		resp, err := httprequest.DelObjMsg(url)
 		if err != nil {
 			fmt.Println("Error: Could not delete the object.")
 			os.Exit(1)
 		}
-		
+
 		DeleteResultDisplay(kind, resp)
 	}
 }
 
 func DeleteResultDisplay(kind string, resp *http.Response) {
-	if(resp.StatusCode == 200) {
+	if resp.StatusCode == 200 {
 		fmt.Println(kind + " deleted successfully.")
 	} else {
 		fmt.Println("Error: Could not delete the " + kind + ".")

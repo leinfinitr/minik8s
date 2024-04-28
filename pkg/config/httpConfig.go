@@ -3,6 +3,7 @@ package config
 const (
 	HttpSchema = "http://"
 
-	SuccessCode = 200
-	ErrorCode   = 500
+	HttpSuccessCode  = 200
+	HttpNotFoundCode = 404
+	HttpErrorCode    = 500
 )

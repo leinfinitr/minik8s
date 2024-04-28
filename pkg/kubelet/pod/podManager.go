@@ -2,8 +2,10 @@ package pod
 
 import (
 	"errors"
+	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/kubelet/runtime"
+	"minik8s/tools/log"
 )
 
 type EventType string
@@ -63,15 +65,38 @@ func GetPodManager() PodManager {
 	return podManager
 }
 
-/* 创建新的Pod */
+func AddPod(c *gin.Context) {
+	var pod apiObject.Pod
+	err := c.ShouldBindJSON(&pod)
+	if err != nil {
+		log.ErrorLog("UpdateNode error: " + err.Error())
+	}
+	err = podManager.AddPod(&pod)
+	if err != nil {
+		log.ErrorLog("AddPod error: " + err.Error())
+	} else {
+		c.JSON(200, "")
+	}
+}
+
+// AddPod 添加一个pod
 func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
+	log.DebugLog("AddPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; ok {
 		// 说明接受过这个请求了
 		return errors.New("pod message has been handled")
 	}
 
-	go p.AddPodHandler(pod)
+	go func() {
+		err := p.AddPodHandler(pod)
+		if err != nil {
+			log.ErrorLog("AddPodHandler error: " + err.Error())
+		} else {
+			p.PodMapByUUID[uuid] = pod
+			log.InfoLog("AddPodHandler success")
+		}
+	}()
 
 	return nil
 }
