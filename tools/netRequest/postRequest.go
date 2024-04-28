@@ -3,8 +3,12 @@ package netRequest
 import (
 	"bytes"
 	"encoding/json"
-	"minik8s/pkg/k8stype"
 	"net/http"
+)
+
+const (
+	ContentType = "Content-Type"
+	JSONType    = ""
 )
 
 // PostRequestByTarget 发送Post请求的工具函数，其中target可以是任意的数据类
@@ -15,10 +19,11 @@ func PostRequestByTarget(url string, target interface{}) (int, interface{}, erro
 		return 0, nil, err
 	}
 
-	response, err := http.Post(url, k8stype.ContentType, bytes.NewBuffer(jsonData))
+	response, err := http.Post(url, ContentType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return 0, nil, err
 	}
+
 	defer response.Body.Close()
 
 	var bodyJson interface{}

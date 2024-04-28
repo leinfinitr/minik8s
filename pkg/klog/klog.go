@@ -1,16 +1,18 @@
 package klog
 
 import (
-	"fmt"
 	"os"
+
+	"github.com/fatih/color"
 	// "log"
 )
 
-var debug = false
 var logPath = ""
 var logFile *os.File = nil
 
-// 最简单版本的写入log文件并输出的log，之后再进行更新
+var outputInfoLog = true
+
+// 最简单版本的写入log文件并输出的log，根据不同的情况进行输出
 func initLog() {
 	workDir, err := os.Getwd()
 	if err != nil {
@@ -25,12 +27,28 @@ func initLog() {
 	logPath = workDir + "/k8s.log"
 }
 
-func appendLog(lofInfo string) {
+func WarnLog(component string, logInfo string) {
 	if logFile == nil {
 		initLog()
 	}
 	// log.
-	logFile.WriteString(lofInfo)
-	fmt.Println(lofInfo)
+	var result = "[" + component + "] : " + logInfo + "\n"
+	logFile.WriteString(result)
+	if outputInfoLog {
+		color.Red(result)
+	}
+
+}
+
+func InfoLog(component string, logInfo string) {
+	if logFile == nil {
+		initLog()
+	}
+	// log.
+	var result = "[" + component + "] : " + logInfo + "\n"
+	logFile.WriteString(result)
+	if outputInfoLog {
+		color.Green(result)
+	}
 
 }
