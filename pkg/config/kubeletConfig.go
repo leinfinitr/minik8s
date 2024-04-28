@@ -13,3 +13,10 @@ const (
 	// ReadOnlyPort 提供了 pod 和 node 的信息，接口以只读形式暴露出去，访问该端口不需要认证和鉴权
 	ReadOnlyPort = 10255
 )
+
+// grpc request
+const (
+	ContainerRuntimeEndpoint = "unix:///run/containerd/containerd.sock"
+
+	MaxMsgSize = 1024 * 1024 * 16
+)
