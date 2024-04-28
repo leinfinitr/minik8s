@@ -33,7 +33,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 	if len(args) == 1 {
-		if resourceType == "Node" {
+		if resourceType == apiObject.NodeType {
 			url := config.APIServerUrl() + config.PodsURI
 			nodes := []apiObject.Node{}
 			code, err := httprequest.GetObjMsg(url, &nodes, "data")
