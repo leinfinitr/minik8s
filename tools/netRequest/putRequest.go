@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// Put请求
+// PutRequestByTarget Put请求
 func PutRequestByTarget(uri string, target interface{}) (int, interface{}, error) {
 	jsonData, err := json.Marshal(target)
 	if err != nil {

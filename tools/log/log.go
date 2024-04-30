@@ -38,7 +38,7 @@ func WriteLogToFile(msg string) string {
 	// 2. 获取发起调用的函数名，文件名，行号
 	funcName, file, line, _ := runtime.Caller(2)
 	// 3. 组装成字符串
-	logStr := fmt.Sprintf("[%s] %s %s %d: %s\n", currentTimeStr, file, runtime.FuncForPC(funcName).Name(), line, msg)
+	logStr := fmt.Sprintf("[%s] [%s %d] [%s]: %s\n", currentTimeStr, file, line, runtime.FuncForPC(funcName).Name(), msg)
 	// 4. 将字符串写入到文件中
 	_, err := File.WriteString(logStr)
 	if err != nil {

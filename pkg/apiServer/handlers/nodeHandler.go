@@ -84,13 +84,12 @@ func GetNodeStatus(c *gin.Context) {
 			return
 		}
 	}
-
 }
 
 // UpdateNodeStatus 更新指定节点的状态
 func UpdateNodeStatus(c *gin.Context) {
 	name := c.Param("name")
-	log.InfoLog("UpdateNodeStatus: " + name)
+	log.DebugLog("UpdateNodeStatus: " + name)
 
 	var status apiObject.NodeStatus
 	err := c.ShouldBindJSON(&status)
