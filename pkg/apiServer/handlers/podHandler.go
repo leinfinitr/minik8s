@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+	// klog "minik8s/pkg/klog"
 )
 
 // GetPod 获取指定Pod
@@ -71,8 +72,11 @@ func UpdatePodStatus(c *gin.Context) {
 // GetPods 获取所有Pod
 func GetPods(c *gin.Context) {
 	namespace := c.Param("namespace")
-
+	if namespace == ""{
+		namespace = "default"
+	}
 	println("GetPods: " + namespace)
+
 }
 
 // CreatePod 创建Pod

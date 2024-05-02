@@ -26,6 +26,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 	resourceType := args[0]
+	println("resourceType:", resourceType)
 	if stringops.StringInSlice(resourceType, apiObject.AllTypeList) {
 		fmt.Println("Getting", resourceType)
 	} else {
@@ -49,13 +50,13 @@ func getHandler(cmd *cobra.Command, args []string) {
 		}
 		namespace, _ := cmd.Flags().GetString("namespace")
 		if namespace == "" {
-			namespace = "deafault"
+			namespace = "default"
 		}
 		switch resourceType {
-		case "Pod":
+		case "pod":
 			getPodHandler(namespace)
-		case "Service":
-		case "Deployment":
+		case "service":
+		case "deployment":
 		}
 	}
 }
