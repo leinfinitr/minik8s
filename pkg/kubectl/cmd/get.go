@@ -35,7 +35,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 	}
 	if len(args) == 1 {
 		if resourceType == apiObject.NodeType {
-			url := config.APIServerUrl() + config.PodsURI
+			url := config.APIServerURL() + config.PodsURI
 			nodes := []apiObject.Node{}
 			code, err := httprequest.GetObjMsg(url, &nodes, "data")
 			if err != nil {
@@ -107,7 +107,7 @@ func printNodeResult(node apiObject.Node, writer table.Writer) {
 }
 
 func getPodHandler(namespace string) {
-	url := config.APIServerUrl() + config.PodsURI
+	url := config.APIServerURL() + config.PodsURI
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	pods := []apiObject.Pod{}
 	code, err := httprequest.GetObjMsg(url, &pods, "data")

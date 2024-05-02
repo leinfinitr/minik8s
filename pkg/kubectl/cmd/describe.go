@@ -46,7 +46,7 @@ func describeHandler(cmd *cobra.Command, args []string) {
 }
 
 func describeNamespace(namespace string, resourceType string) {
-	url := config.APIServerUrl() + config.UriMapping[resourceType]
+	url := config.APIServerURL() + config.UriMapping[resourceType]
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	var ActualType reflect.Type
 	switch resourceType {
@@ -88,7 +88,7 @@ func describeNamespace(namespace string, resourceType string) {
 }
 
 func describeResource(namespace string, resourceName string, resourceType string) {
-	url := config.APIServerUrl() + config.UriSpecMapping[resourceType]
+	url := config.APIServerURL() + config.UriSpecMapping[resourceType]
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	url = strings.Replace(url, config.NameReplace, resourceName, -1)
 	var ActualType reflect.Type
