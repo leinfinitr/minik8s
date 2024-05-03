@@ -60,3 +60,16 @@ func (c *EtcdClientWrapper) Delete(key string) error {
 func (c *EtcdClientWrapper) Watch(key string) etcd.WatchChan {
 	return c.etcdClient.Watch(context.Background(),key)
 }
+
+func (c *EtcdClientWrapper) PrefixGet(key string) ([]string,error) {
+	ctx := context.Background()
+	resp,err := c.etcdClient.Get(ctx,key,etcd.WithPrefix())
+	if err != nil {
+		return nil,fmt.Errorf("cli.Get err:%v",err)
+	}
+	var values []string
+	for _,kv := range resp.Kvs {
+		values = append(values,string(kv.Value))
+	}
+	return values,nil
+}

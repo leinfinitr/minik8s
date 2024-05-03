@@ -4,7 +4,9 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
-
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	"encoding/json"
+	"minik8s/pkg/klog"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,11 +26,47 @@ func CreateNode(c *gin.Context) {
 	err := c.ShouldBindJSON(&node)
 	if err != nil {
 		log.ErrorLog("CreateNode error: " + err.Error())
+		c.JSON(config.HttpErrorCode,gin.H{"error":err.Error()})
+		return
 	}
-	nodes[node.Metadata.Name] = node
-
-	log.InfoLog("CreateNode: " + node.Metadata.Name)
-	c.JSON(config.HttpSuccessCode, "")
+	res,err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix+"/"+node.Metadata.Name)
+	if err != nil {
+		klog.WarnLog("APIServer", "CreateNode: "+err.Error())
+		c.JSON(config.HttpErrorCode,gin.H{"error":err.Error()})
+		return
+	}
+	if len(res) > 0 {
+		klog.WarnLog("APIServer", "CreateNode: node already exists")
+		c.JSON(config.HttpErrorCode,gin.H{"error":"node already exists"})
+		return
+	}
+	if node.Kind != apiObject.NodeType {
+		klog.WarnLog("APIServer", "CreateNode: node kind is not correct")
+		c.JSON(config.HttpErrorCode,gin.H{"error":"node kind is not correct"})
+		return
+	}
+	resJson,err := json.Marshal(node)
+	if err != nil {
+		klog.WarnLog("APIServer", "CreateNode: "+err.Error())
+		c.JSON(config.HttpErrorCode,gin.H{"error":err.Error()})
+		return
+	}
+	err = etcdclient.EtcdStore.Put(config.EtcdNodePrefix+"/"+node.Metadata.Name,string(resJson))
+	if err != nil {
+		klog.WarnLog("APIServer", "CreateNode: "+err.Error())
+		c.JSON(config.HttpErrorCode,gin.H{"error":err.Error()})
+		return
+	}
+	if len(res)!=1{
+		klog.WarnLog("APIServer", "CreateNode: "+err.Error())
+		c.JSON(config.HttpErrorCode,gin.H{"error":err.Error()})
+		return
+	}
+	
+	// nodes[node.Metadata.Name] = node
+	klog.InfoLog("APIServer", "CreateNode: "+node.Metadata.Name)
+	c.JSON(config.HttpSuccessCode, "message: create node success")
+	//TODO: 将信息广播给所有node
 }
 
 // DeleteNodes 删除所有节点
