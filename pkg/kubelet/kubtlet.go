@@ -2,7 +2,6 @@ package kubelet
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubelet/pod"
@@ -12,6 +11,8 @@ import (
 	"minik8s/tools/netRequest"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Kubelet struct {
