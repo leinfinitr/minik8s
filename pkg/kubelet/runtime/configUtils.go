@@ -27,7 +27,7 @@ func (r *RuntimeManager) getPodSandBoxConfig(pod *apiObject.Pod) (*runtimeapi.Po
 	// TODO:这里可能还需要实现端口映射
 
 	// TODO:默认需要生成关于linux的配置
-	linuxConfig, err := r.getPodSandBoxLinuxConfig(pod)
+	linuxConfig, err := r.getPodSandBoxLinuxConfig()
 	if err != nil {
 		return nil, nil
 	}
@@ -36,7 +36,7 @@ func (r *RuntimeManager) getPodSandBoxConfig(pod *apiObject.Pod) (*runtimeapi.Po
 	return podSandboxConfig, nil
 }
 
-func (r *RuntimeManager) getPodSandBoxLinuxConfig(pod *apiObject.Pod) (*runtimeapi.LinuxPodSandboxConfig, error) {
+func (r *RuntimeManager) getPodSandBoxLinuxConfig() (*runtimeapi.LinuxPodSandboxConfig, error) {
 	linuxConfig := &runtimeapi.LinuxPodSandboxConfig{
 		CgroupParent: "",
 		SecurityContext: &runtimeapi.LinuxSandboxSecurityContext{

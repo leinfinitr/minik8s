@@ -39,7 +39,7 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	}
 
 	if response.PodSandboxId == "" {
-		errorMessage := fmt.Sprintf("PodSandboxId set for pod sandbox is failed ")
+		errorMessage := "PodSandboxId set for pod sandbox is failed "
 		log.ErrorLog(errorMessage)
 		return errors.New(errorMessage)
 	}
@@ -48,6 +48,22 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	pod.PodSanboxId = response.PodSandboxId
 
 	// 调用接口去创建Pod内部的所有容器
+	for _, container := range pod.Spec.Containers {
+		containerConfig, err := r.getContainerConfig(&container, sandboxConfig)
+		if err != nil {
+			log.ErrorLog("generate container config failed")
+			return err
+		}
+
+		containerID, err := r.CreateContainers(pod.PodSanboxId, containerConfig, sandboxConfig)
+		if err != nil {
+			log.ErrorLog("Create containers failed")
+			return err
+		}
+
+		message := fmt.Sprintf("container Id:%s is created ", containerID)
+		log.InfoLog(message)
+	}
 
 	return nil
 }
@@ -64,7 +80,7 @@ func (r *RuntimeManager) CreateContainers(podSandBoxID string, containerConfig *
 
 	response, err := r.runtimeClient.CreateContainer(context.Background(), request)
 	if err != nil {
-		errorMessage := fmt.Sprintf("create container in %d sandbox failed", podSandBoxID)
+		errorMessage := fmt.Sprintf("create container in %s sandbox failed", podSandBoxID)
 		log.ErrorLog(errorMessage)
 		return "", err
 	}
