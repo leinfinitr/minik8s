@@ -10,6 +10,8 @@ import (
 )
 
 type Pod struct {
+	// Pod对应的PodSandboxId，供查找podSandboxStatus时使用
+	PodSanboxId string
 	// 对象的类型元数据
 	TypeMeta
 	// 对象的元数据

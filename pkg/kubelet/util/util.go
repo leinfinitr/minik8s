@@ -3,7 +3,7 @@ package util
 import (
 	"context"
 	"fmt"
-	"minik8s/pkg/klog"
+	"minik8s/tools/log"
 	"net"
 	"net/url"
 )
@@ -12,6 +12,16 @@ const (
 	// unixProtocol is the network protocol of unix socket.
 	unixProtocol = "unix"
 )
+
+// 暂时使用context.background 来过渡
+// var ctx *context.Context = nil
+
+// func GetNewContext() (*context.Context, error) {
+// 	ctx_tmp , err := context.WithTimeout()
+// 	if ctx == nil{
+// 		ctx = &context.WithoutCancel(nil)
+// 	}
+// }
 
 // GetAddressAndDialer returns the address parsed from the given endpoint and a context dialer.
 func GetAddressAndDialer(endpoint string) (string, func(ctx context.Context, addr string) (net.Conn, error), error) {
@@ -35,7 +45,7 @@ func parseEndpointWithFallbackProtocol(endpoint string, fallbackProtocol string)
 		fallbackEndpoint := fallbackProtocol + "://" + endpoint
 		protocol, addr, err = parseEndpoint(fallbackEndpoint)
 		if err == nil {
-			klog.WarnLog("kubelet", "Using this endpoint is deprecated, please consider using full URL format"+"endpoint:"+endpoint+" URL"+fallbackEndpoint)
+			log.WarnLog("Using this endpoint is deprecated, please consider using full URL format" + "endpoint:" + endpoint + " URL" + fallbackEndpoint)
 		}
 	}
 	return

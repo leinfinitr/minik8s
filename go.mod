@@ -49,7 +49,6 @@ require (
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
-	google.golang.org/grpc v1.58.3 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 )
@@ -65,4 +64,8 @@ require (
 	github.com/spf13/cobra v1.8.0
 )
 
-require k8s.io/cri-api v0.30.0
+require (
+	github.com/distribution/reference v0.6.0
+	google.golang.org/grpc v1.58.3
+	k8s.io/cri-api v0.30.0
+)
