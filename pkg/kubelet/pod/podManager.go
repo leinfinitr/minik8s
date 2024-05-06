@@ -56,7 +56,7 @@ func GetPodManager() PodManager {
 			RestartPodHandler:        runtimeMgr.RestartPod,
 			StopPodHandler:           runtimeMgr.StopPod,
 			DeletePodHandler:         runtimeMgr.DeletePod,
-			RecreateContainerHandler: runtimeMgr.RecreatePodContainer,
+			RecreateContainerHandler: runtimeMgr.RecreatePodContainers,
 			ExecPodHandler:           runtimeMgr.ExecPodContainer,
 		}
 	}

@@ -6,16 +6,21 @@ package apiObject
 type ContainerStatus string
 
 const (
-	Created  ContainerStatus = "created"
-	Running  ContainerStatus = "running"
-	Paused   ContainerStatus = "paused"
-	Restart  ContainerStatus = "restarting"
-	Removing ContainerStatus = "removing"
-	Exited   ContainerStatus = "exited"
-	Dead     ContainerStatus = "dead"
+	Uncreated ContainerStatus = "uncreated"
+	Created   ContainerStatus = "created"
+	Running   ContainerStatus = "running"
+	Paused    ContainerStatus = "paused"
+	Restart   ContainerStatus = "restarting"
+	Removing  ContainerStatus = "removing"
+	Exited    ContainerStatus = "exited"
+	Dead      ContainerStatus = "dead"
 )
 
 type Container struct {
+	// 容器的ID
+	ContainerID string
+	// 容器当前状态
+	ContainerStatus ContainerStatus
 	// 容器的名称
 	Name string `json:"name" yaml:"name"`
 	// 容器的镜像
