@@ -98,6 +98,15 @@ func (a *ApiServer) Register() {
 	// 获取全局所有Pod
 	a.Router.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
 
+	// 获取全部Service
+	a.Router.GET(config.ServicesURI, handlers.GetServices)
+
+	// 获取指定Service
+	a.Router.GET(config.ServiceURI, handlers.GetService)
+
+	// 获取指定Service的状态
+	a.Router.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
+
 }
 
 // 函数-------------------------------------------------------------
