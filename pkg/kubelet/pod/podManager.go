@@ -77,9 +77,9 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 		if err != nil {
 			log.ErrorLog("AddPodHandler error: " + err.Error())
 		} else {
-			p.PodMapByUUID[uuid] = pod
 			log.InfoLog("AddPodHandler success")
 		}
+		p.PodMapByUUID[uuid] = pod
 	}()
 
 	return nil
