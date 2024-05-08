@@ -5,6 +5,7 @@ import (
 )
 
 type StatusManager interface {
+	Run()
 }
 
 type statusManagerImpl struct {
@@ -13,6 +14,10 @@ type statusManagerImpl struct {
 }
 
 var statusManager *statusManagerImpl = nil
+
+func (s *statusManagerImpl) Run() {
+
+}
 
 // GetStatusManager 返回的是接口类型
 func GetStatusManager(apiServerURL string) StatusManager {

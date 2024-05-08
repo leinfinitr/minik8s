@@ -18,6 +18,10 @@ import (
 type Kubelet struct {
 	// ApiServerConfig 存储apiServer的配置信息，用于和apiServer进行通信
 	ApiServerConfig config.APIServerConfig
+
+	// Iptables 存储每个pod的ip与UUID
+	Iptables map[string]string
+
 	// StatusManager 用来管理Node的状态信息
 	StatusManager status.StatusManager
 	// PodManager 用来管理Pod的信息
@@ -38,11 +42,15 @@ type Kubelet struct {
 func (k *Kubelet) Run() {
 	k.registerNode()
 
+	// 用于接受并转发来自与apiServer通信端口的请求
 	go func() {
 		k.registerKubeletAPI()
 		KubeletIP, _ := host.GetHostIP()
 		_ = k.KubeletAPIRouter.Run(KubeletIP + ":" + fmt.Sprint(config.KubeletAPIPort))
 	}()
+
+	// 定时扫描每个容器的状态，当容器状态发生更改时向apiServer发送通知
+	go k.StatusManager.Run()
 
 	// kubelet的主线程用于发送心跳
 	k.heartbeat()
