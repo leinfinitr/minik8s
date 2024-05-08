@@ -77,6 +77,7 @@ require (
 
 require (
 	github.com/distribution/reference v0.6.0
+	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	go.etcd.io/etcd/client/v3 v3.5.13
 	google.golang.org/grpc v1.59.0
