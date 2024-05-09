@@ -4,16 +4,14 @@ import (
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
 
-	"minik8s/pkg/kubelet/runtime/dockerUtils"
 	"minik8s/pkg/kubelet/runtime/image"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 type RuntimeManager struct {
-	runtimeClient    runtimeapi.RuntimeServiceClient
-	containerManager dockerUtils.ContainerManager
-	imageManager     image.ImageManager
+	runtimeClient runtimeapi.RuntimeServiceClient
+	imageManager  image.ImageManager
 }
 
 /* Singleton pattern */
@@ -29,9 +27,8 @@ func GetRuntimeManager() *RuntimeManager {
 	// TODO：从全局获取endpoint，然后需要获得与本地containerd的cnn
 	if runtimeManager == nil {
 		runtimeManager = &RuntimeManager{
-			runtimeClient:    runtimeapi.NewRuntimeServiceClient(cnn),
-			containerManager: dockerUtils.GetContainerManager(),
-			imageManager:     image.GetImageManager(),
+			runtimeClient: runtimeapi.NewRuntimeServiceClient(cnn),
+			imageManager:  image.GetImageManager(),
 		}
 	}
 
