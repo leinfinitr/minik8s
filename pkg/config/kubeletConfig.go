@@ -17,7 +17,7 @@ const (
 // grpc request
 const (
 	ContainerRuntimeEndpoint = "unix:///run/containerd/containerd.sock"
-	ImageRuntimeEndpoint     = "unix://run/containd/iamge.sock" // TODO：确认该endpoint可以使用
+	ImageRuntimeEndpoint     = "unix:///run/containerd/containerd.sock"
 
 	MaxMsgSize = 1024 * 1024 * 16
 )

@@ -20,10 +20,11 @@ type RuntimeManager struct {
 var runtimeManager *RuntimeManager = nil
 
 func GetRuntimeManager() *RuntimeManager {
-	cnn, ctx, err := image.GetCnn(config.ContainerRuntimeEndpoint)
+	cnn, ctx, cancel, err := image.GetCnn(config.ContainerRuntimeEndpoint)
 	if err != nil {
 		return nil
 	}
+	defer cancel()
 
 	// TODO：从全局获取endpoint，然后需要获得与本地containerd的cnn
 	if runtimeManager == nil {
