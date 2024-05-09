@@ -24,10 +24,10 @@ type ObjectMeta struct {
 }
 
 const (
-	PodType         = "pod"
-	ServiceType     = "service"
-	ReplicaSetType  = "replicaSet"
-	NodeType        = "node"
+	PodType         = "Pod"
+	ServiceType     = "Service"
+	ReplicaSetType  = "ReplicaSet"
+	NodeType        = "Node"
 )
 
 var AllTypeList = []string{PodType, ServiceType, ReplicaSetType, NodeType}
