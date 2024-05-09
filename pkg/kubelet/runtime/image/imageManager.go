@@ -31,10 +31,11 @@ type imageManagerImpl struct {
 var imageManager *imageManagerImpl = nil
 
 func GetImageManager() ImageManager {
-	cnn, ctx, err := GetCnn(config.ImageRuntimeEndpoint)
+	cnn, ctx, cancel, err := GetCnn(config.ImageRuntimeEndpoint)
 	if err != nil {
 		return nil
 	}
+	defer cancel()
 
 	if imageManager == nil {
 		imageManager = &imageManagerImpl{
@@ -143,16 +144,15 @@ func generateDefaultImageTag(image string) (string, error) {
 
 }
 
-func GetCnn(endpoint string) (*grpc.ClientConn, *context.Context, error) {
+func GetCnn(endpoint string) (*grpc.ClientConn, *context.Context, context.CancelFunc, error) {
 	log.InfoLog("come into GetContainerCnn")
 	addr, dialer, err := util.GetAddressAndDialer(endpoint)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// create a context
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.RuntimeRequestTimeout))
-	defer cancel()
 
 	// set some dialOpts
 	var dialOpts []grpc.DialOption
@@ -174,8 +174,8 @@ func GetCnn(endpoint string) (*grpc.ClientConn, *context.Context, error) {
 	conn, err := grpc.DialContext(ctx, addr, dialOpts...)
 	if err != nil {
 		log.WarnLog("Connect remote runtime failed" + "address:" + addr)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return conn, &ctx, nil
+	return conn, &ctx, cancel, nil
 }
