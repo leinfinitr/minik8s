@@ -34,7 +34,7 @@ func GetRuntimeManager() *RuntimeManager {
 
 	// 我们对获取的cnn进行验证，确保能够正常使用rpc进行通信
 	if _, err := runtimeManager.runtimeClient.Version(*ctx, &runtimeapi.VersionRequest{}); err != nil {
-		log.WarnLog("validate CRI v1 runtime API for endpoint failed")
+		log.ErrorLog("validate CRI v1 runtime API for endpoint failed")
 		return nil
 	}
 

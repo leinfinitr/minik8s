@@ -19,7 +19,7 @@ const (
 )
 
 const (
-	RuntimeRequestTimeout = 30 * Minute
+	RuntimeRequestTimeout = 1 * Minute
 	RPCRequestTimeout     = 1 * Minute
 )
 

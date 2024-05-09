@@ -1,7 +1,7 @@
 package reflectprop
 
 import (
-	"fmt"
+	"minik8s/tools/log"
 	"os"
 	"reflect"
 )
@@ -14,13 +14,13 @@ func GetObjNamespace(obj interface{}) string {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.Struct {
-		fmt.Println("Error: Expected a struct type")
+		log.ErrorLog("Expected a struct type")
 		os.Exit(1)
 	}
 
 	objectMetaField := v.FieldByName("ObjectMeta")
 	if !objectMetaField.IsValid() {
-		fmt.Println("Error: No ObjectMeta field found")
+		log.ErrorLog("No ObjectMeta field found")
 		os.Exit(1)
 	}
 
@@ -41,13 +41,13 @@ func GetObjName(obj interface{}) string {
 		v = v.Elem()
 	}
 	if v.Kind() != reflect.Struct {
-		fmt.Println("Error: Expected a struct type")
+		log.ErrorLog("Expected a struct type")
 		os.Exit(1)
 	}
 
 	objectMetaField := v.FieldByName("ObjectMeta")
 	if !objectMetaField.IsValid() {
-		fmt.Println("Error: No ObjectMeta field found")
+		log.ErrorLog("No ObjectMeta field found")
 		os.Exit(1)
 	}
 

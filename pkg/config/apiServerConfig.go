@@ -12,7 +12,7 @@ const (
 )
 
 func APIServerURL() string {
-	return APIServerLocalAddress + ":" + strconv.Itoa(APIServerLocalPort)
+	return "http://" + APIServerLocalAddress + ":" + strconv.Itoa(APIServerLocalPort)
 }
 
 func NewAPIServerConfig() *APIServerConfig {

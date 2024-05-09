@@ -25,7 +25,7 @@ func init() {
 	var err error
 	File, err = os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		fmt.Println("打开日志文件失败")
+		fmt.Println("Tools log init fail!")
 		return
 	}
 }

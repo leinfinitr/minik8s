@@ -5,9 +5,10 @@ package apiServer
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ApiServer struct {

@@ -7,6 +7,7 @@ import (
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
+	"minik8s/tools/host"
 	"minik8s/tools/log"
 	"os"
 	"strings"
@@ -129,7 +130,7 @@ func DeletePod(c *gin.Context) {
 	}
 	//TODO删除kube-controller-manager中的Endpoint
 	//TODO发送删除请求到kubelet
-	url := config.KubeletLocalIP + ":" + fmt.Sprint(config.KubeletAPIPort)
+	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
 	delUri := url + config.PodsURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
@@ -147,7 +148,7 @@ func GetPodEphemeralContainers(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Param("namespace")
 
-	println("GetPodEphemeralContainers: " + namespace + "/" + name)
+	log.DebugLog("GetPodEphemeralContainers: " + namespace + "/" + name)
 }
 
 // UpdatePodEphemeralContainers 更新指定Pod的临时容器
@@ -155,7 +156,7 @@ func UpdatePodEphemeralContainers(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Param("namespace")
 
-	println("UpdatePodEphemeralContainers: " + namespace + "/" + name)
+	log.DebugLog("UpdatePodEphemeralContainers: " + namespace + "/" + name)
 }
 
 // GetPodLog 获取指定Pod的日志
@@ -163,7 +164,7 @@ func GetPodLog(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Param("namespace")
 
-	println("GetPodLog: " + namespace + "/" + name)
+	log.DebugLog("GetPodLog: " + namespace + "/" + name)
 }
 
 // GetPodStatus 获取指定Pod的状态
@@ -172,7 +173,7 @@ func GetPodStatus(c *gin.Context) {
 	namespace := c.Param("namespace")
 	if namespace == "" {
 		namespace = "default"
-	}else if name == "" {
+	} else if name == "" {
 		log.WarnLog("GetPodStatus: name is empty")
 		c.JSON(400, gin.H{"error": "name is empty"})
 		return
@@ -190,7 +191,7 @@ func GetPodStatus(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	pod	:= &apiObject.Pod{}
+	pod := &apiObject.Pod{}
 	err = json.Unmarshal(resJson, pod)
 	if err != nil {
 		log.WarnLog("GetPodStatus: " + err.Error())
@@ -207,7 +208,7 @@ func GetPodStatus(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"data": byteStatus})
 
-	println("GetPodStatus: " + namespace + "/" + name)
+	log.DebugLog("GetPodStatus: " + namespace + "/" + name)
 }
 
 // UpdatePodStatus 更新指定Pod的状态
@@ -215,7 +216,7 @@ func UpdatePodStatus(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Param("namespace")
 
-	println("UpdatePodStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
 }
 
 // GetPods 获取所有Pod
@@ -258,9 +259,9 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 	key := config.EtcdPodPrefix + "/" + pod.Metadata.Namespace + "/" + pod.Metadata.Name
-	_, err = etcdclient.EtcdStore.Get(key)
-	if err == nil {
-		log.WarnLog("CreatePod: Pod already exists")
+	response, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.WarnLog("CreatePod: Pod already exists" + response)
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
 	}
@@ -268,7 +269,8 @@ func CreatePod(c *gin.Context) {
 	// TODO: 生成 UUID
 	pod.Metadata.UUID = uuid.New().String()
 	// TODO: 发送的时候筛选 node
-	url := config.KubeletLocalIP + ":" + fmt.Sprint(config.KubeletAPIPort)
+	pod.Spec.NodeName, _ = host.GetHostname()
+	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
@@ -286,7 +288,7 @@ func CreatePod(c *gin.Context) {
 	}
 	resp, err := httprequest.PostObjMsg(createUri, pod)
 	if err != nil {
-		fmt.Println("Error: Could not post the object message.")
+		log.ErrorLog("Could not post the object message.\n" + err.Error())
 		os.Exit(1)
 	}
 	c.JSON(200, gin.H{"data": resp})
@@ -296,7 +298,7 @@ func CreatePod(c *gin.Context) {
 func DeletePods(c *gin.Context) {
 	namespace := c.Param("namespace")
 
-	println("DeletePods: " + namespace)
+	log.DebugLog("DeletePods: " + namespace)
 }
 
 // GetGlobalPods 获取全局所有Pod

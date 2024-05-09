@@ -2,7 +2,8 @@ package config
 
 const (
 	// KubeletLocalIP kubelet server 的地址
-	KubeletLocalIP = "127.0.0.1"
+	KubeletLocalIP        = "127.0.0.1"
+	KubeletLocalURLPrefix = "http://" + KubeletLocalIP
 
 	// KubeletAPIPort kubelet server 与 apiServer 通信的端口
 	KubeletAPIPort = 10250

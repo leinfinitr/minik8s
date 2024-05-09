@@ -27,6 +27,7 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 
 	sandboxConfig, err := r.getPodSandBoxConfig(pod)
 	if err != nil {
+		log.ErrorLog("GetPodSandBoxConfig fail: " + err.Error())
 		return err
 	}
 
@@ -35,10 +36,15 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 		RuntimeHandler: "",
 	}
 
+	log.DebugLog("RunPodSandbox")
+	log.DebugLog(request.String())
 	response, err := r.runtimeClient.RunPodSandbox(context.Background(), request)
 	if err != nil {
+		log.ErrorLog("Create Podsandbox fail " + err.Error())
 		return nil
 	}
+
+	log.DebugLog("Create Podsandbox Success")
 
 	if response.PodSandboxId == "" {
 		errorMessage := "PodSandboxId set for pod sandbox is failed "
