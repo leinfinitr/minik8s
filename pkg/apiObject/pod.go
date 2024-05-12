@@ -9,6 +9,23 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
+// 参考：https://kubernetes.io/zh-cn/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
+//
+//	Pending（悬决）   Pod 已被 Kubernetes 系统接受，但尚未分配至 Node 或者尚未传送至 Containerd 进行创建.
+//	Running（运行中） Pod 已经绑定到了某个节点，出于创建或者重启 Pod 或者 Container 的过程中。
+//	Succeeded（成功） Pod 中的所有容器都已成功运行，且正常提供 Pod 功能。
+//	Failed（失败）    Pod 中的所有容器都已终止，并且至少有一个容器是因为失败终止。也就是说，容器以非 0 状态退出或者被系统终止。
+//	Unknown（未知）   因为某些原因无法取得 Pod 的状态。这种情况通常是因为与 Pod 所在主机通信失败。
+//	Terminating（需要终止） Pod 已被请求终止，但是该终止请求还没有被发送到底层容器。Pod 仍然在运行。
+const (
+	Pod_Pending     = "Pending"
+	Pod_Running     = "Running"
+	Pod_Successed   = "Successed"
+	Pod_Failed      = "Failed"
+	Pod_Unknown     = "Unknown"
+	Pod_Terminating = "Terminating"
+)
+
 type Pod struct {
 	// Pod对应的PodSandboxId，供查找podSandboxStatus时使用
 	PodSanboxId string
@@ -58,16 +75,6 @@ type HostPathVolumeSource struct {
 
 // PodStatus represents the status of a Pod.
 type PodStatus struct {
-	// 参考：https://kubernetes.io/zh-cn/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
-	// 	Pending（悬决）   Pod 已被 Kubernetes 系统接受，但有一个或者多个容器尚未创建亦未运行。
-	//                  此阶段包括等待 Pod 被调度的时间和通过网络下载镜像的时间。
-	// 	Running（运行中） Pod 已经绑定到了某个节点，Pod 中所有的容器都已被创建。
-	//	                至少有一个容器仍在运行，或者正处于启动或重启状态。
-	// 	Succeeded（成功） Pod 中的所有容器都已成功终止，并且不会再重启。
-	// 	Failed（失败）    Pod 中的所有容器都已终止，并且至少有一个容器是因为失败终止。
-	//	                也就是说，容器以非 0 状态退出或者被系统终止。
-	// 	Unknown（未知）   因为某些原因无法取得 Pod 的状态。这种情况通常是因为与 Pod 所在主机通信失败。
-	// 	Terminating（需要终止） Pod 已被请求终止，但是该终止请求还没有被发送到底层容器。Pod 仍然在运行。
 	Phase string `json:"conditions" yaml:"conditions"`
 
 	// Pod所在节点的IP地址
