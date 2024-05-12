@@ -65,12 +65,15 @@ func GetPodManager() PodManager {
 }
 
 func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
-	log.DebugLog("AddPod")
+	log.DebugLog("[PodManager] Arrived into AddPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; ok {
-		// 说明接受过这个请求了
+		log.ErrorLog("Pod has been built already")
 		return errors.New("pod message has been handled")
 	}
+
+	p.PodMapByUUID[uuid] = pod
+	pod.Status.Phase = apiObject.Pod_Building
 
 	go func() {
 		err := p.AddPodHandler(pod)
@@ -79,36 +82,107 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 		} else {
 			log.InfoLog("AddPodHandler success")
 		}
-		p.PodMapByUUID[uuid] = pod
+		pod.Status.Phase = apiObject.Pod_Succeeded
 	}()
 
 	return nil
 }
 
-func (*podManagerImpl) DeletePod(pod *apiObject.Pod) error {
+func (p *podManagerImpl) DeletePod(pod *apiObject.Pod) error {
+	log.DebugLog("[PodManager] Arrived into DeletePod")
+	uuid := pod.GetPodUUID()
+	if _, ok := p.PodMapByUUID[uuid]; !ok {
+		log.ErrorLog("Pod has been deleted already")
+		return errors.New("pod message has been handled")
+	}
+
+	go func() {
+		err := p.DeletePodHandler(pod)
+		if err != nil {
+			log.ErrorLog("DeletePodHandler error: " + err.Error())
+		} else {
+			log.InfoLog("DeletePodHandler success")
+		}
+		delete(p.PodMapByUUID, uuid)
+	}()
 	return nil
 }
 
-func (*podManagerImpl) StartPod(pod *apiObject.Pod) error {
+func (p *podManagerImpl) StartPod(pod *apiObject.Pod) error {
+	var msg string
+	log.DebugLog("[PodManager] Arrived into StartPod")
+	uuid := pod.GetPodUUID()
+	if _, ok := p.PodMapByUUID[uuid]; !ok {
+		msg = "Pod cann't be found"
+		log.ErrorLog(msg)
+		return errors.New(msg)
+	}
+
+	// 需要对Pod的不同状况进行处理
+	switch pod.Status.Phase {
+	case apiObject.Pod_Succeeded:
+		go func() {
+			err := p.StartPodHandler(pod)
+			if err != nil {
+				log.ErrorLog("StartPodHandler error: " + err.Error())
+			} else {
+				log.InfoLog("StartPodHandler success")
+			}
+			pod.Status.Phase = apiObject.Pod_Running
+		}()
+		return nil
+	case apiObject.Pod_Running:
+		log.DebugLog("Pod has been running")
+		return nil
+	case apiObject.Pod_Building:
+		msg = "Pod has not been built now! "
+	default:
+		msg = "Pod is not ready to start "
+	}
+
+	log.ErrorLog(msg)
+	return errors.New(msg)
+}
+
+func (p *podManagerImpl) StopPod(pod *apiObject.Pod) error {
+	log.DebugLog("[PodManager] Arrived into StopPod")
+	uuid := pod.GetPodUUID()
+	if _, ok := p.PodMapByUUID[uuid]; !ok {
+		msg := "Pod cann't be found"
+		log.ErrorLog(msg)
+		return errors.New(msg)
+	} else if pod.Status.Phase == apiObject.Pod_Running {
+		go func() {
+			err := p.StopPodHandler(pod)
+			if err != nil {
+				log.ErrorLog("StopPodHandler error: " + err.Error())
+			} else {
+				log.InfoLog("StopPodHandler success")
+			}
+			// 回退到所有容器都被创建好的状态
+			pod.Status.Phase = apiObject.Pod_Succeeded
+		}()
+		return nil
+	} else {
+		msg := "Status Error!"
+		log.ErrorLog(msg)
+		return errors.New(msg)
+	}
+
+}
+
+func (p *podManagerImpl) RestartPod(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (*podManagerImpl) StopPod(pod *apiObject.Pod) error {
+func (p *podManagerImpl) DeletePodByUUID(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (*podManagerImpl) RestartPod(pod *apiObject.Pod) error {
+func (p *podManagerImpl) RecreatePodContainer(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (*podManagerImpl) DeletePodByUUID(pod *apiObject.Pod) error {
-	return nil
-}
-
-func (*podManagerImpl) RecreatePodContainer(pod *apiObject.Pod) error {
-	return nil
-}
-
-func (*podManagerImpl) ExecPodContainer(pod *apiObject.Pod) error {
+func (p *podManagerImpl) ExecPodContainer(pod *apiObject.Pod) error {
 	return nil
 }

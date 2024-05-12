@@ -75,6 +75,7 @@ func (i *imageManagerImpl) ImageStatus(image *runtimeapi.ImageSpec, ifVerbose bo
 
 // 返回镜像的ImageRef(也就会ImageID)，如果有需要则需要从仓库中拉下镜像
 func (i *imageManagerImpl) PullImage(container *apiObject.Container, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
+
 	image, err := generateDefaultImageTag(container.Image)
 	if err != nil {
 		log.ErrorLog("generate imageRef failed")
@@ -108,7 +109,7 @@ func (i *imageManagerImpl) PullImage(container *apiObject.Container, sandboxConf
 	}
 	response, err := i.ImageClient.PullImage(context.Background(), request)
 	if err != nil {
-		log.ErrorLog("[RPC] Pull Image failed\n")
+		log.ErrorLog("[RPC] Pull Image failed: " + err.Error())
 		return "", nil
 	}
 
@@ -137,7 +138,7 @@ func generateDefaultImageTag(image string) (string, error) {
 		tag = "latest"
 	}
 
-	if len(digest) == 0 && len(tag) > 0 && !strings.HasPrefix(image, ":"+tag) {
+	if len(digest) == 0 && len(tag) > 0 && !strings.HasSuffix(image, ":"+tag) {
 		image = image + ":" + tag
 	}
 	return image, nil

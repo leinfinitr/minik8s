@@ -71,7 +71,7 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 		}
 
 		(*containers)[i].ContainerID = containerID
-		(*containers)[i].ContainerStatus = apiObject.Created
+		(*containers)[i].ContainerStatus = apiObject.Container_Created
 		message := fmt.Sprintf("container Id:%s is created ", containerID)
 		log.InfoLog(message)
 	}
@@ -111,7 +111,7 @@ func (r *RuntimeManager) StartPod(pod *apiObject.Pod) error {
 			log.ErrorLog(errorMsg)
 			return err
 		}
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Running
+		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Running
 
 	}
 	return nil
@@ -131,7 +131,7 @@ func (r *RuntimeManager) RestartPod(pod *apiObject.Pod) error {
 			return err
 		}
 
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Restart
+		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Restart
 	}
 
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
@@ -145,7 +145,7 @@ func (r *RuntimeManager) RestartPod(pod *apiObject.Pod) error {
 		}
 	}
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Running
+		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Running
 	}
 
 	return nil
@@ -164,7 +164,7 @@ func (r *RuntimeManager) StopPod(pod *apiObject.Pod) error {
 			return err
 		}
 
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Paused
+		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Paused
 	}
 	return nil
 }
@@ -181,7 +181,7 @@ func (r *RuntimeManager) DeletePod(pod *apiObject.Pod) error {
 			return err
 		}
 
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Removing
+		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Removing
 	}
 	return nil
 }
@@ -209,7 +209,7 @@ func (r *RuntimeManager) RecreatePodContainers(pod *apiObject.Pod) error {
 		}
 
 		(*containers)[i].ContainerID = containerID
-		(*containers)[i].ContainerStatus = apiObject.Created
+		(*containers)[i].ContainerStatus = apiObject.Container_Created
 		message := fmt.Sprintf("container Id:%s is created ", containerID)
 		log.InfoLog(message)
 	}
