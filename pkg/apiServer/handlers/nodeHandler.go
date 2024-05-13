@@ -61,6 +61,36 @@ func CreateNode(c *gin.Context) {
 	log.InfoLog("CreateNode: " + node.Metadata.Name)
 	c.JSON(config.HttpSuccessCode, "message: create node success")
 	//TODO: 将信息广播给所有node	
+	BroadcastNode(node)
+}
+
+func BroadcastNode(node apiObject.Node) {
+	res,err := etcdclient.EtcdStore.PrefixGet(config.EtcdPodPrefix)
+	if err != nil {
+		log.WarnLog("BroadcastNode: " + err.Error())
+		return
+	}
+	for _,v := range res {
+		var pod apiObject.Pod
+		err = json.Unmarshal([]byte(v),&pod)
+		if err != nil {
+			log.WarnLog("BroadcastNode: " + err.Error())
+			continue
+		}
+		if pod.Spec.NodeName == node.Metadata.Name {
+			pod.Status.Phase = apiObject.Pod_Running
+			resJson,err := json.Marshal(pod)
+			if err != nil {
+				log.WarnLog("BroadcastNode: " + err.Error())
+				continue
+			}
+			err = etcdclient.EtcdStore.Put(config.EtcdPodPrefix+"/"+pod.Metadata.Name,string(resJson))
+			if err != nil {
+				log.WarnLog("BroadcastNode: " + err.Error())
+				continue
+			}
+		}
+	}
 }
 
 // DeleteNodes 删除所有节点
