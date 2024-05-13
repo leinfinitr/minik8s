@@ -116,7 +116,7 @@ func (p *podManagerImpl) StartPod(pod *apiObject.Pod) error {
 	log.DebugLog("[PodManager] Arrived into StartPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; !ok {
-		msg = "Pod cann't be found"
+		msg = "pod cann't be found"
 		log.ErrorLog(msg)
 		return errors.New(msg)
 	}
@@ -138,9 +138,9 @@ func (p *podManagerImpl) StartPod(pod *apiObject.Pod) error {
 		log.DebugLog("Pod has been running")
 		return nil
 	case apiObject.Pod_Building:
-		msg = "Pod has not been built now! "
+		msg = "pod has not been built now! "
 	default:
-		msg = "Pod is not ready to start "
+		msg = "pod is not ready to start "
 	}
 
 	log.ErrorLog(msg)
@@ -151,7 +151,7 @@ func (p *podManagerImpl) StopPod(pod *apiObject.Pod) error {
 	log.DebugLog("[PodManager] Arrived into StopPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; !ok {
-		msg := "Pod cann't be found"
+		msg := "pod cann't be found"
 		log.ErrorLog(msg)
 		return errors.New(msg)
 	} else if pod.Status.Phase == apiObject.Pod_Running {
@@ -168,7 +168,7 @@ func (p *podManagerImpl) StopPod(pod *apiObject.Pod) error {
 		}()
 		return nil
 	} else {
-		msg := "Status Error!"
+		msg := "status error"
 		log.ErrorLog(msg)
 		return errors.New(msg)
 	}
@@ -179,7 +179,7 @@ func (p *podManagerImpl) RestartPod(pod *apiObject.Pod) error {
 	log.DebugLog("[PodManager] Arrived into RestartPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; !ok {
-		msg := "Pod cann't be found"
+		msg := "pod cann't be found"
 		log.ErrorLog(msg)
 		return errors.New(msg)
 	} else if pod.Status.Phase == apiObject.Pod_Succeeded || pod.Status.Phase == apiObject.Pod_Failed ||
@@ -198,7 +198,7 @@ func (p *podManagerImpl) RestartPod(pod *apiObject.Pod) error {
 		}()
 		return nil
 	} else {
-		msg := "Status Error!"
+		msg := "status error"
 		log.ErrorLog(msg)
 		return errors.New(msg)
 	}
