@@ -3,12 +3,16 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
-	httprequest "minik8s/internal/pkg/httpRequest"
-	"github.com/gin-gonic/gin"
+	"io"
+
+	// httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+	"net/http"
 	"sync"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Scheduler struct {
@@ -40,42 +44,57 @@ func NewScheduler() *Scheduler {
 	}
 }
 
-func (s *Scheduler) getNodesList() []apiObject.Pod {
+func (s *Scheduler) getNodesList() []apiObject.Node {
 	// 从apiServer获取所有的pod信息
 	url := s.ApiServerConfig.APIServerURL() + config.NodesURI
-	var podList []apiObject.Pod
-	resp, err := httprequest.GetObjMsg(url, &podList, "data")
+    var NodeList []apiObject.Node
+    resp, err := http.Get(url)
+    if err != nil {
+        log.ErrorLog("httprequest.GetObjMsg err:" + err.Error())
+        return nil
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != 200 {
+        log.ErrorLog("httprequest.GetObjMsg StatusCode:" + fmt.Sprint(resp.StatusCode))
+        return nil
+    }
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.DebugLog("httprequest.GetObjMsg err:" + err.Error())
+		log.ErrorLog("ioutil.ReadAll err:" + err.Error())
 		return nil
 	}
-	if resp.StatusCode != 200 {
-		log.DebugLog("httprequest.GetObjMsg StatusCode:" + fmt.Sprint(resp.StatusCode))
+	log.InfoLog("getNodesList body:" + string(bodyBytes))
+    bodyString := string(bodyBytes)
+	err = json.Unmarshal([]byte(bodyString), &NodeList)
+	if err != nil {
+		log.ErrorLog("json.Unmarshal err:" + err.Error())
 		return nil
 	}
-	return podList
+	fmt.Println(NodeList)
+    return NodeList
 }
 
-func (s *Scheduler) schedule(podList []apiObject.Pod) string {
+func (s *Scheduler) schedule(nodeList []apiObject.Node) string {
 	switch s.Policy {
 	case RoundRobin:
-		return s.roundRobinSched(podList)
+		return s.roundRobinSched(nodeList)
 	default:
-		return s.roundRobinSched(podList)
+		return s.roundRobinSched(nodeList)
 	}
 }
 
-func (s *Scheduler) roundRobinSched(podList []apiObject.Pod) string {
+func (s *Scheduler) roundRobinSched(nodeList []apiObject.Node) string {
 	lock.Lock()
 	defer lock.Unlock()
-	if glbcnt >= len(podList) {
+	if glbcnt >= len(nodeList) {
 		glbcnt = 0
 	}
-	pod := podList[glbcnt]
+	node := nodeList[glbcnt]
 	glbcnt++
-	data, err := json.Marshal(pod)
+	data, err := json.Marshal(node)
 	if err != nil {
-		log.DebugLog("json.Marshal err:" + err.Error())
+		log.ErrorLog("json.Marshal err:" + err.Error())
 		return ""
 	}
 	return string(data)
@@ -90,6 +109,6 @@ func Run() {
 		c.JSON(200, gin.H{"data": data})
 	})
 
-	log.DebugLog("Starting scheduler HTTP server on :8080")
+	log.InfoLog("Starting scheduler HTTP server on :7820")
 	r.Run(":"+config.SchedulerPort())
 }

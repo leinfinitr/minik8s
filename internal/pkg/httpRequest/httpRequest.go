@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+
 	// "fmt"
 	"net/http"
 )
@@ -64,6 +66,7 @@ func GetObjMsg(url string,obj interface{},kind string)(*http.Response,error){
 		return nil,err
 	}
 	var result map[string]interface{}
+	fmt.Println(res.Body)
 	decoder := json.NewDecoder(res.Body)
 	err2 := decoder.Decode(&result)
 	if err2 != nil {
