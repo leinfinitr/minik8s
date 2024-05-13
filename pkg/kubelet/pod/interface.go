@@ -194,9 +194,9 @@ func ScanPodStatus() {
 				log.DebugLog("Pod is in phase: " + phase)
 
 			}
-			// 间隔10s
-			time.Sleep(10 * time.Second)
 		}
+		// 间隔10s
+		time.Sleep(10 * time.Second)
 	}
 }
 
