@@ -3,10 +3,8 @@ package kubelet
 import (
 	"fmt"
 	"minik8s/pkg/apiObject"
-	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubelet/pod"
-	"minik8s/pkg/kubelet/status"
 	"minik8s/tools/host"
 	"minik8s/tools/log"
 	"minik8s/tools/netRequest"
@@ -23,8 +21,6 @@ type Kubelet struct {
 	// Iptables 存储每个pod的ip与UUID
 	Iptables map[string]string
 
-	// StatusManager 用来管理Node的状态信息
-	StatusManager status.StatusManager
 	// PodManager 用来管理Pod的信息
 	PodManager pod.PodManager
 
@@ -50,8 +46,8 @@ func (k *Kubelet) Run() {
 		_ = k.KubeletAPIRouter.Run(KubeletIP + ":" + fmt.Sprint(config.KubeletAPIPort))
 	}()
 
-	// 定时扫描每个容器的状态，当容器状态发生更改时向apiServer发送通知
-	go k.StatusManager.Run()
+	// 定时扫描pod的状态并进行相应的处理
+	go pod.ScanPodStatus()
 
 	// kubelet的主线程用于发送心跳
 	k.heartbeat()
@@ -174,28 +170,28 @@ func (k *Kubelet) registerKubeletAPI() {
 	// k.KubeletAPIRouter.GET(config.PodLogURI, handlers.GetPodLog)
 
 	// 获取指定Pod的状态
-	k.KubeletAPIRouter.GET(config.PodStatusURI, handlers.GetPodStatus)
+	k.KubeletAPIRouter.GET(config.PodStatusURI, pod.GetPodStatus)
 	// 更新Pod的状态
 	// k.KubeletAPIRouter.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
 
 	// 获取所有Pod
-	k.KubeletAPIRouter.GET(config.PodsURI, handlers.GetPods)
+	k.KubeletAPIRouter.GET(config.PodsURI, pod.GetPods)
 	// 创建Pod
 	k.KubeletAPIRouter.POST(config.PodsURI, pod.CreatePod)
 	// 删除所有Pod
-	k.KubeletAPIRouter.DELETE(config.PodsURI, handlers.DeletePods)
+	// k.KubeletAPIRouter.DELETE(config.PodsURI, handlers.DeletePods)
 
 	// 获取全局所有Pod
-	k.KubeletAPIRouter.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
+	// k.KubeletAPIRouter.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
 
 	// 获取全部Service
-	k.KubeletAPIRouter.GET(config.ServicesURI, handlers.GetServices)
+	// k.KubeletAPIRouter.GET(config.ServicesURI, handlers.GetServices)
 
 	// 获取指定Service
-	k.KubeletAPIRouter.GET(config.ServiceURI, handlers.GetService)
+	// k.KubeletAPIRouter.GET(config.ServiceURI, handlers.GetService)
 
 	// 获取指定Service的状态
-	k.KubeletAPIRouter.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
+	// k.KubeletAPIRouter.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
 }
 
 // heartbeat 向apiServer发送心跳
@@ -239,7 +235,6 @@ func (k *Kubelet) heartbeat() {
 func NewKubelet() *Kubelet {
 	return &Kubelet{
 		ApiServerConfig:  *config.NewAPIServerConfig(),
-		StatusManager:    status.GetStatusManager(config.APIServerURL()),
 		PodManager:       pod.GetPodManager(),
 		KubeletAPIRouter: gin.Default(),
 	}

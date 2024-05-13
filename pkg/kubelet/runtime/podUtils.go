@@ -19,12 +19,14 @@ type PodUtils interface {
 	DeletePod(pod *apiObject.Pod) error
 	RecreatePodContainer(pod *apiObject.Pod) error
 	ExecPodContainer(pod *apiObject.Pod) error
+	UpdateContainerStatus(container *apiObject.Container) error
 }
 
 // 在这里，我们创建一个Pod相当于是创建一个Sandbox，并且会创建Pod内部的所有容器
 func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	log.InfoLog("[RPC] Start CreatePod")
 
+	pod.Status.Phase = apiObject.Pod_Building
 	sandboxConfig, err := r.getPodSandBoxConfig(pod)
 	if err != nil {
 		log.ErrorLog("GetPodSandBoxConfig fail: " + err.Error())
@@ -76,6 +78,8 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 		log.InfoLog(message)
 	}
 
+	pod.Status.Phase = apiObject.Pod_Running
+
 	return nil
 }
 
@@ -114,12 +118,14 @@ func (r *RuntimeManager) StartPod(pod *apiObject.Pod) error {
 		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Running
 
 	}
+	pod.Status.Phase = apiObject.Pod_Running
 	return nil
 }
 
 func (r *RuntimeManager) RestartPod(pod *apiObject.Pod) error {
 	log.InfoLog("[RPC] Start RestartPod")
 	// 考虑到容器之间可能存在依赖，为了保证可用性，在暂停所有的容器后再重新启动
+	pod.Status.Phase = apiObject.Pod_Building
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
 		_, err := r.runtimeClient.StopContainer(context.Background(), &runtimeapi.StopContainerRequest{
 			ContainerId: pod.Spec.Containers[i].ContainerID,
@@ -130,8 +136,6 @@ func (r *RuntimeManager) RestartPod(pod *apiObject.Pod) error {
 			log.ErrorLog(errorMsg)
 			return err
 		}
-
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Restart
 	}
 
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
@@ -148,6 +152,7 @@ func (r *RuntimeManager) RestartPod(pod *apiObject.Pod) error {
 		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Running
 	}
 
+	pod.Status.Phase = apiObject.Pod_Running
 	return nil
 }
 
@@ -164,7 +169,6 @@ func (r *RuntimeManager) StopPod(pod *apiObject.Pod) error {
 			return err
 		}
 
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Paused
 	}
 	return nil
 }
@@ -180,8 +184,6 @@ func (r *RuntimeManager) DeletePod(pod *apiObject.Pod) error {
 			log.ErrorLog(errorMsg)
 			return err
 		}
-
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Removing
 	}
 	return nil
 }
@@ -218,6 +220,33 @@ func (r *RuntimeManager) RecreatePodContainers(pod *apiObject.Pod) error {
 
 // TODO:似乎是在某个容器内部执行某条指令，不知道在哪里会被用到
 func (r *RuntimeManager) ExecPodContainer(pod *apiObject.Pod) error {
+
+	return nil
+}
+
+func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container) error {
+	log.DebugLog("[RPC] Start UpdateContainerStatus, containerID : " + container.ContainerID)
+
+	response, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
+		ContainerId: container.ContainerID,
+		Verbose:     true, // change the verbose status
+	})
+
+	if err != nil {
+		log.ErrorLog("Container status from CRI failed" + err.Error())
+		container.ContainerStatus = apiObject.Container_Unknown
+		return err
+	}
+
+	switch response.Status.State {
+	case runtimeapi.ContainerState_CONTAINER_CREATED:
+		container.ContainerStatus = apiObject.Container_Created
+	case runtimeapi.ContainerState_CONTAINER_RUNNING:
+		container.ContainerStatus = apiObject.Container_Running
+	default:
+		container.ContainerStatus = apiObject.Container_Unknown
+		return errors.New("container status isn't normal")
+	}
 
 	return nil
 }
