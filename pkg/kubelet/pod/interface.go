@@ -6,13 +6,36 @@
 package pod
 
 import (
-	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+
+	"github.com/gin-gonic/gin"
 )
 
-func AddPod(c *gin.Context) {
+// 删除原有 pod 之后根据 pod 信息创建新的 pod
+func UpdatePod(c *gin.Context) {
+	var pod apiObject.Pod
+	err := c.ShouldBindJSON(&pod)
+	if err != nil {
+		log.ErrorLog("UpdatePod error: " + err.Error())
+	}
+	err = podManager.DeletePod(&pod)
+	if err != nil {
+		log.ErrorLog("UpdatePod error: " + err.Error())
+		c.JSON(config.HttpErrorCode, err.Error())
+	}
+
+	err = podManager.AddPod(&pod)
+	if err != nil {
+		log.ErrorLog("UpdatePod error: " + err.Error())
+		c.JSON(config.HttpErrorCode, err.Error())
+	} else {
+		c.JSON(200, "")
+	}
+}
+
+func CreatePod(c *gin.Context) {
 	var pod apiObject.Pod
 	err := c.ShouldBindJSON(&pod)
 	if err != nil {
@@ -21,6 +44,13 @@ func AddPod(c *gin.Context) {
 		return
 	}
 	err = podManager.AddPod(&pod)
+	if err != nil {
+		log.ErrorLog("AddPod error: " + err.Error())
+		c.JSON(config.HttpErrorCode, err.Error())
+		return
+	}
+
+	err = podManager.StartPodHandler(&pod)
 	if err != nil {
 		log.ErrorLog("AddPod error: " + err.Error())
 		c.JSON(config.HttpErrorCode, err.Error())

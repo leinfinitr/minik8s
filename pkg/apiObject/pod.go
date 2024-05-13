@@ -77,6 +77,7 @@ type HostPathVolumeSource struct {
 
 // PodStatus represents the status of a Pod.
 type PodStatus struct {
+	// Pod当前所处的阶段
 	Phase string `json:"conditions" yaml:"conditions"`
 
 	// Pod所在节点的IP地址

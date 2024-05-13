@@ -3,6 +3,7 @@ package kubelet
 import (
 	"fmt"
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubelet/pod"
 	"minik8s/pkg/kubelet/status"
@@ -129,8 +130,72 @@ func (k *Kubelet) registerNode() bool {
 func (k *Kubelet) registerKubeletAPI() {
 	log.DebugLog("register kubelet API")
 	// 该部分实现与 apiServer 中保持一致，每个方法的作用也参考 pkg/apiServer/apiServer.go 中的注释
+
+	// 获取所有节点
+	// k.KubeletAPIRouter.GET(config.NodesURI, handlers.GetNodes)
+	// 创建节点
+	// k.KubeletAPIRouter.POST(config.NodesURI, handlers.CreateNode)
+	// 删除所有节点
+	// k.KubeletAPIRouter.DELETE(config.NodesURI, handlers.DeleteNodes)
+
+	// 获取指定节点
+	// k.KubeletAPIRouter.GET(config.NodeURI, handlers.GetNode)
+	// 更新指定节点
+	// k.KubeletAPIRouter.PUT(config.NodeURI, handlers.UpdateNode)
+	// 部分更新指定节点
+	// k.KubeletAPIRouter.PATCH(config.NodeURI, handlers.UpdateNode)
+	// 删除指定节点
+	// k.KubeletAPIRouter.DELETE(config.NodeURI, handlers.DeleteNode)
+
+	// 获取指定节点的状态
+	// k.KubeletAPIRouter.GET(config.NodeStatusURI, handlers.GetNodeStatus)
+	// 更新指定节点的状态
+	// k.KubeletAPIRouter.PUT(config.NodeStatusURI, handlers.UpdateNodeStatus)
+	// 部分更新指定节点的状态
+	// k.KubeletAPIRouter.PATCH(config.NodeStatusURI, handlers.UpdateNodeStatus)
+
+	// 获取指定Pod
+	// k.KubeletAPIRouter.GET(config.PodURI, handlers.GetPod)
+	// 更新Pod
+	k.KubeletAPIRouter.PUT(config.PodURI, pod.UpdatePod)
+	// 部分更新Pod
+	// k.KubeletAPIRouter.PATCH(config.PodURI, handlers.UpdatePod)
+	// 删除指定Pod
 	k.KubeletAPIRouter.DELETE(config.PodURI, pod.DeletePod)
-	k.KubeletAPIRouter.POST(config.PodsURI, pod.AddPod)
+
+	// 获取指定Pod的EphemeralContainers
+	// k.KubeletAPIRouter.GET(config.PodEphemeralContainersURI, handlers.GetPodEphemeralContainers)
+	// 更新Pod的EphemeralContainers
+	// k.KubeletAPIRouter.PUT(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
+	// 部分更新Pod的EphemeralContainers
+	// k.KubeletAPIRouter.PATCH(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
+
+	// 获取指定Pod的日志
+	// k.KubeletAPIRouter.GET(config.PodLogURI, handlers.GetPodLog)
+
+	// 获取指定Pod的状态
+	k.KubeletAPIRouter.GET(config.PodStatusURI, handlers.GetPodStatus)
+	// 更新Pod的状态
+	// k.KubeletAPIRouter.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
+
+	// 获取所有Pod
+	k.KubeletAPIRouter.GET(config.PodsURI, handlers.GetPods)
+	// 创建Pod
+	k.KubeletAPIRouter.POST(config.PodsURI, pod.CreatePod)
+	// 删除所有Pod
+	k.KubeletAPIRouter.DELETE(config.PodsURI, handlers.DeletePods)
+
+	// 获取全局所有Pod
+	k.KubeletAPIRouter.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
+
+	// 获取全部Service
+	k.KubeletAPIRouter.GET(config.ServicesURI, handlers.GetServices)
+
+	// 获取指定Service
+	k.KubeletAPIRouter.GET(config.ServiceURI, handlers.GetService)
+
+	// 获取指定Service的状态
+	k.KubeletAPIRouter.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
 }
 
 // heartbeat 向apiServer发送心跳
