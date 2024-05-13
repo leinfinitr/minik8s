@@ -6,8 +6,8 @@ import (
 	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	"minik8s/pkg/scheduler/app"
 	"minik8s/pkg/config"
-	"minik8s/tools/host"
 	"minik8s/tools/log"
 	"os"
 	"strings"
@@ -255,7 +255,7 @@ func CreatePod(c *gin.Context) {
 	// TODO: 生成 UUID
 	pod.Metadata.UUID = uuid.New().String()
 	// TODO: 发送的时候筛选 node
-	pod.Spec.NodeName, _ = host.GetHostname()
+	pod.Spec.NodeName = scheduler.Run()
 	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
