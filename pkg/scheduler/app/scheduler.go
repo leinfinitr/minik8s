@@ -3,12 +3,16 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
-	httprequest "minik8s/internal/pkg/httpRequest"
-	"github.com/gin-gonic/gin"
+	"io"
+
+	// httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+	"net/http"
 	"sync"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Scheduler struct {
@@ -43,17 +47,32 @@ func NewScheduler() *Scheduler {
 func (s *Scheduler) getNodesList() []apiObject.Node {
 	// 从apiServer获取所有的pod信息
 	url := s.ApiServerConfig.APIServerURL() + config.NodesURI
-	var NodeList []apiObject.Node
-	resp, err := httprequest.GetObjMsg(url, &NodeList, "data")
+    var NodeList []apiObject.Node
+    resp, err := http.Get(url)
+    if err != nil {
+        log.ErrorLog("httprequest.GetObjMsg err:" + err.Error())
+        return nil
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != 200 {
+        log.ErrorLog("httprequest.GetObjMsg StatusCode:" + fmt.Sprint(resp.StatusCode))
+        return nil
+    }
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.ErrorLog("httprequest.GetObjMsg err:" + err.Error())
+		log.ErrorLog("ioutil.ReadAll err:" + err.Error())
 		return nil
 	}
-	if resp.StatusCode != 200 {
-		log.ErrorLog("httprequest.GetObjMsg StatusCode:" + fmt.Sprint(resp.StatusCode))
+	log.InfoLog("getNodesList body:" + string(bodyBytes))
+    bodyString := string(bodyBytes)
+	err = json.Unmarshal([]byte(bodyString), &NodeList)
+	if err != nil {
+		log.ErrorLog("json.Unmarshal err:" + err.Error())
 		return nil
 	}
-	return NodeList
+	fmt.Println(NodeList)
+    return NodeList
 }
 
 func (s *Scheduler) schedule(nodeList []apiObject.Node) string {
@@ -90,6 +109,6 @@ func Run() {
 		c.JSON(200, gin.H{"data": data})
 	})
 
-	log.ErrorLog("Starting scheduler HTTP server on :7820")
+	log.InfoLog("Starting scheduler HTTP server on :7820")
 	r.Run(":"+config.SchedulerPort())
 }

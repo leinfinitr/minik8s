@@ -262,14 +262,14 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	var nodeName string;
-	err = json.NewDecoder(resp.Body).Decode(&nodeName)
+	var node apiObject.Node
+	err = json.NewDecoder(resp.Body).Decode(&node)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	pod.Spec.NodeName = nodeName
+	pod.Spec.NodeName = node.Metadata.Name
 	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
