@@ -59,36 +59,22 @@ func UpdatePod(c *gin.Context) {
 	log.InfoLog("UpdatePod: " + namespace + "/" + name)
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
-	if err != nil {
-		log.WarnLog("UpdatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-	resJson, err := json.Marshal(res)
-	if err != nil {
+	if res==""||err!=nil {
 		log.WarnLog("UpdatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	pod := &apiObject.Pod{}
-	//解析json到pod
-	err = json.Unmarshal(resJson, pod)
-	if err != nil {
-		log.WarnLog("UpdatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-	reqPod := &apiObject.Pod{}
-	err = c.ShouldBindJSON(reqPod)
+	err = c.ShouldBindJSON(pod)
 	if err != nil {
 		log.WarnLog("UpdatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	//更新pod
-	UpdatePodProps(pod, reqPod)
+	UpdatePodProps(pod)
 	//将更新后的pod写入etcd
-	resJson, err = json.Marshal(pod)
+	resJson, err := json.Marshal(pod)
 	if err != nil {
 		log.WarnLog("UpdatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -274,6 +260,7 @@ func CreatePod(c *gin.Context) {
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
+	fmt.Println("createUri: ", createUri)
 	reaJson, err := json.Marshal(pod)
 	if err != nil {
 		log.WarnLog("CreatePod: " + err.Error())
@@ -320,6 +307,23 @@ func GetGlobalPods(c *gin.Context) {
 }
 
 // TODO: 更新Pod
-func UpdatePodProps(old *apiObject.Pod, new *apiObject.Pod) {
-
+func UpdatePodProps(new *apiObject.Pod) {
+	podBytes,err := json.Marshal(new)
+	if err != nil {
+		log.WarnLog("UpdatePodProps: " + err.Error())
+		return
+	}
+	updateUri := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodURI
+	updateUri = strings.Replace(updateUri, config.NameSpaceReplace, new.Metadata.Namespace, -1)
+	updateUri = strings.Replace(updateUri, config.NameReplace, new.Metadata.Name, -1)
+	resp, err := httprequest.PutObjMsg(updateUri, podBytes)
+	if err != nil {
+		log.WarnLog("UpdatePodProps: " + err.Error())
+	}
+	//将resp中更新的pod信息存入new
+	new = &apiObject.Pod{}
+	err = json.NewDecoder(resp.Body).Decode(new)
+	if err != nil {
+		log.WarnLog("UpdatePodProps: " + err.Error())
+	}
 }
