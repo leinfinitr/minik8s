@@ -6,9 +6,9 @@ import (
 	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
-	"minik8s/pkg/scheduler/app"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -255,7 +255,21 @@ func CreatePod(c *gin.Context) {
 	// TODO: 生成 UUID
 	pod.Metadata.UUID = uuid.New().String()
 	// TODO: 发送的时候筛选 node
-	pod.Spec.NodeName = scheduler.Run()
+	SchedUri := config.SchedulerLocalAddress + ":" + fmt.Sprint(config.SchedulerLocalPort) + config.SchedulerConfigPath
+	resp,err := http.Get(SchedUri)
+	if err != nil {
+		log.WarnLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	var nodeName string;
+	err = json.NewDecoder(resp.Body).Decode(&nodeName)
+	if err != nil {
+		log.WarnLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	pod.Spec.NodeName = nodeName
 	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
@@ -273,7 +287,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resp, err := httprequest.PostObjMsg(createUri, pod)
+	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message.\n" + err.Error())
 		os.Exit(1)
