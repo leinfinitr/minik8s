@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	httprequest "minik8s/internal/pkg/httpRequest"
+	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
@@ -32,6 +33,7 @@ func (s *Scheduler) schedRequest() string {
 }
 
 func NewScheduler() *Scheduler {
+	glbcnt = 0
 	return &Scheduler{
 		ApiServerConfig: config.NewAPIServerConfig(),
 		Policy:          RoundRobin,
@@ -79,12 +81,15 @@ func (s *Scheduler) roundRobinSched(podList []apiObject.Pod) string {
 	return string(data)
 }
 
-func Run() string {
+func Run() {
 	scheduler := NewScheduler()
-	data := scheduler.schedRequest()
-	if data == "" {
-		log.DebugLog("schedRequest data is nil")
-	}
-	log.DebugLog("schedRequest data:" + data)
-	return data
+	r := gin.Default()
+
+	r.GET(config.SchedulerPath(), func(c *gin.Context) {
+		data := scheduler.schedRequest()
+		c.JSON(200, gin.H{"data": data})
+	})
+
+	log.DebugLog("Starting scheduler HTTP server on :8080")
+	r.Run(":"+config.SchedulerPort())
 }
