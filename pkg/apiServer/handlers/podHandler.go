@@ -259,8 +259,8 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 	key := config.EtcdPodPrefix + "/" + pod.Metadata.Namespace + "/" + pod.Metadata.Name
-	response, err := etcdclient.EtcdStore.Get(key)
-	if err != nil {
+	response, _ := etcdclient.EtcdStore.Get(key)
+	if response != "" {
 		log.WarnLog("CreatePod: Pod already exists" + response)
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
