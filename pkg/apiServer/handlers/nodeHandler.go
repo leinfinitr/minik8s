@@ -15,7 +15,24 @@ var nodes = make(map[string]apiObject.Node)
 // GetNodes 获取所有节点
 func GetNodes(c *gin.Context) {
 	log.InfoLog("GetNodes")
-
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+	if err != nil|| res == nil {
+		log.WarnLog("GetNodes: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
+	var nodes []apiObject.Node
+	for _, v := range res {
+		var node apiObject.Node
+		err = json.Unmarshal([]byte(v), &node)
+		if err != nil {
+			log.WarnLog("GetNodes: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		nodes = append(nodes, node)
+	}
+	
 	c.JSON(config.HttpSuccessCode, nodes)
 }
 
