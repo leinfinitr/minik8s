@@ -60,7 +60,7 @@ func CreateNode(c *gin.Context) {
 	// nodes[node.Metadata.Name] = node
 	log.InfoLog("CreateNode: " + node.Metadata.Name)
 	c.JSON(config.HttpSuccessCode, "message: create node success")
-	//TODO: 将信息广播给所有node
+	//TODO: 将信息广播给所有node	
 }
 
 // DeleteNodes 删除所有节点
