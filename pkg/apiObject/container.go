@@ -3,17 +3,14 @@
 
 package apiObject
 
-type ContainerStatus string
+type ContainerStatus int
 
 const (
-	Container_Uncreated ContainerStatus = "uncreated"
-	Container_Created   ContainerStatus = "created"
-	Container_Running   ContainerStatus = "running"
-	Container_Paused    ContainerStatus = "paused"
-	Container_Restart   ContainerStatus = "restarting"
-	Container_Removing  ContainerStatus = "removing"
-	Container_Exited    ContainerStatus = "exited"
-	Container_Dead      ContainerStatus = "dead"
+	Container_Uncreated ContainerStatus = -1
+	Container_Created   ContainerStatus = 0
+	Container_Running   ContainerStatus = 1
+	Container_Exited    ContainerStatus = 2
+	Container_Unknown   ContainerStatus = 3
 )
 
 type Container struct {
