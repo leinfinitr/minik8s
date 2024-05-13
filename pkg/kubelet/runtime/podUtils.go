@@ -19,7 +19,7 @@ type PodUtils interface {
 	DeletePod(pod *apiObject.Pod) error
 	RecreatePodContainer(pod *apiObject.Pod) error
 	ExecPodContainer(pod *apiObject.Pod) error
-	UpdateContainerStatus(container *apiObject.Container) error
+	UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error
 }
 
 // 在这里，我们创建一个Pod相当于是创建一个Sandbox，并且会创建Pod内部的所有容器
@@ -78,7 +78,7 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 		log.InfoLog(message)
 	}
 
-	pod.Status.Phase = apiObject.Pod_Running
+	pod.Status.Phase = apiObject.Pod_Succeeded
 
 	return nil
 }
@@ -224,9 +224,7 @@ func (r *RuntimeManager) ExecPodContainer(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container) error {
-	log.DebugLog("[RPC] Start UpdateContainerStatus, containerID : " + container.ContainerID)
-
+func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error {
 	response, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
 		ContainerId: container.ContainerID,
 		Verbose:     true, // change the verbose status
@@ -241,10 +239,12 @@ func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container) e
 	switch response.Status.State {
 	case runtimeapi.ContainerState_CONTAINER_CREATED:
 		container.ContainerStatus = apiObject.Container_Created
+		pod.Status.Phase = apiObject.Pod_Succeeded
 	case runtimeapi.ContainerState_CONTAINER_RUNNING:
 		container.ContainerStatus = apiObject.Container_Running
 	default:
 		container.ContainerStatus = apiObject.Container_Unknown
+		pod.Status.Phase = apiObject.Pod_Failed
 		return errors.New("container status isn't normal")
 	}
 

@@ -36,7 +36,7 @@ type podManagerImpl struct {
 	DeletePodHandler             func(pod *apiObject.Pod) error
 	RecreateContainerHandler     func(pod *apiObject.Pod) error
 	ExecPodHandler               func(pod *apiObject.Pod) error
-	UpdateContainerStatusHandler func(container *apiObject.Container) error
+	UpdateContainerStatusHandler func(container *apiObject.Container, pod *apiObject.Pod) error
 }
 
 /* Singleton pattern */
@@ -218,25 +218,16 @@ func (p *podManagerImpl) ExecPodContainer(pod *apiObject.Pod) error {
 }
 
 func (p *podManagerImpl) UpdatePodStatus() error {
-	log.DebugLog("[PodManager]: Arrived into UpdatePodStatus")
-
 	for _, pod := range p.PodMapByUUID {
 		if pod.Status.Phase == apiObject.Pod_Pending || pod.Status.Phase == apiObject.Pod_Building {
 			continue
 		}
-		pod_ok := true
 		for j := 0; j < len(pod.Spec.Containers); j += 1 {
 			container := &pod.Spec.Containers[j]
-			err := p.UpdateContainerStatusHandler(container)
+			err := p.UpdateContainerStatusHandler(container, pod)
 			if err != nil {
 				log.ErrorLog("Get status failed in container ID : " + container.ContainerID)
-				pod_ok = false
 			}
-		}
-		if pod_ok {
-			pod.Status.Phase = apiObject.Pod_Running
-		} else {
-			pod.Status.Phase = apiObject.Pod_Failed
 		}
 	}
 
