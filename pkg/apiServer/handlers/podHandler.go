@@ -59,7 +59,7 @@ func UpdatePod(c *gin.Context) {
 	log.InfoLog("UpdatePod: " + namespace + "/" + name)
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
-	if res==""||err!=nil {
+	if res == "" || err != nil {
 		log.ErrorLog("UpdatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -256,7 +256,7 @@ func CreatePod(c *gin.Context) {
 	pod.Metadata.UUID = uuid.New().String()
 	// TODO: 发送的时候筛选 node
 	SchedUri := config.SchedulerURL() + config.SchedulerConfigPath
-	resp,err := http.Get(SchedUri)
+	resp, err := http.Get(SchedUri)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -270,7 +270,12 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 	pod.Spec.NodeName = node.Metadata.Name
-	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
+	// url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
+	//TODO选取对应node的ip
+	// url := node.Status.Addresses + ":" + fmt.Sprint(config.KubeletAPIPort)
+	addresses := node.Status.Addresses
+	address := addresses[0].Address
+	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
@@ -322,7 +327,7 @@ func GetGlobalPods(c *gin.Context) {
 
 // TODO: 更新Pod
 func UpdatePodProps(new *apiObject.Pod) {
-	podBytes,err := json.Marshal(new)
+	podBytes, err := json.Marshal(new)
 	if err != nil {
 		log.ErrorLog("UpdatePodProps: " + err.Error())
 		return
