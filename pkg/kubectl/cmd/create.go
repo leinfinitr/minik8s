@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	httprequest "minik8s/internal/pkg/httpRequest"
+	"github.com/spf13/cobra"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
+	"minik8s/tools/httpRequest"
 	"os"
 	"strings"
-	"github.com/spf13/cobra"
 )
 
 var createCmd = &cobra.Command{
@@ -41,10 +41,10 @@ func CreatePod(name string, image string, namespace string) {
 		},
 	}
 
-	url := config.APIServerUrl()+config.PodsURI
-	url = strings.Replace(url,config.NameSpaceReplace,namespace,-1)
+	url := config.APIServerURL() + config.PodsURI
+	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	resp, err := httprequest.PostObjMsg(url, pod)
-	fmt.Println("Post",url)
+	fmt.Println("Post", url)
 	if err != nil {
 		fmt.Println("Error: Could not create the pod.")
 		os.Exit(1)
@@ -75,7 +75,7 @@ func createHandler(cmd *cobra.Command, args []string) {
 		if namespace == "" {
 			namespace = "default" // Set a default namespace if not specified
 		}
-	
+
 		CreatePod(name, image, namespace)
 	default:
 		fmt.Println("Error: The resource type specified is not supported.")

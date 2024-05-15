@@ -20,5 +20,14 @@ type ObjectMeta struct {
 	// 对象的注解
 	Annotations map[string]string `json:"annotations" yaml:"annotations"`
 	// 此对象在时间和空间上唯一的值。它通常由成功创建资源时的服务器生成，并且不允许在PUT上的更改操作。
-	UID string `json:"uid" yaml:"uid"`
+	UUID string `json:"uid" yaml:"uid"`
 }
+
+const (
+	PodType         = "Pod"
+	ServiceType     = "Service"
+	ReplicaSetType  = "ReplicaSet"
+	NodeType        = "Node"
+)
+
+var AllTypeList = []string{PodType, ServiceType, ReplicaSetType, NodeType}

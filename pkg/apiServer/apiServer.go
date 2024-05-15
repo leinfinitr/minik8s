@@ -5,9 +5,10 @@ package apiServer
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ApiServer struct {
@@ -98,6 +99,15 @@ func (a *ApiServer) Register() {
 	// 获取全局所有Pod
 	a.Router.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
 
+	// 获取全部Service
+	a.Router.GET(config.ServicesURI, handlers.GetServices)
+
+	// 获取指定Service
+	a.Router.GET(config.ServiceURI, handlers.GetService)
+
+	// 获取指定Service的状态
+	a.Router.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
+
 }
 
 // 函数-------------------------------------------------------------
@@ -105,8 +115,8 @@ func (a *ApiServer) Register() {
 // NewApiServer 使用配置文件创建并返回一个新的ApiServer
 func NewApiServer() *ApiServer {
 	return &ApiServer{
-		Address: config.LocalServerAddress,
-		Port:    config.LocalServerPort,
+		Address: config.APIServerLocalAddress,
+		Port:    config.APIServerLocalPort,
 		Router:  gin.Default(),
 	}
 }

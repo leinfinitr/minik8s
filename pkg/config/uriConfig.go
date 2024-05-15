@@ -1,5 +1,7 @@
 package config
 
+import "minik8s/pkg/apiObject"
+
 const (
 	NodesURI      = "/api/v1/nodes"
 	NodeURI       = "/api/v1/nodes/:name"
@@ -11,9 +13,23 @@ const (
 	PodStatusURI              = "/api/v1/namespaces/:namespace/pods/:name/status"
 	PodsURI                   = "/api/v1/namespaces/:namespace/pods"
 	PodsGlobalURI             = "/api/v1/pods"
+
+	ServicesURI      = "/api/v1/namespaces/:namespace/services"
+	ServiceURI       = "/api/v1/namespaces/:namespace/services/:name"
+	ServiceStatusURI = "/api/v1/namespaces/:namespace/services/:name/status"
 )
 
 const (
 	NameSpaceReplace = ":namespace"
 	NameReplace      = ":name"
 )
+
+var UriMapping = map[string]string{
+	apiObject.NodeType: NodesURI,
+	apiObject.PodType:  PodsURI,
+}
+
+var UriSpecMapping = map[string]string{
+	apiObject.NodeType: NodeURI,
+	apiObject.PodType:  PodURI,
+}

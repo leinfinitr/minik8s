@@ -3,7 +3,21 @@
 
 package apiObject
 
+type ContainerStatus int
+
+const (
+	ContainerUncreated ContainerStatus = -1
+	ContainerCreated   ContainerStatus = 0
+	ContainerRunning   ContainerStatus = 1
+	ContainerExited    ContainerStatus = 2
+	ContainerUnknown   ContainerStatus = 3
+)
+
 type Container struct {
+	// 容器的ID
+	ContainerID string
+	// 容器当前状态
+	ContainerStatus ContainerStatus
 	// 容器的名称
 	Name string `json:"name" yaml:"name"`
 	// 容器的镜像
@@ -114,8 +128,6 @@ type Handler struct {
 	Exec *ExecAction `json:"exec" yaml:"exec"`
 	// HTTP处理器
 	HTTPGet *HTTPGetAction `json:"httpGet" yaml:"httpGet"`
-	// TCP处理器
-	// TCPSocket *TCPSocketAction `json:"tcpSocket" yaml:"tcpSocket"`
 }
 
 type ExecAction struct {
