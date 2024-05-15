@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
+	"minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"net/http"
 	"os"

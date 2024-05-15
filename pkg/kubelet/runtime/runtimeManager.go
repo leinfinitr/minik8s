@@ -4,21 +4,19 @@ import (
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
 
-	"minik8s/pkg/kubelet/runtime/image"
-
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 type RuntimeManager struct {
 	runtimeClient runtimeapi.RuntimeServiceClient
-	imageManager  image.ImageManager
+	imageManager  ImageManager
 }
 
 /* Singleton pattern */
 var runtimeManager *RuntimeManager = nil
 
 func GetRuntimeManager() *RuntimeManager {
-	cnn, ctx, cancel, err := image.GetCnn(config.ContainerRuntimeEndpoint)
+	cnn, ctx, cancel, err := GetCnn(config.ContainerRuntimeEndpoint)
 	if err != nil {
 		return nil
 	}
@@ -28,7 +26,7 @@ func GetRuntimeManager() *RuntimeManager {
 	if runtimeManager == nil {
 		runtimeManager = &RuntimeManager{
 			runtimeClient: runtimeapi.NewRuntimeServiceClient(cnn),
-			imageManager:  image.GetImageManager(),
+			imageManager:  GetImageManager(),
 		}
 	}
 

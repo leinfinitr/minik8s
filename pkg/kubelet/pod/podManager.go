@@ -75,16 +75,16 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 	}
 
 	p.PodMapByUUID[uuid] = pod
-	pod.Status.Phase = apiObject.Pod_Building
+	pod.Status.Phase = apiObject.PodBuilding
 
 	go func() {
 		err := p.AddPodHandler(pod)
 		if err != nil {
 			log.ErrorLog("AddPodHandler error: " + err.Error())
-			pod.Status.Phase = apiObject.Pod_Unknown
+			pod.Status.Phase = apiObject.PodUnknown
 		} else {
 			log.InfoLog("AddPodHandler success")
-			pod.Status.Phase = apiObject.Pod_Succeeded
+			pod.Status.Phase = apiObject.PodSucceeded
 		}
 	}()
 
@@ -116,14 +116,14 @@ func (p *podManagerImpl) StartPod(pod *apiObject.Pod) error {
 	log.DebugLog("[PodManager] Arrived into StartPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; !ok {
-		msg = "pod cann't be found"
+		msg = "pod can't be found"
 		log.ErrorLog(msg)
 		return errors.New(msg)
 	}
 
 	// 需要对Pod的不同状况进行处理
 	switch pod.Status.Phase {
-	case apiObject.Pod_Succeeded:
+	case apiObject.PodSucceeded:
 		go func() {
 			err := p.StartPodHandler(pod)
 			if err != nil {
@@ -131,13 +131,13 @@ func (p *podManagerImpl) StartPod(pod *apiObject.Pod) error {
 			} else {
 				log.InfoLog("StartPodHandler success")
 			}
-			pod.Status.Phase = apiObject.Pod_Running
+			pod.Status.Phase = apiObject.PodRunning
 		}()
 		return nil
-	case apiObject.Pod_Running:
+	case apiObject.PodRunning:
 		log.DebugLog("Pod has been running")
 		return nil
-	case apiObject.Pod_Building:
+	case apiObject.PodBuilding:
 		msg = "pod has not been built now! "
 	default:
 		msg = "pod is not ready to start "
@@ -151,19 +151,19 @@ func (p *podManagerImpl) StopPod(pod *apiObject.Pod) error {
 	log.DebugLog("[PodManager] Arrived into StopPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; !ok {
-		msg := "pod cann't be found"
+		msg := "pod can't be found"
 		log.ErrorLog(msg)
 		return errors.New(msg)
-	} else if pod.Status.Phase == apiObject.Pod_Running {
+	} else if pod.Status.Phase == apiObject.PodRunning {
 		go func() {
 			err := p.StopPodHandler(pod)
 			if err != nil {
 				log.ErrorLog("StopPodHandler error: " + err.Error())
-				pod.Status.Phase = apiObject.Pod_Unknown
+				pod.Status.Phase = apiObject.PodUnknown
 			} else {
 				log.InfoLog("StopPodHandler success")
 				// 回退到所有容器都被创建好的状态
-				pod.Status.Phase = apiObject.Pod_Succeeded
+				pod.Status.Phase = apiObject.PodSucceeded
 			}
 		}()
 		return nil
@@ -179,22 +179,22 @@ func (p *podManagerImpl) RestartPod(pod *apiObject.Pod) error {
 	log.DebugLog("[PodManager] Arrived into RestartPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; !ok {
-		msg := "pod cann't be found"
+		msg := "pod can't be found"
 		log.ErrorLog(msg)
 		return errors.New(msg)
-	} else if pod.Status.Phase == apiObject.Pod_Succeeded || pod.Status.Phase == apiObject.Pod_Failed ||
-		pod.Status.Phase == apiObject.Pod_Running {
+	} else if pod.Status.Phase == apiObject.PodSucceeded || pod.Status.Phase == apiObject.PodFailed ||
+		pod.Status.Phase == apiObject.PodRunning {
 		go func() {
 			err := p.StopPodHandler(pod)
 			if err != nil {
 				log.ErrorLog("RestartPodHandler error: " + err.Error())
-				pod.Status.Phase = apiObject.Pod_Unknown
+				pod.Status.Phase = apiObject.PodUnknown
 			} else {
 				log.InfoLog("RestartPodHandler success")
-				pod.Status.Phase = apiObject.Pod_Running
+				pod.Status.Phase = apiObject.PodRunning
 			}
 			// 回退到所有容器都被创建好的状态
-			pod.Status.Phase = apiObject.Pod_Succeeded
+			pod.Status.Phase = apiObject.PodSucceeded
 		}()
 		return nil
 	} else {
@@ -219,7 +219,7 @@ func (p *podManagerImpl) ExecPodContainer(pod *apiObject.Pod) error {
 
 func (p *podManagerImpl) UpdatePodStatus() error {
 	for _, pod := range p.PodMapByUUID {
-		if pod.Status.Phase == apiObject.Pod_Pending || pod.Status.Phase == apiObject.Pod_Building {
+		if pod.Status.Phase == apiObject.PodPending || pod.Status.Phase == apiObject.PodBuilding {
 			continue
 		}
 		for j := 0; j < len(pod.Spec.Containers); j += 1 {

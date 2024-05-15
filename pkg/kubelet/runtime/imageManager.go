@@ -1,4 +1,4 @@
-package image
+package runtime
 
 import (
 	"context"
@@ -17,8 +17,7 @@ import (
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
-/* imageManager 调用 借助docker来实现对于容器镜像的管理
- */
+// ImageManager 借助docker来实现对于容器镜像的管理
 type ImageManager interface {
 	PullImage(container *apiObject.Container, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error)
 	ImageStatus(image *runtimeapi.ImageSpec, ifVerbose bool) (string, error)
@@ -52,7 +51,7 @@ func GetImageManager() ImageManager {
 	return imageManager
 }
 
-// 查找镜像当前的状态，如果镜像已经在本地，则返回镜像的ID，否则返回空字符串
+// ImageStatus 查找镜像当前的状态，如果镜像已经在本地，则返回镜像的ID，否则返回空字符串
 func (i *imageManagerImpl) ImageStatus(image *runtimeapi.ImageSpec, ifVerbose bool) (string, error) {
 	request := &runtimeapi.ImageStatusRequest{
 		Image:   image,
@@ -73,7 +72,7 @@ func (i *imageManagerImpl) ImageStatus(image *runtimeapi.ImageSpec, ifVerbose bo
 	return response.Image.Id, nil
 }
 
-// 返回镜像的ImageRef(也就会ImageID)，如果有需要则需要从仓库中拉下镜像
+// PullImage 返回镜像的ImageRef(也就会ImageID)，如果有需要则需要从仓库中拉下镜像
 func (i *imageManagerImpl) PullImage(container *apiObject.Container, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
 
 	image, err := generateDefaultImageTag(container.Image)
@@ -175,7 +174,7 @@ func GetCnn(endpoint string) (*grpc.ClientConn, *context.Context, context.Cancel
 	conn, err := grpc.DialContext(ctx, addr, dialOpts...)
 	if err != nil {
 		log.WarnLog("Connect remote runtime failed" + "address:" + addr)
-		return nil, nil, nil, err
+		return nil, nil, cancel, err
 	}
 
 	return conn, &ctx, cancel, nil

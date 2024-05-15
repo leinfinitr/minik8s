@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 删除原有 pod 之后根据 pod 信息创建新的 pod
+// UpdatePod 删除原有 pod 之后根据 pod 信息创建新的 pod
 func UpdatePod(c *gin.Context) {
 	var pod apiObject.Pod
 	err := c.ShouldBindJSON(&pod)
@@ -186,9 +186,14 @@ func ScanPodStatus() {
 			// 根据每个pod当前所处的阶段进行相应的操作
 			phase := pod.Status.Phase
 			switch phase {
-			case apiObject.Pod_Succeeded:
+			case apiObject.PodSucceeded:
 				// 如果 pod 处于 Succeeded 阶段，则运行 pod
-				go podManager.StartPod(pod)
+				go func() {
+					err := podManager.StartPod(pod)
+					if err != nil {
+						log.ErrorLog("StartPod error: " + err.Error())
+					}
+				}()
 				// 其余情况暂不处理
 			default:
 				log.DebugLog("Pod is in phase: " + phase)

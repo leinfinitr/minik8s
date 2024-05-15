@@ -22,11 +22,11 @@ type PodUtils interface {
 	UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error
 }
 
-// 在这里，我们创建一个Pod相当于是创建一个Sandbox，并且会创建Pod内部的所有容器
+// CreatePod 在这里，我们创建一个Pod相当于是创建一个Sandbox，并且会创建Pod内部的所有容器
 func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	log.InfoLog("[RPC] Start CreatePod")
 
-	pod.Status.Phase = apiObject.Pod_Building
+	pod.Status.Phase = apiObject.PodBuilding
 	sandboxConfig, err := r.getPodSandBoxConfig(pod)
 	if err != nil {
 		log.ErrorLog("GetPodSandBoxConfig fail: " + err.Error())
@@ -42,11 +42,11 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	log.DebugLog(request.String())
 	response, err := r.runtimeClient.RunPodSandbox(context.Background(), request)
 	if err != nil {
-		log.ErrorLog("Create Podsandbox fail " + err.Error())
+		log.ErrorLog("Create Pod sandbox fail " + err.Error())
 		return nil
 	}
 
-	log.DebugLog("Create Podsandbox Success")
+	log.DebugLog("Create Pod sandbox Success")
 
 	if response.PodSandboxId == "" {
 		errorMessage := "PodSandboxId set for pod sandbox is failed "
@@ -55,7 +55,7 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	}
 	message := fmt.Sprintf("PodSandboxId is set successfullly, Is : " + response.PodSandboxId)
 	log.InfoLog(message)
-	pod.PodSanboxId = response.PodSandboxId
+	pod.PodSandboxId = response.PodSandboxId
 
 	// 调用接口去创建Pod内部的所有容器
 	containers := &pod.Spec.Containers
@@ -66,24 +66,24 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 			return err
 		}
 
-		containerID, err := r.CreateContainers(pod.PodSanboxId, containerConfig, sandboxConfig)
+		containerID, err := r.CreateContainers(pod.PodSandboxId, containerConfig, sandboxConfig)
 		if err != nil {
 			log.ErrorLog("Create containers failed")
 			return err
 		}
 
 		(*containers)[i].ContainerID = containerID
-		(*containers)[i].ContainerStatus = apiObject.Container_Created
+		(*containers)[i].ContainerStatus = apiObject.ContainerCreated
 		message := fmt.Sprintf("container Id:%s is created ", containerID)
 		log.InfoLog(message)
 	}
 
-	pod.Status.Phase = apiObject.Pod_Succeeded
+	pod.Status.Phase = apiObject.PodSucceeded
 
 	return nil
 }
 
-// 创建指定配置文件的container
+// CreateContainers 创建指定配置文件的container
 func (r *RuntimeManager) CreateContainers(podSandBoxID string, containerConfig *runtimeapi.ContainerConfig,
 	sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
 	log.InfoLog("[RPC] Start CreateContainers")
@@ -103,7 +103,7 @@ func (r *RuntimeManager) CreateContainers(podSandBoxID string, containerConfig *
 	return response.ContainerId, nil
 }
 
-// 运行该Pod内部的所有容器
+// StartPod 运行该Pod内部的所有容器
 func (r *RuntimeManager) StartPod(pod *apiObject.Pod) error {
 	log.InfoLog("[RPC] Start StartPod")
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
@@ -115,17 +115,17 @@ func (r *RuntimeManager) StartPod(pod *apiObject.Pod) error {
 			log.ErrorLog(errorMsg)
 			return err
 		}
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Running
+		pod.Spec.Containers[i].ContainerStatus = apiObject.ContainerRunning
 
 	}
-	pod.Status.Phase = apiObject.Pod_Running
+	pod.Status.Phase = apiObject.PodRunning
 	return nil
 }
 
 func (r *RuntimeManager) RestartPod(pod *apiObject.Pod) error {
 	log.InfoLog("[RPC] Start RestartPod")
 	// 考虑到容器之间可能存在依赖，为了保证可用性，在暂停所有的容器后再重新启动
-	pod.Status.Phase = apiObject.Pod_Building
+	pod.Status.Phase = apiObject.PodBuilding
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
 		_, err := r.runtimeClient.StopContainer(context.Background(), &runtimeapi.StopContainerRequest{
 			ContainerId: pod.Spec.Containers[i].ContainerID,
@@ -149,10 +149,10 @@ func (r *RuntimeManager) RestartPod(pod *apiObject.Pod) error {
 		}
 	}
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
-		pod.Spec.Containers[i].ContainerStatus = apiObject.Container_Running
+		pod.Spec.Containers[i].ContainerStatus = apiObject.ContainerRunning
 	}
 
-	pod.Status.Phase = apiObject.Pod_Running
+	pod.Status.Phase = apiObject.PodRunning
 	return nil
 }
 
@@ -188,7 +188,7 @@ func (r *RuntimeManager) DeletePod(pod *apiObject.Pod) error {
 	return nil
 }
 
-// 此处保留所有podSandbox，创建pod内部所有的容器
+// RecreatePodContainers 此处保留所有podSandbox，创建pod内部所有的容器
 func (r *RuntimeManager) RecreatePodContainers(pod *apiObject.Pod) error {
 	log.InfoLog("[RPC] Start RecreatePodContainers")
 
@@ -204,21 +204,21 @@ func (r *RuntimeManager) RecreatePodContainers(pod *apiObject.Pod) error {
 			return err
 		}
 
-		containerID, err := r.CreateContainers(pod.PodSanboxId, containerConfig, sandboxConfig)
+		containerID, err := r.CreateContainers(pod.PodSandboxId, containerConfig, sandboxConfig)
 		if err != nil {
 			log.ErrorLog("Create containers failed")
 			return err
 		}
 
 		(*containers)[i].ContainerID = containerID
-		(*containers)[i].ContainerStatus = apiObject.Container_Created
+		(*containers)[i].ContainerStatus = apiObject.ContainerCreated
 		message := fmt.Sprintf("container Id:%s is created ", containerID)
 		log.InfoLog(message)
 	}
 	return nil
 }
 
-// TODO:似乎是在某个容器内部执行某条指令，不知道在哪里会被用到
+// TODO: 似乎是在某个容器内部执行某条指令，不知道在哪里会被用到
 func (r *RuntimeManager) ExecPodContainer(pod *apiObject.Pod) error {
 
 	return nil
@@ -232,19 +232,19 @@ func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container, p
 
 	if err != nil {
 		log.ErrorLog("Container status from CRI failed" + err.Error())
-		container.ContainerStatus = apiObject.Container_Unknown
+		container.ContainerStatus = apiObject.ContainerUnknown
 		return err
 	}
 
 	switch response.Status.State {
 	case runtimeapi.ContainerState_CONTAINER_CREATED:
-		container.ContainerStatus = apiObject.Container_Created
-		pod.Status.Phase = apiObject.Pod_Succeeded
+		container.ContainerStatus = apiObject.ContainerCreated
+		pod.Status.Phase = apiObject.PodSucceeded
 	case runtimeapi.ContainerState_CONTAINER_RUNNING:
-		container.ContainerStatus = apiObject.Container_Running
+		container.ContainerStatus = apiObject.ContainerRunning
 	default:
-		container.ContainerStatus = apiObject.Container_Unknown
-		pod.Status.Phase = apiObject.Pod_Failed
+		container.ContainerStatus = apiObject.ContainerUnknown
+		pod.Status.Phase = apiObject.PodFailed
 		return errors.New("container status isn't normal")
 	}
 

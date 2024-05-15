@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"fmt"
-	httprequest "minik8s/internal/pkg/httpRequest"
-	stringops "minik8s/internal/pkg/stringops"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	"os"
-	"strings"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/httpRequest"
+	"minik8s/tools/stringops"
+	"os"
+	"strings"
 )
 
 var getCmd = &cobra.Command{
@@ -36,7 +36,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 	if len(args) == 1 {
 		if resourceType == apiObject.NodeType {
 			url := config.APIServerURL() + config.PodsURI
-			nodes := []apiObject.Node{}
+			var nodes []apiObject.Node
 			code, err := httprequest.GetObjMsg(url, &nodes, "data")
 			if err != nil {
 				fmt.Println("Error: ", err)
@@ -109,7 +109,7 @@ func printNodeResult(node apiObject.Node, writer table.Writer) {
 func getPodHandler(namespace string) {
 	url := config.APIServerURL() + config.PodsURI
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
-	pods := []apiObject.Pod{}
+	var pods []apiObject.Pod
 	code, err := httprequest.GetObjMsg(url, &pods, "data")
 	if err != nil {
 		fmt.Println("Error: ", err)

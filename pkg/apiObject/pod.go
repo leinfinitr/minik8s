@@ -19,18 +19,18 @@ import (
 //		Unknown（未知）   因为某些原因无法取得 Pod 的状态。这种情况通常是因为与 Pod 所在主机通信失败。
 //		Terminating（需要终止） Pod 已被请求终止，但是该终止请求还没有被发送到底层容器。Pod 仍然在运行。
 const (
-	Pod_Pending     = "Pending"
-	Pod_Building    = "Building"
-	Pod_Running     = "Running"
-	Pod_Succeeded   = "Succeeded"
-	Pod_Failed      = "Failed"
-	Pod_Unknown     = "Unknown"
-	Pod_Terminating = "Terminating"
+	PodPending     = "Pending"
+	PodBuilding    = "Building"
+	PodRunning     = "Running"
+	PodSucceeded   = "Succeeded"
+	PodFailed      = "Failed"
+	PodUnknown     = "Unknown"
+	PodTerminating = "Terminating"
 )
 
 type Pod struct {
 	// Pod对应的PodSandboxId，供查找podSandboxStatus时使用
-	PodSanboxId string
+	PodSandboxId string
 	// 对象的类型元数据
 	TypeMeta
 	// 对象的元数据

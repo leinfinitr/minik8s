@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
+	"minik8s/tools/httpRequest"
 	"os"
 	"reflect"
 	"strings"
@@ -28,10 +28,10 @@ func describeHandler(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 	resourceType := args[0]
-	if len(args)==1{
+	if len(args) == 1 {
 		namespace := "default"
 		describeNamespace(namespace, resourceType)
-	}else if len(args)==2{
+	} else if len(args) == 2 {
 		//describe [resource-type] [namespace]/[resource-name]
 		namespace, resourceName := SplitNamespaceAndResourceName(args[1])
 		if namespace == "" || resourceName == "" {
@@ -39,7 +39,7 @@ func describeHandler(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 		describeResource(namespace, resourceName, resourceType)
-	}else{
+	} else {
 		fmt.Println("Error: The resource name must be in the format namespace/resource-name")
 		os.Exit(1)
 	}
