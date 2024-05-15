@@ -15,7 +15,6 @@ func PostObjMsg(url string, obj interface{}) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println(string(jsonStr))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 	if err != nil {
 		return nil, err

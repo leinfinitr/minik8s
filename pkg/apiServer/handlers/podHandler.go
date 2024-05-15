@@ -42,7 +42,6 @@ func GetPod(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"data": resJson})
-
 }
 
 // UpdatePod 更新Pod

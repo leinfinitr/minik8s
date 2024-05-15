@@ -17,6 +17,9 @@ const (
 	ServicesURI      = "/api/v1/namespaces/:namespace/services"
 	ServiceURI       = "/api/v1/namespaces/:namespace/services/:name"
 	ServiceStatusURI = "/api/v1/namespaces/:namespace/services/:name/status"
+
+	ServerlessURI         = "/api/v1/serverless"
+	ServerlessFunctionURI = "/api/v1/serverless/:namespace/:name"
 )
 
 const (

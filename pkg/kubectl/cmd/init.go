@@ -23,6 +23,7 @@ func init() {
 	rootCmd.AddCommand(describeCmd)
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(serverlessCmd)
 }
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {

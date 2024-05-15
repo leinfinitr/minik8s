@@ -5,10 +5,9 @@ package apiServer
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
-
-	"github.com/gin-gonic/gin"
 )
 
 type ApiServer struct {
@@ -107,7 +106,6 @@ func (a *ApiServer) Register() {
 
 	// 获取指定Service的状态
 	a.Router.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
-
 }
 
 // 函数-------------------------------------------------------------
