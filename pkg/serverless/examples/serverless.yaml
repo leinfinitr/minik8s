@@ -1,0 +1,12 @@
+image: 3.7-alpine
+name: test
+volume: test-volume
+requirements:
+  - numpy
+functions:
+  - name: add
+    createMethod: file
+    file: add.py
+  - name: subtract
+    createMethod: file
+    file: subtract.py

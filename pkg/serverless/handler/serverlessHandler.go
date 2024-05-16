@@ -3,7 +3,11 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/conversion"
+	"minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"strings"
 )
 
 // CreateServerless 创建Serverless环境
@@ -15,6 +19,22 @@ func CreateServerless(c *gin.Context) {
 		log.ErrorLog("CreateServerless: " + err.Error())
 		c.JSON(400, gin.H{"error": err.Error()})
 	}
+
+	// 根据 serverless 对象创建一个 pod 对象
+	pod := conversion.ServerlessToPod(serverless)
+
+	// 转发给 apiServer 创建 pod
+	url := config.APIServerURL() + config.PodsURI
+	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+	_, err = httprequest.PostObjMsg(config.APIServerURL()+config.PodsURI, pod)
+	if err != nil {
+		log.ErrorLog("CreateServerless: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	log.DebugLog("CreateServerless success" + serverless.Name)
+
+	// 将函数文件存入 volume
 }
 
 // GetServerless 获取所有的Serverless Function
