@@ -1,7 +1,11 @@
 package main
 
-// func main() {
-// 	proxy := GETKubeproxy()
-// 	proxy.Run()
+import (
+	"minik8s/pkg/kubeproxy"
+)
 
-// }
+func main() {
+	proxy := kubeproxy.GetKubeproxy()
+	proxy.Run()
+
+}
