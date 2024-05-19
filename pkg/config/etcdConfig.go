@@ -9,6 +9,7 @@ type EtcdConfig struct {
 const (
 	EtcdPodPrefix = "/registry/pods"
 	EtcdNodePrefix = "/registry/nodes"
+	EtcdReplicaSetPrefix = "/registry/replicasets"
 )
 func NewEtcdConfig() *EtcdConfig {
 	return &EtcdConfig{

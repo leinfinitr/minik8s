@@ -17,6 +17,11 @@ const (
 	ServicesURI      = "/api/v1/namespaces/:namespace/services"
 	ServiceURI       = "/api/v1/namespaces/:namespace/services/:name"
 	ServiceStatusURI = "/api/v1/namespaces/:namespace/services/:name/status"
+
+	ReplicaSetsURI = "/api/v1/namespaces/:namespace/replicasets"
+	GlobalReplicaSetsURI = "/api/v1/replicasets"
+	ReplicaSetURI  = "/api/v1/namespaces/:namespace/replicasets/:name"
+	ReplicaSetStatusURI = "/api/v1/namespaces/:namespace/replicasets/:name/status"
 )
 
 const (

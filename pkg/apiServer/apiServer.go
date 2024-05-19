@@ -108,6 +108,13 @@ func (a *ApiServer) Register() {
 	// 获取指定Service的状态
 	a.Router.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
 
+	a.Router.GET(config.ReplicaSetsURI, handlers.GetReplicaSets)
+	a.Router.GET(config.GlobalReplicaSetsURI, handlers.GetGlobalReplicaSets)
+	a.Router.GET(config.ReplicaSetURI, handlers.GetReplicaSet)
+	a.Router.GET(config.ReplicaSetStatusURI, handlers.GetReplicaSetStatus)
+	a.Router.POST(config.ReplicaSetsURI, handlers.AddReplicaSet)
+	a.Router.PUT(config.ReplicaSetURI, handlers.UpdateReplicaSet)
+	a.Router.DELETE(config.ReplicaSetURI, handlers.DeleteReplicaSet)
 }
 
 // 函数-------------------------------------------------------------
