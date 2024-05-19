@@ -78,7 +78,7 @@ func deleteHandler(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 		url := config.APIServerURL() + "/api/v1/namespaces/" + namespace + "/" + kind + "/" + name
-		resp, err := httprequest.DelObjMsg(url)
+		resp, err := httprequest.DelMsg(url)
 		if err != nil {
 			fmt.Println("Error: Could not delete the object.")
 			os.Exit(1)

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-
 	// "fmt"
 	"net/http"
 )
@@ -28,7 +26,7 @@ func PostObjMsg(url string, obj interface{}) (*http.Response, error) {
 	return resp, nil
 }
 
-func DelObjMsg(url string) (*http.Response, error) {
+func DelMsg(url string) (*http.Response, error) {
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return nil, err
@@ -65,7 +63,6 @@ func GetObjMsg(url string, obj interface{}, kind string) (*http.Response, error)
 		return nil, err
 	}
 	var result map[string]interface{}
-	fmt.Println(res.Body)
 	decoder := json.NewDecoder(res.Body)
 	err2 := decoder.Decode(&result)
 	if err2 != nil {
@@ -78,6 +75,14 @@ func GetObjMsg(url string, obj interface{}, kind string) (*http.Response, error)
 	err3 := json.Unmarshal([]byte(data.(string)), obj)
 	if err3 != nil {
 		return nil, err3
+	}
+	return res, nil
+}
+
+func GetMsg(url string) (*http.Response, error) {
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, err
 	}
 	return res, nil
 }

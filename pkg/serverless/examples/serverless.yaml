@@ -1,12 +1,6 @@
-image: 3.7-alpine
-name: test
-volume: test-volume
+image: python:3.7-alpine
+name: add
+volume: serverless-volume
 requirements:
   - numpy
-functions:
-  - name: add
-    createMethod: file
-    file: add.py
-  - name: subtract
-    createMethod: file
-    file: subtract.py
+functionFile: add.py

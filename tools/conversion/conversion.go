@@ -4,7 +4,7 @@ import (
 	"minik8s/pkg/apiObject"
 )
 
-// ServerlessToPod 将一组 ServerlessFunction 转换为一组 Container
+// ServerlessToPod 将一个 Serverless 对象转换为 Pod 对象
 func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 	pod := apiObject.Pod{
 		TypeMeta: apiObject.TypeMeta{
@@ -37,4 +37,16 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 		},
 	}
 	return pod
+}
+
+// PodToServerless 将一个 Pod 对象转换为 Serverless 对象
+func PodToServerless(pod apiObject.Pod) apiObject.Serverless {
+	serverless := apiObject.Serverless{
+		Name: pod.Metadata.Name,
+	}
+	for _, container := range pod.Spec.Containers {
+		serverless.Image = container.Image
+		serverless.Volume = container.VolumeMounts[0].Name
+	}
+	return serverless
 }

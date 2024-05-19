@@ -1,13 +1,17 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/spf13/cobra"
+	"io"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
 	"minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"os"
+	"strings"
 )
 
 var serverlessCmd = &cobra.Command{
@@ -28,20 +32,34 @@ func serverlessHandler(cmd *cobra.Command, args []string) {
 	switch args[0] {
 	case "create":
 		if len(args) != 2 {
-			log.ErrorLog("The number of parameters is incorrect.")
+			log.ErrorLog("The number of parameters is incorrect: create [file.yaml]")
 			return
 		}
 		createServerless(args[1])
-	//case "delete":
-	//	deleteServerless(args[1])
-	//case "get":
-	//	getServerless(args[1])
-	//case "add":
-	//	addFunction(args[1], args[2])
-	//case "remove":
-	//	removeFunction(args[1], args[2])
-	//case "update":
-	//	updateFunction(args[1], args[2])
+	case "delete":
+		if len(args) != 2 {
+			log.ErrorLog("The number of parameters is incorrect: delete [serverless name]")
+			return
+		}
+		deleteServerless(args[1])
+	case "get":
+		if len(args) != 1 {
+			log.ErrorLog("The number of parameters is incorrect: get")
+			return
+		}
+		getAllServerless()
+	case "update":
+		if len(args) != 3 {
+			log.ErrorLog("The number of parameters is incorrect: update [serverless name] [file.py]")
+			return
+		}
+		updateFunction(args[1], args[2])
+	case "run":
+		if len(args) != 2 {
+			log.ErrorLog("The number of parameters is incorrect: run [serverless name]")
+			return
+		}
+		runFunction(args[1])
 	default:
 		printHelp()
 	}
@@ -53,10 +71,8 @@ func printHelp() {
 	serverless create xxx.yaml # 创建 serverless 环境
 	serverless delete [serverless name] # 删除 serverless 环境
 	serverless get # 获取所有 serverless 环境
-	serverless get [serverless name] # 获取指定 serverless 环境
-	serverless add [serverless name] xxx.py # 向指定 serverless 环境添加函数
-	serverless remove [serverless name] [function name] # 从指定 serverless 环境删除函数
-	serverless update [serverless name] xxx.py # 向指定 serverless 环境添加函数`
+	serverless update [serverless name] xxx.py # 更新指定 serverless 环境函数
+	serverless run [serverless name] # 运行指定 serverless 环境`
 	println(help)
 }
 
@@ -91,6 +107,83 @@ func createServerless(fileName string) {
 	_, err = httprequest.PostObjMsg(url, serverless)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
+}
+
+// deleteServerless 删除 serverless 环境
+func deleteServerless(serverlessName string) {
+	log.DebugLog("Delete serverless environment: " + serverlessName)
+	// 转发给 serverless 服务端口处理
+	url := config.ServerlessURL() + config.ServerlessFunctionURI
+	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
+	_, err := httprequest.DelMsg(url)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+}
+
+// getAllServerless 获取所有 serverless 环境
+func getAllServerless() {
+	log.DebugLog("Get all serverless environment")
+	var result []apiObject.Serverless
+	// 转发给 serverless 服务端口处理
+	url := config.ServerlessURL() + config.ServerlessURI
+	response, err := httprequest.GetMsg(url)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	// 解析返回结果
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	// 输出结果
+	for _, serverless := range result {
+		fmt.Println("Name: " + serverless.Name + " Image: " + serverless.Image + " Volume: " + serverless.Volume)
+	}
+}
+
+// updateFunction 更新 serverless 环境函数
+func updateFunction(serverlessName, fileName string) {
+	log.DebugLog("Update serverless: " + serverlessName + " " + fileName)
+	// 检查文件是否存在
+	fileInfo, err := os.Stat(fileName)
+	if err != nil {
+		log.ErrorLog("The file " + fileName + " does not exist.")
+		os.Exit(1)
+	}
+	if fileInfo.IsDir() {
+		log.ErrorLog("The file " + fileName + " is a directory.")
+		os.Exit(1)
+	}
+	// 转发给 serverless 服务端口处理
+	url := config.ServerlessURL() + config.ServerlessFunctionURI
+	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
+	_, err = httprequest.PutObjMsg(url, fileName)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+}
+
+// runFunction 运行 serverless 环境函数
+func runFunction(serverlessName string) {
+	log.DebugLog("Run serverless: " + serverlessName)
+	// 转发给 serverless 服务端口处理
+	url := config.ServerlessURL() + config.ServerlessFunctionURI
+	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
+	_, err := httprequest.GetMsg(url)
+	if err != nil {
+		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
 }

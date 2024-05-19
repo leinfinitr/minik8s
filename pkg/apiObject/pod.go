@@ -60,7 +60,7 @@ type Volume struct {
 	// 存储卷的名称
 	Name string `json:"name" yaml:"name"`
 	// 存储卷的来源
-	VolumeSource `json:",inline" yaml:",inline"`
+	VolumeSource
 }
 
 type VolumeSource struct {

@@ -119,7 +119,7 @@ func DeletePod(c *gin.Context) {
 	delUri := url + config.PodsURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
-	_, err = httprequest.DelObjMsg(delUri)
+	_, err = httprequest.DelMsg(delUri)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
