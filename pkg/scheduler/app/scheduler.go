@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	// httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
@@ -26,10 +25,10 @@ const (
 	RoundRobin = "RoundRobin"
 )
 
-var glbcnt int
+var globalCount int
 var lock sync.Mutex
 
-func (s *Scheduler) schedRequest() string {
+func (s *Scheduler) scheduleRequest() string {
 	// 从apiServer获取pod信息
 	podList := s.getNodesList()
 	// 调度pod
@@ -37,7 +36,7 @@ func (s *Scheduler) schedRequest() string {
 }
 
 func NewScheduler() *Scheduler {
-	glbcnt = 0
+	globalCount = 0
 	return &Scheduler{
 		ApiServerConfig: config.NewAPIServerConfig(),
 		Policy:          RoundRobin,
@@ -47,51 +46,51 @@ func NewScheduler() *Scheduler {
 func (s *Scheduler) getNodesList() []apiObject.Node {
 	// 从apiServer获取所有的pod信息
 	url := s.ApiServerConfig.APIServerURL() + config.NodesURI
-    var NodeList []apiObject.Node
-    resp, err := http.Get(url)
-    if err != nil {
-        log.ErrorLog("httprequest.GetObjMsg err:" + err.Error())
-        return nil
-    }
-    defer resp.Body.Close()
+	var NodeList []apiObject.Node
+	resp, err := http.Get(url)
+	if err != nil {
+		log.ErrorLog("http request.GetObjMsg err:" + err.Error())
+		return nil
+	}
+	defer resp.Body.Close()
 
-    if resp.StatusCode != 200 {
-        log.ErrorLog("httprequest.GetObjMsg StatusCode:" + fmt.Sprint(resp.StatusCode))
-        return nil
-    }
+	if resp.StatusCode != 200 {
+		log.ErrorLog("http request.GetObjMsg StatusCode:" + fmt.Sprint(resp.StatusCode))
+		return nil
+	}
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.ErrorLog("ioutil.ReadAll err:" + err.Error())
+		log.ErrorLog("io.ReadAll err:" + err.Error())
 		return nil
 	}
 	log.InfoLog("getNodesList body:" + string(bodyBytes))
-    bodyString := string(bodyBytes)
+	bodyString := string(bodyBytes)
 	err = json.Unmarshal([]byte(bodyString), &NodeList)
 	if err != nil {
 		log.ErrorLog("json.Unmarshal err:" + err.Error())
 		return nil
 	}
 	fmt.Println(NodeList)
-    return NodeList
+	return NodeList
 }
 
 func (s *Scheduler) schedule(nodeList []apiObject.Node) string {
 	switch s.Policy {
 	case RoundRobin:
-		return s.roundRobinSched(nodeList)
+		return s.roundRobin(nodeList)
 	default:
-		return s.roundRobinSched(nodeList)
+		return s.roundRobin(nodeList)
 	}
 }
 
-func (s *Scheduler) roundRobinSched(nodeList []apiObject.Node) string {
+func (s *Scheduler) roundRobin(nodeList []apiObject.Node) string {
 	lock.Lock()
 	defer lock.Unlock()
-	if glbcnt >= len(nodeList) {
-		glbcnt = 0
+	if globalCount >= len(nodeList) {
+		globalCount = 0
 	}
-	node := nodeList[glbcnt]
-	glbcnt++
+	node := nodeList[globalCount]
+	globalCount++
 	data, err := json.Marshal(node)
 	if err != nil {
 		log.ErrorLog("json.Marshal err:" + err.Error())
@@ -105,10 +104,10 @@ func Run() {
 	r := gin.Default()
 
 	r.GET(config.SchedulerPath(), func(c *gin.Context) {
-		data := scheduler.schedRequest()
+		data := scheduler.scheduleRequest()
 		c.JSON(200, gin.H{"data": data})
 	})
 
 	log.InfoLog("Starting scheduler HTTP server on :7820")
-	r.Run(":"+config.SchedulerPort())
+	r.Run(":" + config.SchedulerPort())
 }

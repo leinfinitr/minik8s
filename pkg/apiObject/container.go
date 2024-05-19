@@ -6,11 +6,11 @@ package apiObject
 type ContainerStatus int
 
 const (
-	Container_Uncreated ContainerStatus = -1
-	Container_Created   ContainerStatus = 0
-	Container_Running   ContainerStatus = 1
-	Container_Exited    ContainerStatus = 2
-	Container_Unknown   ContainerStatus = 3
+	ContainerUncreated ContainerStatus = -1
+	ContainerCreated   ContainerStatus = 0
+	ContainerRunning   ContainerStatus = 1
+	ContainerExited    ContainerStatus = 2
+	ContainerUnknown   ContainerStatus = 3
 )
 
 type Container struct {
@@ -128,8 +128,6 @@ type Handler struct {
 	Exec *ExecAction `json:"exec" yaml:"exec"`
 	// HTTP处理器
 	HTTPGet *HTTPGetAction `json:"httpGet" yaml:"httpGet"`
-	// TCP处理器
-	// TCPSocket *TCPSocketAction `json:"tcpSocket" yaml:"tcpSocket"`
 }
 
 type ExecAction struct {

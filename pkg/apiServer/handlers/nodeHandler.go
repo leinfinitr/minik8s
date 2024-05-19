@@ -16,11 +16,12 @@ var nodes = make(map[string]apiObject.Node)
 func GetNodes(c *gin.Context) {
 	log.InfoLog("GetNodes")
 	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
-	if err != nil|| res == nil {
+	if err != nil {
 		log.WarnLog("GetNodes: " + err.Error())
 		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 		return
 	}
+
 	var nodes []apiObject.Node
 	for _, v := range res {
 		var node apiObject.Node
@@ -32,7 +33,7 @@ func GetNodes(c *gin.Context) {
 		}
 		nodes = append(nodes, node)
 	}
-	
+
 	c.JSON(config.HttpSuccessCode, nodes)
 }
 
@@ -77,31 +78,31 @@ func CreateNode(c *gin.Context) {
 	// nodes[node.Metadata.Name] = node
 	log.InfoLog("CreateNode: " + node.Metadata.Name)
 	c.JSON(config.HttpSuccessCode, "message: create node success")
-	//TODO: 将信息广播给所有node	
+	// TODO: 将信息广播给所有node
 	BroadcastNode(node)
 }
 
 func BroadcastNode(node apiObject.Node) {
-	res,err := etcdclient.EtcdStore.PrefixGet(config.EtcdPodPrefix)
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdPodPrefix)
 	if err != nil {
 		log.WarnLog("BroadcastNode: " + err.Error())
 		return
 	}
-	for _,v := range res {
+	for _, v := range res {
 		var pod apiObject.Pod
-		err = json.Unmarshal([]byte(v),&pod)
+		err = json.Unmarshal([]byte(v), &pod)
 		if err != nil {
 			log.WarnLog("BroadcastNode: " + err.Error())
 			continue
 		}
 		if pod.Spec.NodeName == node.Metadata.Name {
-			pod.Status.Phase = apiObject.Pod_Running
-			resJson,err := json.Marshal(pod)
+			pod.Status.Phase = apiObject.PodRunning
+			resJson, err := json.Marshal(pod)
 			if err != nil {
 				log.WarnLog("BroadcastNode: " + err.Error())
 				continue
 			}
-			err = etcdclient.EtcdStore.Put(config.EtcdPodPrefix+"/"+pod.Metadata.Name,string(resJson))
+			err = etcdclient.EtcdStore.Put(config.EtcdPodPrefix+"/"+pod.Metadata.Name, string(resJson))
 			if err != nil {
 				log.WarnLog("BroadcastNode: " + err.Error())
 				continue

@@ -24,10 +24,9 @@ const (
 )
 
 const (
-	// How frequently to report identical errors
+	// IdenticalErrorDelay How frequently to report identical errors
 	IdenticalErrorDelay = 1 * time.Minute
 
-	// connection parameters
 	MaxBackoffDelay      = 3 * time.Second
 	BaseBackoffDelay     = 100 * time.Millisecond
 	MinConnectionTimeout = 5 * time.Second

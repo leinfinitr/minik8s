@@ -8,8 +8,7 @@ import (
 	"net/http"
 )
 
-// Get请求
-// GetRequest 从指定的uri获取数据，并将数据反序列化到target指向的对象中
+// GetRequestByTarget GetRequest 从指定的uri获取数据，并将数据反序列化到target指向的对象中
 func GetRequestByTarget(uri string, target interface{}, key string) (int, error) {
 	code, res, err := GetRequest(uri)
 

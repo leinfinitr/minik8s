@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	httprequest "minik8s/internal/pkg/httpRequest"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
+	"minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"net/http"
 	"os"
@@ -71,9 +71,9 @@ func UpdatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	//更新pod
+	// 更新pod
 	UpdatePodProps(pod)
-	//将更新后的pod写入etcd
+	// 将更新后的pod写入etcd
 	resJson, err := json.Marshal(pod)
 	if err != nil {
 		log.ErrorLog("UpdatePod: " + err.Error())
@@ -114,8 +114,8 @@ func DeletePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	//TODO删除kube-controller-manager中的Endpoint
-	//TODO发送删除请求到kubelet
+	// TODO 删除kube-controller-manager中的Endpoint
+	// TODO 发送删除请求到kubelet
 	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
 	delUri := url + config.PodsURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
@@ -325,7 +325,7 @@ func GetGlobalPods(c *gin.Context) {
 	c.JSON(200, gin.H{"data": resJson})
 }
 
-// TODO: 更新Pod
+// UpdatePodProps TODO: 更新Pod
 func UpdatePodProps(new *apiObject.Pod) {
 	podBytes, err := json.Marshal(new)
 	if err != nil {

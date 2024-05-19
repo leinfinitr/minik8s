@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	httprequest "minik8s/internal/pkg/httpRequest"
-	reflectprop "minik8s/internal/pkg/reflectProp"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
+	"minik8s/tools/httpRequest"
+	"minik8s/tools/reflectProp"
 	"net/http"
 	"os"
 	"reflect"
