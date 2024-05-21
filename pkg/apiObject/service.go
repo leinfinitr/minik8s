@@ -31,10 +31,9 @@ type ServicePort struct {
 	Name string `json:"name" yaml:"name"`
 	// 该端口的IP协议，包括TCP、UDP、SCTP，默认为TCP
 	Protocol Protocol `json:"protocol" yaml:"protocol"`
-	// Service暴露的端口
+	// Service内部向外暴露的端口
 	Port int32 `json:"port" yaml:"port"`
-	// 服务所针对的pod上要访问的端口的编号或名称，也就是对应到pod上的端口
-	//	如果未指定，则使用port作为targetPort
+	// 服务所针对的pod上要访问的端口的编号或名称，也就是对应到pod上的端口，如果未指定，则使用port作为targetPort
 	TargetPort int32 `json:"targetPort" yaml:"targetPort"`
 	// 当Type为NodePort或LoadBalancer时，每个Node上的端口，即全局对外提供服务的端口
 	NodePort int32 `json:"nodePort" yaml:"nodePort"`

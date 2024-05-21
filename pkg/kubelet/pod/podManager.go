@@ -17,7 +17,7 @@ type PodManager interface {
 	RestartPod(pod *apiObject.Pod) error
 	DeletePodByUUID(pod *apiObject.Pod) error
 	RecreatePodContainer(pod *apiObject.Pod) error
-	ExecPodContainer(pod *apiObject.Pod) error
+	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
 	UpdatePodStatus() error
 }
 
@@ -35,7 +35,7 @@ type podManagerImpl struct {
 	StopPodHandler               func(pod *apiObject.Pod) error
 	DeletePodHandler             func(pod *apiObject.Pod) error
 	RecreateContainerHandler     func(pod *apiObject.Pod) error
-	ExecPodHandler               func(pod *apiObject.Pod) error
+	ExecPodHandler               func(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
 	UpdateContainerStatusHandler func(container *apiObject.Container, pod *apiObject.Pod) error
 }
 
@@ -213,8 +213,8 @@ func (p *podManagerImpl) RecreatePodContainer(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (p *podManagerImpl) ExecPodContainer(pod *apiObject.Pod) error {
-	return nil
+func (p *podManagerImpl) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
+	return p.ExecPodContainer(req)
 }
 
 func (p *podManagerImpl) UpdatePodStatus() error {

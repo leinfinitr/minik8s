@@ -18,7 +18,7 @@ type PodUtils interface {
 	StopPod(pod *apiObject.Pod) error
 	DeletePod(pod *apiObject.Pod) error
 	RecreatePodContainer(pod *apiObject.Pod) error
-	ExecPodContainer(pod *apiObject.Pod) error
+	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
 	UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error
 }
 
@@ -106,6 +106,7 @@ func (r *RuntimeManager) CreateContainers(podSandBoxID string, containerConfig *
 // StartPod 运行该Pod内部的所有容器
 func (r *RuntimeManager) StartPod(pod *apiObject.Pod) error {
 	log.InfoLog("[RPC] Start StartPod")
+	// 运行所有的容器
 	for i := 0; i < len(pod.Spec.Containers); i += 1 {
 		_, err := r.runtimeClient.StartContainer(context.Background(), &runtimeapi.StartContainerRequest{
 			ContainerId: pod.Spec.Containers[i].ContainerID,
@@ -218,10 +219,26 @@ func (r *RuntimeManager) RecreatePodContainers(pod *apiObject.Pod) error {
 	return nil
 }
 
-// TODO: 似乎是在某个容器内部执行某条指令，不知道在哪里会被用到
-func (r *RuntimeManager) ExecPodContainer(pod *apiObject.Pod) error {
+func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
+	log.InfoLog("[RPC] Start ExecPodContainer")
 
-	return nil
+	response, err := r.runtimeClient.Exec(context.Background(), &runtimeapi.ExecRequest{
+		ContainerId: req.ContainerId,
+		Cmd:         req.Cmd,
+		Tty:         req.Tty,
+		Stdin:       req.Stdin,
+		Stdout:      req.Stdout,
+		Stderr:      req.Stderr,
+	})
+
+	if err != nil {
+		log.ErrorLog("Exec container failed")
+		return nil, err
+	}
+
+	return &apiObject.ExecRsp{
+		Url: response.Url,
+	}, nil
 }
 
 func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error {
