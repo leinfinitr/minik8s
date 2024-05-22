@@ -74,5 +74,4 @@ type Condition struct {
 type Endpoint struct {
 	PodUUID string
 	IP      string
-	Ports   []string
 }

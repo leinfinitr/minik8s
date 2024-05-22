@@ -5,7 +5,7 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
-	"minik8s/tools/httpRequest"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"net/http"
 	"os"
@@ -92,13 +92,21 @@ func PodHandler(content []byte) {
 }
 
 func ServiceHandler(content []byte) {
-	// var service apiObject.Service
-	// err := translator.ParseApiObjFromYaml(content, &service)
-	// if err != nil {
-	// 	log.ErrorLog("Could not unmarshal the yaml file.")
-	// 	os.Exit(1)
-	// }
-
+	var service apiObject.Service
+	err := translator.ParseApiObjFromYaml(content, &service)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	url := config.APIServerURL() + config.ServiceURI
+	url = strings.Replace(url, config.NameSpaceReplace, service.Metadata.Namespace, -1)
+	log.DebugLog("PUT " + url)
+	resp, err := httprequest.PutObjMsg(url, service)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
+	ApplyResultDisplay(Service, resp)
 }
 
 func DeploymentHandler(content []byte) {

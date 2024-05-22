@@ -1,4 +1,5 @@
 package config
+
 import "time"
 
 type EtcdConfig struct {
@@ -7,9 +8,11 @@ type EtcdConfig struct {
 }
 
 const (
-	EtcdPodPrefix = "/registry/pods"
-	EtcdNodePrefix = "/registry/nodes"
+	EtcdPodPrefix     = "/registry/pods"
+	EtcdNodePrefix    = "/registry/nodes"
+	EtcdServicePrefix = "/registry/services"
 )
+
 func NewEtcdConfig() *EtcdConfig {
 	return &EtcdConfig{
 		Endpoints: []string{"localhost:2379"},
