@@ -7,9 +7,7 @@ import (
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
 	"minik8s/tools/conversion"
-	"minik8s/tools/httpRequest"
 	"minik8s/tools/log"
-	"strings"
 )
 
 // CreateServerless 创建Serverless环境
@@ -48,28 +46,6 @@ func CreateServerless(c *gin.Context) {
 	log.InfoLog("CreateServerless: " + serverless.Name)
 }
 
-// DeleteServerless 删除Serverless环境
-func DeleteServerless(c *gin.Context) {
-	log.DebugLog("DeleteServerless")
-	serverlessName := c.Param("serverlessName")
-	if serverlessName == "" {
-		log.ErrorLog("DeleteServerless: serverlessName is empty")
-		c.JSON(400, gin.H{"error": "serverlessName is empty"})
-		return
-	}
-
-	// 从 etcd 中删除 serverless 对象
-	key := config.EtcdServerlessPrefix + "/" + serverlessName
-	err := etcdclient.EtcdStore.Delete(key)
-	if err != nil {
-		log.ErrorLog("DeleteServerless: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-
-	log.InfoLog("DeleteServerless: " + serverlessName)
-}
-
 // GetServerless 获取所有的Serverless Function
 func GetServerless(c *gin.Context) {
 	log.InfoLog("GetServerless")
@@ -97,62 +73,35 @@ func GetServerless(c *gin.Context) {
 	c.JSON(200, gin.H{"data": serverlessList})
 }
 
-// RunServerlessFunction 运行Serverless Function
-func RunServerlessFunction(c *gin.Context) {
-	log.DebugLog("RunServerlessFunction")
-	serverlessName := c.Param("serverlessName")
+// DeleteServerless 删除Serverless环境
+func DeleteServerless(c *gin.Context) {
+	log.DebugLog("DeleteServerless")
+	serverlessName := c.Param("Name")
 	if serverlessName == "" {
-		log.ErrorLog("RunServerlessFunction: serverlessName or functionName is empty")
-		c.JSON(400, gin.H{"error": "serverlessName or functionName is empty"})
+		log.ErrorLog("DeleteServerless: serverlessName is empty")
+		c.JSON(400, gin.H{"error": "serverlessName is empty"})
 		return
 	}
-	log.InfoLog("RunServerlessFunction: " + serverlessName)
 
-	// 获取 serverless 对应的 pod 对象
+	// 从 etcd 中删除 serverless 对象
 	key := config.EtcdServerlessPrefix + "/" + serverlessName
-	response, _ := etcdclient.EtcdStore.Get(key)
-	if response == "" {
-		log.ErrorLog("RunServerlessFunction: " + serverlessName + " not exists")
-		c.JSON(400, gin.H{"error": "Serverless " + serverlessName + " not exists"})
-		return
-	}
-
-	var pod apiObject.Pod
-	err := json.Unmarshal([]byte(response), &pod)
+	err := etcdclient.EtcdStore.Delete(key)
 	if err != nil {
-		log.ErrorLog("RunServerlessFunction: " + err.Error())
+		log.ErrorLog("DeleteServerless: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 转发给 apiServer 运行 pod
-	go func() {
-		url := config.APIServerURL() + config.PodsURI
-		url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
-		res, err := httprequest.PostObjMsg(url, pod)
-		if err != nil {
-			log.ErrorLog("RunServerlessFunction: " + err.Error())
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		if res.StatusCode != 200 {
-			log.ErrorLog("RunServerlessFunction: " + res.Status)
-			c.JSON(500, gin.H{"error": res.Status})
-			return
-		} else {
-			log.InfoLog("RunServerlessFunction success" + serverlessName)
-			c.JSON(200, gin.H{"data": "success"})
-		}
-	}()
+	log.InfoLog("DeleteServerless: " + serverlessName)
 }
 
 // UpdateServerlessFunction 更新Serverless Function
 func UpdateServerlessFunction(c *gin.Context) {
 	log.DebugLog("UpdateServerlessFunction")
-	serverlessName := c.Param("serverlessName")
+	serverlessName := c.Param("Name")
 	if serverlessName == "" {
-		log.ErrorLog("UpdateServerlessFunction: serverlessName or functionName is empty")
-		c.JSON(400, gin.H{"error": "serverlessName or functionName is empty"})
+		log.ErrorLog("UpdateServerlessFunction: serverlessName is empty")
+		c.JSON(400, gin.H{"error": "serverlessName is empty"})
 		return
 	}
 	log.InfoLog("UpdateServerlessFunction: " + serverlessName)
@@ -169,4 +118,43 @@ func UpdateServerlessFunction(c *gin.Context) {
 	// TODO: 更新 volume 中的文件
 
 	c.JSON(200, gin.H{"data": "success"})
+}
+
+// RunServerlessFunction 运行Serverless Function
+func RunServerlessFunction(c *gin.Context) {
+	log.DebugLog("RunServerlessFunction")
+	serverlessName := c.Param("Name")
+	param := c.Param("Param")
+	if serverlessName == "" {
+		log.ErrorLog("RunServerlessFunction: serverlessName or functionName is empty")
+		c.JSON(400, gin.H{"error": "serverlessName or functionName is empty"})
+		return
+	}
+	log.InfoLog("RunServerlessFunction: " + serverlessName)
+
+	result := RunFunction(serverlessName, param)
+	c.JSON(200, gin.H{"result": result})
+}
+
+// RunFunction 运行Serverless Function
+func RunFunction(name string, param string) string {
+	// 获取 serverless 对应的 pod 对象
+	key := config.EtcdServerlessPrefix + "/" + name
+	response, _ := etcdclient.EtcdStore.Get(key)
+	if response == "" {
+		log.ErrorLog("RunFunction: " + name + " not found")
+		return ""
+	}
+
+	var pod apiObject.Pod
+	err := json.Unmarshal([]byte(response), &pod)
+	if err != nil {
+		log.ErrorLog("RunFunction: " + err.Error())
+		return ""
+	}
+
+	// TODO: 运行 pod 对象
+	result := param
+
+	return result
 }

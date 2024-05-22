@@ -55,11 +55,17 @@ func serverlessHandler(cmd *cobra.Command, args []string) {
 		}
 		updateFunction(args[1], args[2])
 	case "run":
-		if len(args) != 2 {
-			log.ErrorLog("The number of parameters is incorrect: run [serverless name]")
+		if len(args) != 3 {
+			log.ErrorLog("The number of parameters is incorrect: run [serverless name] [param]")
 			return
 		}
-		runFunction(args[1])
+		runFunction(args[1], args[2])
+	case "workflow":
+		if len(args) != 2 {
+			log.ErrorLog("The number of parameters is incorrect: workflow [file.txt] [param]")
+			return
+		}
+		workflow(args[1], args[2])
 	default:
 		printHelp()
 	}
@@ -68,11 +74,12 @@ func serverlessHandler(cmd *cobra.Command, args []string) {
 // printHelp 输出 serverless 指令的帮助信息
 func printHelp() {
 	help := `serverless 指令格式如下：
-	serverless create xxx.yaml # 创建 serverless 环境
+	serverless create [xxx.yaml] # 创建 serverless 环境
 	serverless delete [serverless name] # 删除 serverless 环境
 	serverless get # 获取所有 serverless 环境
-	serverless update [serverless name] xxx.py # 更新指定 serverless 环境函数
-	serverless run [serverless name] # 运行指定 serverless 环境`
+	serverless update [serverless name] [xxx.py] # 更新指定 serverless 环境函数
+	serverless run [serverless name] [param] # 运行指定 serverless 环境
+	serverless workflow [xxx.txt] [param] # 执行 serverless 工作流`
 	println(help)
 }
 
@@ -111,19 +118,6 @@ func createServerless(fileName string) {
 	}
 }
 
-// deleteServerless 删除 serverless 环境
-func deleteServerless(serverlessName string) {
-	log.DebugLog("Delete serverless environment: " + serverlessName)
-	// 转发给 serverless 服务端口处理
-	url := config.ServerlessURL() + config.ServerlessFunctionURI
-	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
-	_, err := httprequest.DelMsg(url)
-	if err != nil {
-		log.ErrorLog(err.Error())
-		os.Exit(1)
-	}
-}
-
 // getAllServerless 获取所有 serverless 环境
 func getAllServerless() {
 	log.DebugLog("Get all serverless environment")
@@ -152,6 +146,19 @@ func getAllServerless() {
 	}
 }
 
+// deleteServerless 删除 serverless function
+func deleteServerless(serverlessName string) {
+	log.DebugLog("Delete serverless environment: " + serverlessName)
+	// 转发给 serverless 服务端口处理
+	url := config.ServerlessURL() + config.ServerlessFunctionURI
+	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
+	_, err := httprequest.DelMsg(url)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+}
+
 // updateFunction 更新 serverless 环境函数
 func updateFunction(serverlessName, fileName string) {
 	log.DebugLog("Update serverless: " + serverlessName + " " + fileName)
@@ -176,14 +183,58 @@ func updateFunction(serverlessName, fileName string) {
 }
 
 // runFunction 运行 serverless 环境函数
-func runFunction(serverlessName string) {
+func runFunction(serverlessName string, param string) {
 	log.DebugLog("Run serverless: " + serverlessName)
 	// 转发给 serverless 服务端口处理
-	url := config.ServerlessURL() + config.ServerlessFunctionURI
+	url := config.ServerlessURL() + config.ServerlessRunURI
 	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
-	_, err := httprequest.GetMsg(url)
+	url = strings.Replace(url, config.ParamReplace, param, -1)
+	response, err := httprequest.GetMsg(url)
 	if err != nil {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
+	// 输出结果
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	log.InfoLog("Result: " + string(body))
+}
+
+// workflow 执行 serverless 工作流
+func workflow(fileName string, param string) {
+	log.DebugLog("Run workflow: " + fileName)
+	// 检查文件是否存在
+	fileInfo, err := os.Stat(fileName)
+	if err != nil {
+		log.ErrorLog("The file " + fileName + " does not exist.")
+		os.Exit(1)
+	}
+	if fileInfo.IsDir() {
+		log.ErrorLog("The file " + fileName + " is a directory.")
+		os.Exit(1)
+	}
+	// 读取文件内容
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		log.ErrorLog("Could not read the file specified.")
+		os.Exit(1)
+	}
+	// 转发给 serverless 服务端口处理
+	url := config.ServerlessURL() + config.ServerlessWorkflowURI
+	url = strings.Replace(url, config.ParamReplace, param, -1)
+	response, err := httprequest.PostObjMsg(url, content)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	// 输出结果
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	log.InfoLog("Result: " + string(body))
 }

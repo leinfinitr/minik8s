@@ -32,15 +32,19 @@ func (a *ServerlessServer) Run() {
 func (a *ServerlessServer) Register() {
 	// 创建Serverless环境
 	a.Router.POST(config.ServerlessURI, handler.CreateServerless)
-	// 删除Serverless环境
-	a.Router.DELETE(config.ServerlessURI, handler.DeleteServerless)
 	// 获取所有的Serverless Function
 	a.Router.GET(config.ServerlessURI, handler.GetServerless)
 
-	// 运行Serverless Function
-	a.Router.GET(config.ServerlessFunctionURI, handler.RunServerlessFunction)
+	// 删除Serverless Function
+	a.Router.DELETE(config.ServerlessFunctionURI, handler.DeleteServerless)
 	// 更新Serverless Function
 	a.Router.PUT(config.ServerlessFunctionURI, handler.UpdateServerlessFunction)
+
+	// 运行Serverless Function
+	a.Router.GET(config.ServerlessRunURI, handler.RunServerlessFunction)
+
+	// 运行Serverless Workflow
+	a.Router.GET(config.ServerlessWorkflowURI, handler.RunServerlessWorkflow)
 }
 
 // 函数-------------------------------------------------------------
