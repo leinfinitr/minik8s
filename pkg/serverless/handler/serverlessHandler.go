@@ -6,6 +6,7 @@ import (
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
+	"minik8s/pkg/serverless/scale"
 	"minik8s/tools/conversion"
 	"minik8s/tools/log"
 )
@@ -145,7 +146,6 @@ func RunFunction(name string, param string) string {
 		log.ErrorLog("RunFunction: " + name + " not found")
 		return ""
 	}
-
 	var pod apiObject.Pod
 	err := json.Unmarshal([]byte(response), &pod)
 	if err != nil {
@@ -153,8 +153,14 @@ func RunFunction(name string, param string) string {
 		return ""
 	}
 
-	// TODO: 运行 pod 对象
-	result := param
+	// 运行请求数加一
+	scale.ScaleManager.IncreaseRequestNum(name)
+
+	// 交由 scale 进行处理
+	result := scale.ScaleManager.RunFunction(pod, param)
+
+	// 运行请求数减一
+	scale.ScaleManager.DecreaseRequestNum(name)
 
 	return result
 }

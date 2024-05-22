@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"minik8s/pkg/config"
 	"minik8s/pkg/serverless/handler"
+	"minik8s/pkg/serverless/scale"
 	"minik8s/tools/log"
 )
 
@@ -15,14 +16,21 @@ type ServerlessServer struct {
 	Port int
 	// 转发请求
 	Router *gin.Engine
+	// 自动扩容控制
+	Scale scale.ScaleManagerImpl
 }
 
 // 方法-------------------------------------------------------------
 
-// Run 启动ApiServer
-func (a *ServerlessServer) Run() {
-	a.Register()
-	err := a.Router.Run(a.Address + ":" + fmt.Sprint(a.Port))
+// Run 启动ServerlessServer
+func (s *ServerlessServer) Run() {
+	s.Register()
+
+	// 开启一个线程运行自动扩容控制
+	go s.Scale.Run()
+
+	// 主线程用于处理请求
+	err := s.Router.Run(s.Address + ":" + fmt.Sprint(s.Port))
 	if err != nil {
 		log.ErrorLog("ServerlessServer Run: " + err.Error())
 	}
@@ -30,7 +38,7 @@ func (a *ServerlessServer) Run() {
 
 // Register 注册路由
 func (a *ServerlessServer) Register() {
-	// 创建Serverless环境
+	// 创建Serverless Function环境
 	a.Router.POST(config.ServerlessURI, handler.CreateServerless)
 	// 获取所有的Serverless Function
 	a.Router.GET(config.ServerlessURI, handler.GetServerless)
@@ -55,5 +63,6 @@ func NewServerlessServer() *ServerlessServer {
 		Address: config.ServerlessAddress,
 		Port:    config.ServerlessPort,
 		Router:  gin.Default(),
+		Scale:   *scale.NewScaleManager(),
 	}
 }
