@@ -293,7 +293,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resp, err = httprequest.PostObjMsg(createUri, pod)
+	resp, err := httprequest.PostObjMsg(createUri, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message.\n" + err.Error())
 		os.Exit(1)
