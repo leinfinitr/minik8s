@@ -94,7 +94,6 @@ func (i *iptableManager) CreateService(createEvent *entity.ServiceEvent) error {
 				return err
 			}
 		}
-		// TODO: 需要考虑不指定端口的情况
 
 	} else if createEvent.Service.Spec.Type == "NodePort" {
 		for _, portConfig := range createEvent.Service.Spec.Ports {
