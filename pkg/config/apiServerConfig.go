@@ -6,7 +6,7 @@ import "strconv"
 
 const (
 	// APIServerLocalAddress api server的本地服务器地址
-	APIServerLocalAddress = "192.168.1.6"
+	APIServerLocalAddress = "192.168.1.7"
 	// APIServerLocalPort api server的本地服务器端口
 	APIServerLocalPort = 7000
 )
