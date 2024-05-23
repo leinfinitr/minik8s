@@ -32,7 +32,7 @@ func GetKubeproxy() *Kubeproxy {
 			// serviceEvents:   make(chan *entity.ServiceEvent),
 			proxyAPIRouter:  gin.Default(),
 			apiServerConfig: *config.NewAPIServerConfig(),
-			// iptableManager: GetIptableManager(),
+			iptableManager:  iptableManager.GetIptableManager(),
 		}
 	}
 	return kubeproxy

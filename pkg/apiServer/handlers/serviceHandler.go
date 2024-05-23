@@ -3,11 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/entity"
 	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"strings"
 
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 
@@ -71,6 +73,8 @@ func PutService(c *gin.Context) {
 	}
 
 	service.Metadata.UUID = uuid.New().String()
+	service.Spec.ClusterIP = AllocClusterIP()
+	log.InfoLog("AllocClusterIP: " + service.Spec.ClusterIP)
 	serviceEvent.Service = *service
 	serviceEvent.Endpoints = *Selector(service)
 
@@ -105,11 +109,13 @@ func PutService(c *gin.Context) {
 
 	// 向所有的Node发送serviceEvent
 	for _, node := range nodes {
-		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + "/" + config.ServiceURI
+		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.ServiceURI
+		url = strings.Replace(url, config.NameSpaceReplace, newServiceNamespace, -1)
+		url = strings.Replace(url, config.NameReplace, newServiceName, -1)
 		if serviceEvent.Action == "CreateService" {
 			res, err := httprequest.PutObjMsg(url, serviceEvent)
 			if err != nil || res.StatusCode != 200 {
-				log.ErrorLog("PutService: " + err.Error())
+				log.ErrorLog("PutService: errorUrl: " + url + "error: " + err.Error())
 				c.JSON(500, gin.H{"error": err.Error()})
 				return
 			}
@@ -125,7 +131,7 @@ func PutService(c *gin.Context) {
 
 	log.InfoLog("Put Service Successfully")
 	c.JSON(config.HttpSuccessCode, "Service add successfully")
-	return
+
 }
 
 // GetServiceStatus 获取指定Service的状态
@@ -166,4 +172,41 @@ func Selector(service *apiObject.Service) *[]apiObject.Endpoint {
 	}
 
 	return &endpoints
+}
+
+func AllocClusterIP() string {
+	IP := ""
+	var service apiObject.Service
+	isused := false
+
+	for {
+		i := 0
+		for i = 0; i < 4; i++ {
+			IP += fmt.Sprint(rand.Intn(255))
+			if i != 3 {
+				IP += "."
+			}
+		}
+
+		// 比对所有的service的clusterIP，如果有重复则重新生成
+		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdServicePrefix)
+		if err != nil {
+			log.ErrorLog("AllocClusterIP: " + err.Error())
+			return ""
+		}
+
+		for _, v := range res {
+			json.Unmarshal([]byte(v), &service)
+			if service.Spec.ClusterIP == IP {
+				isused = true
+				break
+			}
+		}
+
+		if !isused {
+			break
+		}
+	}
+
+	return IP
 }
