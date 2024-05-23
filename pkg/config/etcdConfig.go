@@ -10,6 +10,7 @@ const (
 	EtcdPodPrefix = "/registry/pods"
 	EtcdNodePrefix = "/registry/nodes"
 	EtcdReplicaSetPrefix = "/registry/replicasets"
+	EtcdHpaPrefix = "/registry/hpa"
 )
 func NewEtcdConfig() *EtcdConfig {
 	return &EtcdConfig{

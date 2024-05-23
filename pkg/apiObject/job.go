@@ -30,7 +30,7 @@ type JobSpec struct {
 // PodTemplateSpec 是Pod的模板定义，包含了Pod的规范和标签选择器。
 type PodTemplateSpec struct {
 	// 对象的元数据
-	ObjectMeta
+	Metadata ObjectMeta
 	// Pod的规格
 	Spec PodSpec
 }

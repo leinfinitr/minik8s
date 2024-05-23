@@ -28,6 +28,7 @@ const (
 	ServiceType     = "Service"
 	ReplicaSetType  = "ReplicaSet"
 	NodeType        = "Node"
+	HpaType		 	= "Hpa"
 )
 
 var AllTypeList = []string{PodType, ServiceType, ReplicaSetType, NodeType}
