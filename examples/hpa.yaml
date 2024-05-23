@@ -9,6 +9,8 @@ spec:
     metadata:
       name: my-pod
       namespace: my-namespace
+  selector:
+      app: my-app
   minReplicas: 1
   maxReplicas: 10
   adjustInterval: 30s

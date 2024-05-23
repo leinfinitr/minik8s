@@ -22,6 +22,7 @@ type HPA struct {
 
 type HPASpec struct {
 	ScaletargetRef ScaleTargetRef `json:"scaleTargetRef" yaml:"scaleTargetRef"`
+	Selector map[string]string `json:"selector" yaml:"selector"`
 	MinReplicas int32 `json:"minReplicas" yaml:"minReplicas"`
 	MaxReplicas int32 `json:"maxReplicas" yaml:"maxReplicas"`
 	AdjustInterval time.Duration `json:"adjustInterval" yaml:"adjustInterval"`

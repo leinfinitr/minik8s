@@ -95,6 +95,10 @@ type PodStatus struct {
 	ContainerStatuses []types.ContainerState `json:"containerStatuses" yaml:"containerStatuses"`
 	// 最后更新时间
 	LastUpdateTime time.Time `json:"lastUpdateTime" yaml:"lastUpdateTime"`
+
+	//Pod资源状态
+	CpuUsage float64 `json:"cpuUsage" yaml:"cpuUsage"`
+	MemUsage float64 `json:"memUsage" yaml:"memUsage"`
 }
 
 func (p *Pod) GetPodUUID() string {

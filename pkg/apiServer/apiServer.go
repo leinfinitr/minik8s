@@ -112,9 +112,17 @@ func (a *ApiServer) Register() {
 	a.Router.GET(config.GlobalReplicaSetsURI, handlers.GetGlobalReplicaSets)
 	a.Router.GET(config.ReplicaSetURI, handlers.GetReplicaSet)
 	a.Router.GET(config.ReplicaSetStatusURI, handlers.GetReplicaSetStatus)
+	a.Router.POST(config.ReplicaSetStatusURI, handlers.UpdateReplicaSetStatus)
 	a.Router.POST(config.ReplicaSetsURI, handlers.AddReplicaSet)
 	a.Router.PUT(config.ReplicaSetURI, handlers.UpdateReplicaSet)
 	a.Router.DELETE(config.ReplicaSetURI, handlers.DeleteReplicaSet)
+
+	a.Router.GET(config.GlobalHpaURI, handlers.GetGlobalHPAs)
+	a.Router.GET(config.HpasURI, handlers.GetHPAs)
+	a.Router.GET(config.HpaURI, handlers.GetHPA)
+	a.Router.POST(config.HpasURI, handlers.AddHPA)
+	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
+	
 }
 
 // 函数-------------------------------------------------------------

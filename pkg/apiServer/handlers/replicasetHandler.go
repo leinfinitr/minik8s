@@ -227,3 +227,50 @@ func GetReplicaSetStatus(c *gin.Context){
 	}
 	c.JSON(200, gin.H{"data": byteStatus})
 }
+
+func UpdateReplicaSetStatus(c *gin.Context){
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+	if namespace == "" || name == ""{
+		log.ErrorLog("UpdateReplicaSetStatus: namespace or name is empty")
+		c.JSON(400, gin.H{"error": "namespace or name is empty"})
+		return
+	}
+	log.InfoLog("UpdateReplicaSetStatus: "+namespace+"/"+name)
+	var status apiObject.ReplicaSetStatus
+	err := c.ShouldBindJSON(&status)
+	if err != nil{
+		log.ErrorLog("UpdateReplicaSetStatus: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	key := config.EtcdReplicaSetPrefix + "/" + namespace + "/" + name
+	res, err := etcdclient.EtcdStore.Get(key)
+	if err != nil{
+		log.ErrorLog("UpdateReplicaSetStatus: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	rs := &apiObject.ReplicaSet{}
+	err = json.Unmarshal([]byte(res), rs)
+	if err != nil{
+		log.ErrorLog("UpdateReplicaSetStatus: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	rs.Status = status
+	resJson, err := json.Marshal(rs)
+	if err != nil{
+		log.ErrorLog("UpdateReplicaSetStatus: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	err = etcdclient.EtcdStore.Put(key, string(resJson))
+	if err != nil{
+		log.ErrorLog("UpdateReplicaSetStatus: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": string(resJson)})
+	log.InfoLog("UpdateReplicaSetStatus: "+namespace+"/"+name+" success")
+}

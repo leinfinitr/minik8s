@@ -22,6 +22,11 @@ const (
 	GlobalReplicaSetsURI = "/api/v1/replicasets"
 	ReplicaSetURI  = "/api/v1/namespaces/:namespace/replicasets/:name"
 	ReplicaSetStatusURI = "/api/v1/namespaces/:namespace/replicasets/:name/status"
+
+	HpasURI = "/api/v1/namespaces/:namespace/hpa"
+	HpaStatusURI = "/api/v1/namespaces/:namespace/hpa/:name/status"
+	HpaURI = "/api/v1/namespaces/:namespace/hpa/:name" 
+	GlobalHpaURI = "/api/v1/hpa"
 )
 
 const (

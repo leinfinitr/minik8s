@@ -7,7 +7,7 @@ import (
 	"minik8s/tools/executor"
 	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
-	netRequest "minik8s/tools/netrequest"
+	netRequest "minik8s/tools/netRequest"
 	stringops "minik8s/tools/stringops"
 	"net/http"
 	"strings"
@@ -34,19 +34,7 @@ func (rc *ReplicaSetControllerImpl) Run() {
 	executor.ExecuteInPeriod(ReplicaControllerDelay, ReplicaControllerTimeGap, rc.syncReplicaSet)
 }
 
-func GetAllPodsFromAPIServer() (pods []apiObject.Pod,err error) {
-	url := config.APIServerURL() + config.PodsGlobalURI
-	res, err := httprequest.GetObjMsg(url, &pods, "data")
-	if err != nil {
-		log.ErrorLog("GetAllPodsFromAPIServer: " + err.Error())
-		return pods,err
-	}
-	if res.StatusCode != 200 {
-		log.ErrorLog("GetAllPodsFromAPIServer: " + res.Status)
-		return pods,err
-	}
-	return pods,nil
-}
+
 func GetAllReplicaSetsFromAPIServer() ( replicaSets []apiObject.ReplicaSet,err error) {
 	url := config.APIServerURL() + config.ReplicaSetsURI
 	res, err := httprequest.GetObjMsg(url, &replicaSets, "data")
@@ -75,10 +63,10 @@ func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 		log.ErrorLog("syncReplicaSet: " + err.Error())
 		return
 	}
-	replicatMapping := make(map[string]string, 0)
+	replicaMapping := make(map[string]string, 0)
 	for _, rs := range replicaSets {
 		key := rs.Metadata.Namespace + "/" + rs.Metadata.Name
-		replicatMapping[key] = rs.Metadata.UUID
+		replicaMapping[key] = rs.Metadata.UUID
 	}
 
 	for _, rs := range replicaSets {
@@ -112,7 +100,7 @@ func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 				continue
 			}
 			key := pod.Metadata.Labels[apiObject.PodReplicaNamespace] + "/" + pod.Metadata.Labels[apiObject.PodReplicaName]
-			if _, ok := replicatMapping[key]; !ok {
+			if _, ok := replicaMapping[key]; !ok {
 				rc.DecreaseReplicas([]apiObject.Pod{pod}, 1)
 			}
 		}
@@ -120,14 +108,6 @@ func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 
 }
 
-func PodsMatched(pod apiObject.Pod, selector map[string]string) bool {
-	for k, v := range selector {
-		if pod.Metadata.Labels[k] != v {
-			return false
-		}
-	}
-	return true
-}
 
 func (rc *ReplicaSetControllerImpl) IncreaseReplicas(replicaMeta *apiObject.ObjectMeta, pod *apiObject.PodTemplateSpec, num int) error {
 	new_pod := apiObject.Pod{}
@@ -220,7 +200,7 @@ func (rc *ReplicaSetControllerImpl) UpdateStatus(replicaSet *apiObject.ReplicaSe
 	newReplicaStatus.Replicas = replicaSet.Spec.Replicas
 	newReplicaStatus.ReadyReplicas = int32(numsReady)
 
-	url := config.APIServerURL() + config.ReplicaSetURI
+	url := config.APIServerURL() + config.ReplicaSetStatusURI
 	url = strings.Replace(url, config.NameSpaceReplace, replicaSet.Metadata.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, replicaSet.Metadata.Name, -1)
 	code, _, err := netRequest.PutRequestByTarget(url, &newReplicaStatus)
