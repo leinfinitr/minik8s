@@ -51,3 +51,14 @@ type ReplicaSetCondition struct {
 	// 条件的详细信息
 	Message string `json:"message" yaml:"message"`
 }
+
+const (
+	PodReplicaName = "pod-replica"
+	PodReplicaUUID = "pod-replica-uuid"
+	PodReplicaNamespace = "pod-replica-namespace"
+
+	PodHpaName = "pod-hpa"
+	PodHpaUUID = "pod-hpa-uuid"
+	PodHpaNamespace = "pod-hpa-namespace"
+
+)

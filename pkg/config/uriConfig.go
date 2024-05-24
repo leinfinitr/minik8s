@@ -22,6 +22,16 @@ const (
 	ServiceURI       = "/api/v1/namespaces/:namespace/services/:name"
 	ServiceStatusURI = "/api/v1/namespaces/:namespace/services/:name/status"
 
+	ReplicaSetsURI       = "/api/v1/namespaces/:namespace/replicasets"
+	GlobalReplicaSetsURI = "/api/v1/replicasets"
+	ReplicaSetURI        = "/api/v1/namespaces/:namespace/replicasets/:name"
+	ReplicaSetStatusURI  = "/api/v1/namespaces/:namespace/replicasets/:name/status"
+
+	HpasURI      = "/api/v1/namespaces/:namespace/hpa"
+	HpaStatusURI = "/api/v1/namespaces/:namespace/hpa/:name/status"
+	HpaURI       = "/api/v1/namespaces/:namespace/hpa/:name"
+	GlobalHpaURI = "/api/v1/hpa"
+
 	ServerlessURI         = "/api/v1/serverless"
 	ServerlessFunctionURI = "/api/v1/serverless/function/:name"
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"

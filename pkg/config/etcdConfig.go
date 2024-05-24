@@ -10,6 +10,8 @@ type EtcdConfig struct {
 const (
 	EtcdPodPrefix        = "/registry/pods"
 	EtcdNodePrefix       = "/registry/nodes"
+	EtcdReplicaSetPrefix = "/registry/replicasets"
+	EtcdHpaPrefix        = "/registry/hpa"
 	EtcdServerlessPrefix = "/registry/serverless"
 	EtcdServicePrefix    = "/registry/services"
 )

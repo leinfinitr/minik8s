@@ -8,6 +8,7 @@ import (
 	"minik8s/pkg/config"
 	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -56,8 +57,8 @@ func UpdatePod(c *gin.Context) {
 	}
 	log.InfoLog("UpdatePod: " + namespace + "/" + name)
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
-	_, err := etcdclient.EtcdStore.Get(key)
-	if err != nil {
+	res, err := etcdclient.EtcdStore.Get(key)
+	if res == "" || err != nil {
 		log.ErrorLog("UpdatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -200,7 +201,47 @@ func UpdatePodStatus(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Param("namespace")
 
-	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
+	if name == "" || namespace == "" {
+		log.ErrorLog("UpdatePodStatus: name or namespace is empty")
+		c.JSON(400, gin.H{"error": "name or namespace is empty"})
+		return
+	}
+	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
+	res, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	podStatus := &apiObject.PodStatus{}
+	err = c.ShouldBindJSON(podStatus)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	// 更新podStatus
+	pod := &apiObject.Pod{}
+	err = json.Unmarshal([]byte(res), pod)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	pod.Status = *podStatus
+	// 将更新后的pod写入etcd
+	resJson, err := json.Marshal(pod)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	err = etcdclient.EtcdStore.Put(key, string(resJson))
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 // GetPods 获取所有Pod
@@ -250,41 +291,31 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 	log.InfoLog("CreatePod: " + newPodNamespace + "/" + newPodName)
-	// TODO: 生成 UUID
+	// 生成 UUID
 	pod.Metadata.UUID = uuid.New().String()
-	// TODO: 发送的时候筛选 node
-	// SchedulerUrl := config.SchedulerURL() + config.SchedulerConfigPath
-	// resp, err := http.Get(SchedulerUrl)
-	// if err != nil {
-	// 	log.ErrorLog("CreatePod: " + err.Error())
-	// 	c.JSON(500, gin.H{"error": err.Error()})
-	// 	return
-	// }
-	var node apiObject.Node
-	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
-	if err != nil {
-		log.WarnLog("GetNodes: " + err.Error())
-		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
-		return
-	}
-	err = json.Unmarshal([]byte(res[0]), &node)
+	// 发送的时候筛选 node
+	SchedUri := config.SchedulerURL() + config.SchedulerConfigPath
+	resp, err := http.Get(SchedUri)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	// err = json.NewDecoder(resp.Body).Decode(&node)
-	// if err != nil {
-	// 	log.ErrorLog("CreatePod: " + err.Error())
-	// 	c.JSON(500, gin.H{"error": err.Error()})
-	// 	return
-	// }
+	var node apiObject.Node
+	err = json.NewDecoder(resp.Body).Decode(&node)
+	if err != nil {
+		log.ErrorLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 	pod.Spec.NodeName = node.Metadata.Name
-	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
+	addresses := node.Status.Addresses
+	address := addresses[0].Address
+	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
-	log.InfoLog("createUri: " + createUri)
+	fmt.Println("createUri: ", createUri)
 	reaJson, err := json.Marshal(pod)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
@@ -297,7 +328,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resp, err := httprequest.PostObjMsg(createUri, pod)
+	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message.\n" + err.Error())
 		os.Exit(1)
@@ -337,7 +368,23 @@ func UpdatePodProps(new *apiObject.Pod) {
 		log.ErrorLog("UpdatePodProps: " + err.Error())
 		return
 	}
-	updateUri := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodURI
+	nodeName := new.Spec.NodeName
+	key := config.EtcdNodePrefix + "/" + nodeName
+	res, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.ErrorLog("UpdatePodProps: " + err.Error())
+		return
+	}
+	node := &apiObject.Node{}
+	err = json.Unmarshal([]byte(res), node)
+	if err != nil {
+		log.ErrorLog("UpdatePodProps: " + err.Error())
+		return
+	}
+	addresses := node.Status.Addresses
+	address := addresses[0].Address
+	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
+	updateUri := url + config.PodURI
 	updateUri = strings.Replace(updateUri, config.NameSpaceReplace, new.Metadata.Namespace, -1)
 	updateUri = strings.Replace(updateUri, config.NameReplace, new.Metadata.Name, -1)
 	resp, err := httprequest.PutObjMsg(updateUri, podBytes)
