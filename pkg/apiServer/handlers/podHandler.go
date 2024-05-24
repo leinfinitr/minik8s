@@ -202,7 +202,47 @@ func UpdatePodStatus(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Param("namespace")
 
-	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
+	if name == "" || namespace == "" {
+		log.ErrorLog("UpdatePodStatus: name or namespace is empty")
+		c.JSON(400, gin.H{"error": "name or namespace is empty"})
+		return
+	}
+	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
+	res, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	podStatus := &apiObject.PodStatus{}
+	err = c.ShouldBindJSON(podStatus)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	// 更新podStatus
+	pod := &apiObject.Pod{}
+	err = json.Unmarshal([]byte(res), pod)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	pod.Status = *podStatus
+	// 将更新后的pod写入etcd
+	resJson, err := json.Marshal(pod)
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	err = etcdclient.EtcdStore.Put(key, string(resJson))
+	if err != nil {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 // GetPods 获取所有Pod
@@ -332,7 +372,23 @@ func UpdatePodProps(new *apiObject.Pod) {
 		log.ErrorLog("UpdatePodProps: " + err.Error())
 		return
 	}
-	updateUri := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodURI
+	nodeName := new.Spec.NodeName
+	key := config.EtcdNodePrefix + "/" + nodeName
+	res, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.ErrorLog("UpdatePodProps: " + err.Error())
+		return
+	}
+	node := &apiObject.Node{}
+	err = json.Unmarshal([]byte(res), node)
+	if err != nil {
+		log.ErrorLog("UpdatePodProps: " + err.Error())
+		return
+	}
+	addresses := node.Status.Addresses
+	address := addresses[0].Address
+	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
+	updateUri := url + config.PodURI
 	updateUri = strings.Replace(updateUri, config.NameSpaceReplace, new.Metadata.Namespace, -1)
 	updateUri = strings.Replace(updateUri, config.NameReplace, new.Metadata.Name, -1)
 	resp, err := httprequest.PutObjMsg(updateUri, podBytes)
