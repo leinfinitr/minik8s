@@ -327,6 +327,11 @@ func CreatePod(c *gin.Context) {
 		os.Exit(1)
 	}
 	err = json.NewDecoder(resp.Body).Decode(&pod)
+	if err != nil {
+		log.ErrorLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 	reaJson, err := json.Marshal(pod)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
@@ -334,6 +339,11 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 	err = etcdclient.EtcdStore.Put(key, string(reaJson))
+	if err != nil {
+		log.ErrorLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(200, gin.H{"data": resp})
 }
