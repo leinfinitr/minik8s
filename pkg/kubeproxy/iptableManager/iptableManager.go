@@ -43,9 +43,6 @@ func (i *iptableManager) init_iptable() {
 
 	i.iptable, _ = iptables.New()
 
-	// 清空已经存在的链和规则
-	i.iptable.ClearAll()
-
 	//设置NAT表的策略
 	i.iptable.ChangePolicy("nat", "PREROUTING", "ACCEPT")
 	i.iptable.ChangePolicy("nat", "INPUT", "ACCEPT")
