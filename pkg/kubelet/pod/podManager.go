@@ -77,17 +77,15 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 	p.PodMapByUUID[uuid] = pod
 	pod.Status.Phase = apiObject.PodBuilding
 
-	go func() {
-		err := p.AddPodHandler(pod)
-		if err != nil {
-			log.ErrorLog("AddPodHandler error: " + err.Error())
-			pod.Status.Phase = apiObject.PodUnknown
-		} else {
-			log.InfoLog("AddPodHandler success")
-			pod.Status.Phase = apiObject.PodSucceeded
-		}
-	}()
-
+	err := p.AddPodHandler(pod)
+	if err != nil {
+		log.ErrorLog("AddPodHandler error: " + err.Error())
+		pod.Status.Phase = apiObject.PodUnknown
+		return err
+	} else {
+		log.InfoLog("AddPodHandler success")
+		pod.Status.Phase = apiObject.PodSucceeded
+	}
 	return nil
 }
 
@@ -99,15 +97,14 @@ func (p *podManagerImpl) DeletePod(pod *apiObject.Pod) error {
 		return errors.New("pod message has been handled")
 	}
 
-	go func() {
-		err := p.DeletePodHandler(pod)
-		if err != nil {
-			log.ErrorLog("DeletePodHandler error: " + err.Error())
-		} else {
-			log.InfoLog("DeletePodHandler success")
-		}
-		delete(p.PodMapByUUID, uuid)
-	}()
+	err := p.DeletePodHandler(pod)
+	if err != nil {
+		log.ErrorLog("DeletePodHandler error: " + err.Error())
+		return err
+	} else {
+		log.InfoLog("DeletePodHandler success")
+	}
+	delete(p.PodMapByUUID, uuid)
 	return nil
 }
 
@@ -124,15 +121,14 @@ func (p *podManagerImpl) StartPod(pod *apiObject.Pod) error {
 	// 需要对Pod的不同状况进行处理
 	switch pod.Status.Phase {
 	case apiObject.PodSucceeded:
-		go func() {
-			err := p.StartPodHandler(pod)
-			if err != nil {
-				log.ErrorLog("StartPodHandler error: " + err.Error())
-			} else {
-				log.InfoLog("StartPodHandler success")
-			}
-			pod.Status.Phase = apiObject.PodRunning
-		}()
+		err := p.StartPodHandler(pod)
+		if err != nil {
+			log.ErrorLog("StartPodHandler error: " + err.Error())
+			return err
+		} else {
+			log.InfoLog("StartPodHandler success")
+		}
+		pod.Status.Phase = apiObject.PodRunning
 		return nil
 	case apiObject.PodRunning:
 		log.DebugLog("Pod has been running")
@@ -155,17 +151,16 @@ func (p *podManagerImpl) StopPod(pod *apiObject.Pod) error {
 		log.ErrorLog(msg)
 		return errors.New(msg)
 	} else if pod.Status.Phase == apiObject.PodRunning {
-		go func() {
-			err := p.StopPodHandler(pod)
-			if err != nil {
-				log.ErrorLog("StopPodHandler error: " + err.Error())
-				pod.Status.Phase = apiObject.PodUnknown
-			} else {
-				log.InfoLog("StopPodHandler success")
-				// 回退到所有容器都被创建好的状态
-				pod.Status.Phase = apiObject.PodSucceeded
-			}
-		}()
+		err := p.StopPodHandler(pod)
+		if err != nil {
+			log.ErrorLog("StopPodHandler error: " + err.Error())
+			pod.Status.Phase = apiObject.PodUnknown
+			return err
+		} else {
+			log.InfoLog("StopPodHandler success")
+			// 回退到所有容器都被创建好的状态
+			pod.Status.Phase = apiObject.PodSucceeded
+		}
 		return nil
 	} else {
 		msg := "status error"
@@ -184,18 +179,17 @@ func (p *podManagerImpl) RestartPod(pod *apiObject.Pod) error {
 		return errors.New(msg)
 	} else if pod.Status.Phase == apiObject.PodSucceeded || pod.Status.Phase == apiObject.PodFailed ||
 		pod.Status.Phase == apiObject.PodRunning {
-		go func() {
-			err := p.StopPodHandler(pod)
-			if err != nil {
-				log.ErrorLog("RestartPodHandler error: " + err.Error())
-				pod.Status.Phase = apiObject.PodUnknown
-			} else {
-				log.InfoLog("RestartPodHandler success")
-				pod.Status.Phase = apiObject.PodRunning
-			}
-			// 回退到所有容器都被创建好的状态
-			pod.Status.Phase = apiObject.PodSucceeded
-		}()
+		err := p.StopPodHandler(pod)
+		if err != nil {
+			log.ErrorLog("RestartPodHandler error: " + err.Error())
+			pod.Status.Phase = apiObject.PodUnknown
+			return err
+		} else {
+			log.InfoLog("RestartPodHandler success")
+			pod.Status.Phase = apiObject.PodRunning
+		}
+		// 回退到所有容器都被创建好的状态
+		pod.Status.Phase = apiObject.PodSucceeded
 		return nil
 	} else {
 		msg := "status error"
