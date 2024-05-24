@@ -69,6 +69,7 @@ func (r *RuntimeManager) getContainerConfig(container *apiObject.Container, sand
 			Image:              imageRef,
 			UserSpecifiedImage: container.Image,
 		},
+		Command: container.Command,
 	}
 
 	return config, nil
