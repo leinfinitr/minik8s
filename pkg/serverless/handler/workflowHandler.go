@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"github.com/gin-gonic/gin"
 	"minik8s/tools/log"
 	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 // RunServerlessWorkflow 运行Serverless Workflow
@@ -15,7 +16,7 @@ func RunServerlessWorkflow(c *gin.Context) {
 	err := c.ShouldBindJSON(&content)
 	if err != nil {
 		log.ErrorLog("RunServerlessWorkflow: " + err.Error())
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(400, err.Error())
 		return
 	}
 	param := c.Param("param")

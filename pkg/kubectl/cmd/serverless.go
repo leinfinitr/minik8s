@@ -3,15 +3,16 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
-	"minik8s/tools/httpRequest"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"os"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 var serverlessCmd = &cobra.Command{
@@ -111,11 +112,18 @@ func createServerless(fileName string) {
 	}
 	// 转发给 serverless 服务端口处理
 	url := config.ServerlessURL() + config.ServerlessURI
-	_, err = httprequest.PostObjMsg(url, serverless)
+	res, err := httprequest.PostObjMsg(url, serverless)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
 		os.Exit(1)
 	}
+	// 输出结果
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.ErrorLog("Could not read the response body.")
+		os.Exit(1)
+	}
+	fmt.Println("Result: " + string(body))
 }
 
 // getAllServerless 获取所有 serverless 环境
@@ -152,11 +160,18 @@ func deleteServerless(serverlessName string) {
 	// 转发给 serverless 服务端口处理
 	url := config.ServerlessURL() + config.ServerlessFunctionURI
 	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
-	_, err := httprequest.DelMsg(url)
+	res, err := httprequest.DelMsg(url)
 	if err != nil {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
+	// 输出结果
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	fmt.Println("Result: " + string(body))
 }
 
 // updateFunction 更新 serverless 环境函数
@@ -175,11 +190,18 @@ func updateFunction(serverlessName, fileName string) {
 	// 转发给 serverless 服务端口处理
 	url := config.ServerlessURL() + config.ServerlessFunctionURI
 	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
-	_, err = httprequest.PutObjMsg(url, fileName)
+	response, err := httprequest.PutObjMsg(url, fileName)
 	if err != nil {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
+	// 输出结果
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	fmt.Println("Result: " + string(body))
 }
 
 // runFunction 运行 serverless 环境函数
@@ -200,7 +222,7 @@ func runFunction(serverlessName string, param string) {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	log.InfoLog("Result: " + string(body))
+	fmt.Println("Result: " + string(body))
 }
 
 // workflow 执行 serverless 工作流
@@ -236,5 +258,5 @@ func workflow(fileName string, param string) {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	log.InfoLog("Result: " + string(body))
+	fmt.Println("Result: " + string(body))
 }
