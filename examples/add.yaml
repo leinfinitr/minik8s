@@ -4,3 +4,4 @@ volume: serverless-volume
 requirements:
   - numpy
 functionFile: add.py
+command: python add.py

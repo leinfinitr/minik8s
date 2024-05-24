@@ -205,6 +205,28 @@ func ScanPodStatus() {
 	}
 }
 
+// ExecPodContainer 用于执行 pod 中的容器
+func ExecPodContainer(c *gin.Context) {
+	containerId := c.Param("container")
+	param := c.Param("param")
+	exec := new(apiObject.ExecReq)
+
+	exec.ContainerId = containerId
+	exec.Cmd = []string{param}
+	exec.Tty = true
+	exec.Stdin = true
+	exec.Stdout = true
+	exec.Stderr = true
+
+	rep, err := podManager.ExecPodContainer(exec)
+	if err != nil {
+		log.ErrorLog("ExecPodContainer error: " + err.Error())
+		c.JSON(config.HttpErrorCode, err.Error())
+	} else {
+		c.JSON(200, rep.Url)
+	}
+}
+
 // GetPods 用于获取所有的 pod
 func GetPods(c *gin.Context) {
 	log.DebugLog("GetPods")

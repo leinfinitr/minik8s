@@ -11,6 +11,7 @@ const (
 	PodEphemeralContainersURI = "/api/v1/namespaces/:namespace/pods/:name/ephemeralContainers"
 	PodLogURI                 = "/api/v1/namespaces/:namespace/pods/:name/log"
 	PodStatusURI              = "/api/v1/namespaces/:namespace/pods/:name/status"
+	PodExecURI                = "/api/v1/namespaces/:namespace/pods/:name/exec/:container/:param"
 	PodsURI                   = "/api/v1/namespaces/:namespace/pods"
 	PodsGlobalURI             = "/api/v1/pods"
 
@@ -31,6 +32,7 @@ const (
 	NameSpaceReplace = ":namespace"
 	NameReplace      = ":name"
 	ParamReplace     = ":param"
+	ContainerReplace = ":container"
 )
 
 var UriMapping = map[string]string{

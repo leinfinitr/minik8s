@@ -214,7 +214,7 @@ func (p *podManagerImpl) RecreatePodContainer(pod *apiObject.Pod) error {
 }
 
 func (p *podManagerImpl) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
-	return p.ExecPodContainer(req)
+	return p.ExecPodHandler(req)
 }
 
 func (p *podManagerImpl) UpdatePodStatus() error {

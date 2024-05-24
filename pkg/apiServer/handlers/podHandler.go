@@ -268,6 +268,11 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 	err = json.Unmarshal([]byte(res[0]), &node)
+	if err != nil {
+		log.ErrorLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 	// err = json.NewDecoder(resp.Body).Decode(&node)
 	// if err != nil {
 	// 	log.ErrorLog("CreatePod: " + err.Error())
@@ -279,7 +284,7 @@ func CreatePod(c *gin.Context) {
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
-	fmt.Println("createUri: ", createUri)
+	log.InfoLog("createUri: " + createUri)
 	reaJson, err := json.Marshal(pod)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
@@ -345,4 +350,55 @@ func UpdatePodProps(new *apiObject.Pod) {
 	if err != nil {
 		log.ErrorLog("UpdatePodProps: " + err.Error())
 	}
+}
+
+// ExecPod 根据Pod和container名称执行相应的命令
+func ExecPod(c *gin.Context) {
+	name := c.Param("name")
+	namespace := c.Param("namespace")
+	container := c.Param("container")
+	param := c.Param("param")
+	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + container)
+
+	// 取出Pod
+	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
+	res, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.ErrorLog("ExecPod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	pod := &apiObject.Pod{}
+	err = json.Unmarshal([]byte(res), pod)
+	if err != nil {
+		log.ErrorLog("ExecPod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	// 取出containerID
+	containerID := ""
+	for _, containers := range pod.Spec.Containers {
+		if containers.Name == container {
+			containerID = containers.ContainerID
+			break
+		}
+	}
+	if containerID == "" {
+		log.ErrorLog("ExecPod: containerID is empty")
+		c.JSON(400, gin.H{"error": "containerID is empty"})
+		return
+	}
+	// 执行命令
+	execUri := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodExecURI
+	execUri = strings.Replace(execUri, config.NameSpaceReplace, namespace, -1)
+	execUri = strings.Replace(execUri, config.NameReplace, name, -1)
+	execUri = strings.Replace(execUri, config.ContainerReplace, containerID, -1)
+	execUri = strings.Replace(execUri, config.ParamReplace, param, -1)
+	resp, err := httprequest.GetMsg(execUri)
+	if err != nil {
+		log.ErrorLog("ExecPod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"data": resp})
 }

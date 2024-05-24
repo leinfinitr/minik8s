@@ -39,7 +39,6 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	}
 
 	log.DebugLog("RunPodSandbox")
-	log.DebugLog(request.String())
 	response, err := r.runtimeClient.RunPodSandbox(context.Background(), request)
 	if err != nil {
 		log.ErrorLog("Create Pod sandbox fail " + err.Error())

@@ -2,11 +2,12 @@ package serverless
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"minik8s/pkg/config"
 	"minik8s/pkg/serverless/handler"
 	"minik8s/pkg/serverless/scale"
 	"minik8s/tools/log"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ServerlessServer struct {

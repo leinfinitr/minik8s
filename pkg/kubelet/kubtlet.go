@@ -43,6 +43,7 @@ func (k *Kubelet) Run() {
 	go func() {
 		k.registerKubeletAPI()
 		KubeletIP, _ := host.GetHostIP()
+		log.InfoLog("Listening and serving HTTP on " + KubeletIP + ":" + fmt.Sprint(config.KubeletAPIPort))
 		_ = k.KubeletAPIRouter.Run(KubeletIP + ":" + fmt.Sprint(config.KubeletAPIPort))
 	}()
 
@@ -173,6 +174,9 @@ func (k *Kubelet) registerKubeletAPI() {
 	k.KubeletAPIRouter.GET(config.PodStatusURI, pod.GetPodStatus)
 	// 更新Pod的状态
 	// k.KubeletAPIRouter.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
+
+	// 执行指定Pod和container的命令
+	k.KubeletAPIRouter.GET(config.PodExecURI, pod.ExecPodContainer)
 
 	// 获取所有Pod
 	k.KubeletAPIRouter.GET(config.PodsURI, pod.GetPods)

@@ -11,4 +11,6 @@ type Serverless struct {
 	Requirements []string `json:"requirements" yaml:"requirements"`
 	// 函数文件
 	FunctionFile string `json:"functionFile" yaml:"functionFile"`
+	// 执行函数的命令
+	Command string `json:"command" yaml:"command"`
 }
