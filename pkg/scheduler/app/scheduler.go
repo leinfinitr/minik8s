@@ -28,7 +28,7 @@ const (
 var globalCount int
 var lock sync.Mutex
 
-func (s *Scheduler) scheduleRequest() string {
+func (s *Scheduler) scheduleRequest() apiObject.Node {
 	// 从apiServer获取pod信息
 	podList := s.getNodesList()
 	// 调度pod
@@ -74,7 +74,7 @@ func (s *Scheduler) getNodesList() []apiObject.Node {
 	return NodeList
 }
 
-func (s *Scheduler) schedule(nodeList []apiObject.Node) string {
+func (s *Scheduler) schedule(nodeList []apiObject.Node) apiObject.Node {
 	switch s.Policy {
 	case RoundRobin:
 		return s.roundRobin(nodeList)
@@ -83,7 +83,7 @@ func (s *Scheduler) schedule(nodeList []apiObject.Node) string {
 	}
 }
 
-func (s *Scheduler) roundRobin(nodeList []apiObject.Node) string {
+func (s *Scheduler) roundRobin(nodeList []apiObject.Node) apiObject.Node {
 	lock.Lock()
 	defer lock.Unlock()
 	if globalCount >= len(nodeList) {
@@ -91,12 +91,7 @@ func (s *Scheduler) roundRobin(nodeList []apiObject.Node) string {
 	}
 	node := nodeList[globalCount]
 	globalCount++
-	data, err := json.Marshal(node)
-	if err != nil {
-		log.ErrorLog("json.Marshal err:" + err.Error())
-		return ""
-	}
-	return string(data)
+	return node
 }
 
 func Run() {
@@ -105,7 +100,7 @@ func Run() {
 
 	r.GET(config.SchedulerPath(), func(c *gin.Context) {
 		data := scheduler.scheduleRequest()
-		c.JSON(200, gin.H{"data": data})
+		c.JSON(200, data)
 	})
 
 	log.InfoLog("Starting scheduler HTTP server on :7820")

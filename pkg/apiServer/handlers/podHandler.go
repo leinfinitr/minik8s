@@ -310,6 +310,8 @@ func CreatePod(c *gin.Context) {
 	}
 	pod.Spec.NodeName = node.Metadata.Name
 	addresses := node.Status.Addresses
+	tep, _ := json.Marshal(addresses)
+	log.DebugLog("CreatePod: " + string(tep))
 	address := addresses[0].Address
 	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
