@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 一个临时的用于存储 node 信息的 map
@@ -76,7 +77,7 @@ func CreateNode(c *gin.Context) {
 	}
 
 	// nodes[node.Metadata.Name] = node
-	log.InfoLog("CreateNode: " + node.Metadata.Name)
+	log.InfoLog("CreateNode: " + node.Metadata.Name + " Node IP: " + node.Status.Addresses[0].Address)
 	c.JSON(config.HttpSuccessCode, "message: create node success")
 	// TODO: 将信息广播给所有node
 	BroadcastNode(node)

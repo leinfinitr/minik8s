@@ -6,9 +6,8 @@ import (
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
-	"minik8s/tools/httpRequest"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
-	"net/http"
 	"os"
 	"strings"
 
@@ -254,20 +253,27 @@ func CreatePod(c *gin.Context) {
 	// TODO: 生成 UUID
 	pod.Metadata.UUID = uuid.New().String()
 	// TODO: 发送的时候筛选 node
-	SchedulerUrl := config.SchedulerURL() + config.SchedulerConfigPath
-	resp, err := http.Get(SchedulerUrl)
-	if err != nil {
-		log.ErrorLog("CreatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
+	// SchedulerUrl := config.SchedulerURL() + config.SchedulerConfigPath
+	// resp, err := http.Get(SchedulerUrl)
+	// if err != nil {
+	// 	log.ErrorLog("CreatePod: " + err.Error())
+	// 	c.JSON(500, gin.H{"error": err.Error()})
+	// 	return
+	// }
 	var node apiObject.Node
-	err = json.NewDecoder(resp.Body).Decode(&node)
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
 	if err != nil {
-		log.ErrorLog("CreatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		log.WarnLog("GetNodes: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 		return
 	}
+	err = json.Unmarshal([]byte(res[0]), &node)
+	// err = json.NewDecoder(resp.Body).Decode(&node)
+	// if err != nil {
+	// 	log.ErrorLog("CreatePod: " + err.Error())
+	// 	c.JSON(500, gin.H{"error": err.Error()})
+	// 	return
+	// }
 	pod.Spec.NodeName = node.Metadata.Name
 	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
@@ -286,7 +292,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resp, err = httprequest.PostObjMsg(createUri, pod)
+	resp, err := httprequest.PostObjMsg(createUri, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message.\n" + err.Error())
 		os.Exit(1)

@@ -76,6 +76,7 @@ require (
 )
 
 require (
+	github.com/coreos/go-iptables v0.7.0
 	github.com/distribution/reference v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.5.9

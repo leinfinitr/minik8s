@@ -11,6 +11,7 @@ const (
 	EtcdPodPrefix        = "/registry/pods"
 	EtcdNodePrefix       = "/registry/nodes"
 	EtcdServerlessPrefix = "/registry/serverless"
+	EtcdServicePrefix    = "/registry/services"
 )
 
 func NewEtcdConfig() *EtcdConfig {

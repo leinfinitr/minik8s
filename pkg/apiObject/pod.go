@@ -59,10 +59,17 @@ type PodSpec struct {
 type Volume struct {
 	// 存储卷的名称
 	Name string `json:"name" yaml:"name"`
+	//
+	EmptyDir EmptyDirVolumeSource `json:"emptyDir" yaml:"emptyDir"`
 	// 存储卷的来源
 	VolumeSource
 }
 
+type EmptyDirVolumeSource struct {
+	Medium string `json:"medium" yaml:"medium"`
+	// 空目录的大小
+	SizeLimit string `json:"sizeLimit" yaml:"sizeLimit"`
+}
 type VolumeSource struct {
 	// 主机路径
 	HostPath *HostPathVolumeSource `json:"hostPath" yaml:"hostPath"`

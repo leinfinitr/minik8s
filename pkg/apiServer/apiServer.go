@@ -5,9 +5,10 @@ package apiServer
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ApiServer struct {
@@ -95,17 +96,15 @@ func (a *ApiServer) Register() {
 	// 删除所有Pod
 	a.Router.DELETE(config.PodsURI, handlers.DeletePods)
 
-	// 获取全局所有Pod
-	a.Router.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
-
-	// 获取全部Service
-	a.Router.GET(config.ServicesURI, handlers.GetServices)
-
+	// 接受kubeproxy的心跳
+	a.Router.PUT(config.ProxiesStatusURI, handlers.UpdateProxyStatus)
 	// 获取指定Service
 	a.Router.GET(config.ServiceURI, handlers.GetService)
+	// 更新指定Service
+	a.Router.PUT(config.ServiceURI, handlers.PutService)
+	// 删除制定Service
+	a.Router.DELETE(config.ServiceURI, handlers.GetService)
 
-	// 获取指定Service的状态
-	a.Router.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
 }
 
 // 函数-------------------------------------------------------------
