@@ -46,6 +46,8 @@ func CreatePod(c *gin.Context) {
 		log.ErrorLog("AddPod error: " + err.Error())
 		c.JSON(config.HttpErrorCode, err.Error())
 		return
+	} else {
+		c.JSON(config.HttpSuccessCode, pod)
 	}
 }
 

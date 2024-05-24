@@ -318,6 +318,22 @@ func CreatePod(c *gin.Context) {
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
 	fmt.Println("createUri: ", createUri)
+	if err != nil {
+		log.ErrorLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	resp, err = httprequest.PostObjMsg(createUri, pod)
+	if err != nil || resp.StatusCode != config.HttpSuccessCode {
+		log.ErrorLog("Could not post the object message.\n" + err.Error())
+		os.Exit(1)
+	}
+	err = json.NewDecoder(resp.Body).Decode(&pod)
+	if err != nil {
+		log.ErrorLog("CreatePod: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 	reaJson, err := json.Marshal(pod)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
@@ -330,11 +346,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resp, err = httprequest.PostObjMsg(createUri, pod)
-	if err != nil {
-		log.ErrorLog("Could not post the object message.\n" + err.Error())
-		os.Exit(1)
-	}
+
 	c.JSON(200, gin.H{"data": resp})
 }
 
