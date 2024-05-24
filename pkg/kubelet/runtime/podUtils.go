@@ -17,6 +17,7 @@ type PodUtils interface {
 	RestartPod(pod *apiObject.Pod) error
 	StopPod(pod *apiObject.Pod) error
 	DeletePod(pod *apiObject.Pod) error
+	GetPodSandboxStatus(podId string) (*runtimeapi.PodSandboxStatus, error)
 	RecreatePodContainer(pod *apiObject.Pod) error
 	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
 	UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error
@@ -55,6 +56,14 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 	message := fmt.Sprintf("PodSandboxId is set successfullly, Is : " + response.PodSandboxId)
 	log.InfoLog(message)
 	pod.PodSandboxId = response.PodSandboxId
+
+	// 调用接口去获取分配给Pod的IP信息
+	res, err := r.GetPodSandboxStatus(pod.PodSandboxId)
+	if err != nil {
+		log.ErrorLog("GetPodSandboxStatus failed")
+		return err
+	}
+	pod.Status.PodIP = res.Network.Ip // 获取到Pod的IP信息
 
 	// 调用接口去创建Pod内部的所有容器
 	containers := &pod.Spec.Containers
@@ -171,6 +180,20 @@ func (r *RuntimeManager) StopPod(pod *apiObject.Pod) error {
 
 	}
 	return nil
+}
+
+func (r *RuntimeManager) GetPodSandboxStatus(podId string) (*runtimeapi.PodSandboxStatus, error) {
+	log.InfoLog("[RPC] Start GetPodSandboxStatus")
+	response, err := r.runtimeClient.PodSandboxStatus(context.Background(), &runtimeapi.PodSandboxStatusRequest{
+		PodSandboxId: podId,
+	})
+
+	if err != nil {
+		log.ErrorLog("GetPodSandboxStatus failed")
+		return nil, err
+	}
+
+	return response.Status, nil
 }
 
 func (r *RuntimeManager) DeletePod(pod *apiObject.Pod) error {
