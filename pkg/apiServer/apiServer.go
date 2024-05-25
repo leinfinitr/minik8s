@@ -5,6 +5,7 @@ package apiServer
 
 import (
 	"fmt"
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
 
@@ -29,6 +30,7 @@ func (a *ApiServer) Run() {
 	if err != nil {
 		panic(err)
 	}
+	etcdclient.EtcdStore.Delete(config.EtcdNodePrefix)
 }
 
 // Register 注册路由

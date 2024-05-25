@@ -3,9 +3,12 @@
 package pod
 
 import (
+	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -219,6 +222,9 @@ func ScanPodStatusRoutine() {
 				err := podManager.StartPod(pod)
 				if err != nil {
 					log.ErrorLog("StartPod error: " + err.Error())
+				} else {
+					// 更新apiServer的pod状态
+					UpdatePodStatus(pod)
 				}
 			}()
 			// 其余情况暂不处理
@@ -259,4 +265,18 @@ func GetPods(c *gin.Context) {
 		*pods = append(*pods, *pod)
 	}
 	c.JSON(200, pods)
+}
+
+func UpdatePodStatus(pod *apiObject.Pod) {
+	for {
+		url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodStatusURI
+		url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+		url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+		res, err := httprequest.PutObjMsg(url, pod.Status)
+		if err != nil || res.StatusCode != 200 {
+			log.ErrorLog("UpdatePodStatus: " + err.Error())
+		} else {
+			break
+		}
+	}
 }

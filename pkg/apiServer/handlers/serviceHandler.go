@@ -52,6 +52,27 @@ func RegisterProxy(c *gin.Context) {
 		services = append(services, service)
 	}
 
+	// 如果kubeproxy所在的node没有注册，则返回错误
+	var node apiObject.Node
+	res, err = etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+	for _, v := range res {
+		err = json.Unmarshal([]byte(v), &node)
+		if err != nil {
+			log.ErrorLog("RegisterProxy: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		if node.Status.Addresses[0].Address == c.ClientIP() {
+			break
+		}
+	}
+
+	if node.Status.Addresses[0].Address != c.ClientIP() {
+		log.ErrorLog("RegisterProxy: node not exists, IP: " + c.ClientIP() + " node: " + node.Metadata.Name)
+		c.JSON(config.HttpErrorCode, gin.H{"error": "node not exists"})
+		return
+	}
+
 	// 向proxy发送serviceEvent
 	for _, service := range services {
 		var serviceEvent entity.ServiceEvent

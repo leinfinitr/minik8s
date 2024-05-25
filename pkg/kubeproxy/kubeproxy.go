@@ -82,9 +82,7 @@ func (k *Kubeproxy) updateService(c *gin.Context) {
 
 	// 更新service
 	if _, ok := k.serviceUUIDMap[service.Metadata.UUID]; !ok {
-		log.ErrorLog("UpdateService error: service not exists")
-		c.JSON(config.HttpErrorCode, gin.H{"error": "service not exists"})
-		return
+		log.WarnLog("UpdateService error: service not exists")
 	}
 	k.serviceUUIDMap[service.Metadata.UUID] = service
 
@@ -143,14 +141,12 @@ func (k *Kubeproxy) registerKubeproxyAPI() {
 func (k *Kubeproxy) Run() {
 
 	// 主线程，用于接受并转发来自与apiServer通信端口的请求
-	go func() {
-		k.registerKubeproxyAPI()
-		kubeproxyIP, _ := host.GetHostIP()
-		_ = k.proxyAPIRouter.Run(kubeproxyIP + ":" + fmt.Sprint(config.KubeproxyAPIPort))
-	}()
-
+	k.registerKubeproxyAPI()
+	kubeproxyIP, _ := host.GetHostIP()
 	// 在proxy刚启动时，向apiServer注册自己
-	k.registerProxy()
+	go k.registerProxy()
+
+	_ = k.proxyAPIRouter.Run(kubeproxyIP + ":" + fmt.Sprint(config.KubeproxyAPIPort))
 }
 
 func (k *Kubeproxy) registerProxy() {
@@ -163,9 +159,9 @@ func (k *Kubeproxy) registerProxy() {
 		statusCode, _, _ := netRequest.PostRequestByTarget(url, nil)
 
 		if statusCode != config.HttpSuccessCode {
-			log.ErrorLog("kubeproxy heartbeat failed")
+			log.ErrorLog("kubeproxy register failed")
 		} else {
-			log.DebugLog("kubeproxy heartbeat success")
+			log.DebugLog("kubeproxy register success")
 			return
 		}
 
