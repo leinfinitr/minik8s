@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 
 	"github.com/gin-gonic/gin"
@@ -53,9 +55,38 @@ func CreateNode(c *gin.Context) {
 		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 		return
 	}
+
 	if len(res) > 0 {
-		log.WarnLog("CreateNode: node already exists")
-		c.JSON(config.HttpErrorCode, gin.H{"error": "node already exists"})
+		// 节点已经存在，需要对pod进行特殊处理
+		log.InfoLog("CreateNode: node already exists")
+		c.JSON(config.HttpSuccessCode, "message: node already exists")
+		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdPodPrefix)
+		if err != nil {
+			log.WarnLog("CreateNode: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		var pods []apiObject.Pod
+		for _, v := range res {
+			var pod apiObject.Pod
+			err = json.Unmarshal([]byte(v), &pod)
+			if err != nil {
+				log.WarnLog("CreateNode: " + err.Error())
+				continue
+			}
+			if pod.Spec.NodeName == node.Metadata.Name {
+				pods = append(pods, pod)
+			}
+		}
+		// 把pods信息发送到给kubelet，同步pods信息
+		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodsSyncURI
+		resp, err := httprequest.PostObjMsg(url, pods)
+		if err != nil || resp.StatusCode != config.HttpSuccessCode {
+			log.WarnLog("CreateNode: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(config.HttpSuccessCode, "message: create node success")
 		return
 	}
 	if node.Kind != apiObject.NodeType {

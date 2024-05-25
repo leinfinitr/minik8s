@@ -89,6 +89,22 @@ func GetPodStatus(c *gin.Context) {
 	c.JSON(config.HttpErrorCode, "Pod not found")
 }
 
+func SyncPods(c *gin.Context) {
+	var pods []apiObject.Pod
+	err := c.ShouldBindJSON(&pods)
+	if err != nil {
+		log.ErrorLog("SyncPod error: " + err.Error())
+	}
+	err = podManager.SyncPods(&pods)
+	if err != nil {
+		log.ErrorLog("SyncPod error: " + err.Error())
+	} else {
+		// 主动调用一次扫描 pod 状态的函数
+		ScanPodStatusRoutine()
+		c.JSON(200, "")
+	}
+}
+
 // func StartPod(c *gin.Context) {
 // 	var pod apiObject.Pod
 // 	err := c.ShouldBindJSON(&pod)
@@ -176,34 +192,40 @@ func GetPodStatus(c *gin.Context) {
 // ScanPodStatus 用于扫描 pod 的状态，根据 pod 的状态进行相应的操作
 func ScanPodStatus() {
 	log.DebugLog("start scan pod status")
-	// 每间隔 10s 扫描一次
+	// 每间隔 15s 扫描一次
 	for {
-		// 更新 pod 的状态
-		err := podManager.UpdatePodStatus()
-		if err != nil {
-			log.ErrorLog("ScanPodStatus error: " + err.Error())
-		}
-		// 遍历所有的pod
-		for _, pod := range podManager.PodMapByUUID {
-			// 根据每个pod当前所处的阶段进行相应的操作
-			phase := pod.Status.Phase
-			switch phase {
-			case apiObject.PodSucceeded:
-				// 如果 pod 处于 Succeeded 阶段，则运行 pod
-				go func() {
-					err := podManager.StartPod(pod)
-					if err != nil {
-						log.ErrorLog("StartPod error: " + err.Error())
-					}
-				}()
-				// 其余情况暂不处理
-			default:
-				log.DebugLog("Pod is in phase: " + phase)
 
-			}
+		ScanPodStatusRoutine()
+
+		// 间隔15s
+		time.Sleep(15 * time.Second)
+	}
+}
+
+func ScanPodStatusRoutine() {
+	// 更新 pod 的状态
+	err := podManager.UpdatePodStatus()
+	if err != nil {
+		log.ErrorLog("ScanPodStatus error: " + err.Error())
+	}
+	// 遍历所有的pod，根据pod的状态进行相应的操作
+	for _, pod := range podManager.PodMapByUUID {
+		// 根据每个pod当前所处的阶段进行相应的操作
+		phase := pod.Status.Phase
+		switch phase {
+		case apiObject.PodSucceeded:
+			// 如果 pod 处于 Succeeded 阶段，则运行 pod
+			go func() {
+				err := podManager.StartPod(pod)
+				if err != nil {
+					log.ErrorLog("StartPod error: " + err.Error())
+				}
+			}()
+			// 其余情况暂不处理
+		default:
+			log.DebugLog("Pod is in phase: " + phase)
+
 		}
-		// 间隔10s
-		time.Sleep(10 * time.Second)
 	}
 }
 

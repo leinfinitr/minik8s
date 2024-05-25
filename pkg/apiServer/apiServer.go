@@ -101,12 +101,14 @@ func (a *ApiServer) Register() {
 
 	// 接受kubeproxy的心跳
 	a.Router.PUT(config.ProxiesStatusURI, handlers.UpdateProxyStatus)
+	// 接受kubeproxy的注册
+	a.Router.POST(config.ProxyStatusURI, handlers.RegisterProxy)
 	// 获取指定Service
 	a.Router.GET(config.ServiceURI, handlers.GetService)
 	// 更新指定Service
 	a.Router.PUT(config.ServiceURI, handlers.PutService)
 	// 删除制定Service
-	a.Router.DELETE(config.ServiceURI, handlers.GetService)
+	a.Router.DELETE(config.ServiceURI, handlers.DeleteService)
 
 	a.Router.GET(config.ReplicaSetsURI, handlers.GetReplicaSets)
 	a.Router.GET(config.GlobalReplicaSetsURI, handlers.GetGlobalReplicaSets)
@@ -122,7 +124,7 @@ func (a *ApiServer) Register() {
 	a.Router.GET(config.HpaURI, handlers.GetHPA)
 	a.Router.POST(config.HpasURI, handlers.AddHPA)
 	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
-	
+
 }
 
 // 函数-------------------------------------------------------------

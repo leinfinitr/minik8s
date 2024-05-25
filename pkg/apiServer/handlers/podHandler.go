@@ -119,7 +119,7 @@ func DeletePod(c *gin.Context) {
 	delUri := url + config.PodsURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
-	_, err = httprequest.DelMsg(delUri)
+	_, err = httprequest.DelMsg(delUri, nil)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -318,11 +318,6 @@ func CreatePod(c *gin.Context) {
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
 	fmt.Println("createUri: ", createUri)
-	if err != nil {
-		log.ErrorLog("CreatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
 	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil || resp.StatusCode != config.HttpSuccessCode {
 		log.ErrorLog("Could not post the object message.\n" + err.Error())

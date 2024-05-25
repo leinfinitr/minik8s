@@ -19,6 +19,7 @@ type PodManager interface {
 	RecreatePodContainer(pod *apiObject.Pod) error
 	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
 	UpdatePodStatus() error
+	SyncPods(pods *[]apiObject.Pod) error
 }
 
 /*  */
@@ -60,6 +61,7 @@ func GetPodManager() PodManager {
 			RecreateContainerHandler:     runtimeMgr.RecreatePodContainers,
 			ExecPodHandler:               runtimeMgr.ExecPodContainer,
 			UpdateContainerStatusHandler: runtimeMgr.UpdateContainerStatus,
+			// SyncPods:                     runtimeMgr.SyncPods,
 		}
 	}
 
@@ -225,5 +227,17 @@ func (p *podManagerImpl) UpdatePodStatus() error {
 		}
 	}
 
+	return nil
+}
+
+func (p *podManagerImpl) SyncPods(pods *[]apiObject.Pod) error {
+	// 把apiServer的pods信息同步到本地
+	if len(p.PodMapByUUID) != 0 {
+		log.DebugLog("PodMapByUUID is not empty")
+		return nil
+	}
+	for _, pod := range *pods {
+		p.PodMapByUUID[pod.GetPodUUID()] = &pod
+	}
 	return nil
 }

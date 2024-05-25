@@ -37,8 +37,6 @@ type Kubelet struct {
 }
 
 func (k *Kubelet) Run() {
-	k.registerNode()
-
 	// 用于接受并转发来自与apiServer通信端口的请求
 	go func() {
 		k.registerKubeletAPI()
@@ -46,6 +44,9 @@ func (k *Kubelet) Run() {
 		log.InfoLog("Listening and serving HTTP on " + KubeletIP + ":" + fmt.Sprint(config.KubeletAPIPort))
 		_ = k.KubeletAPIRouter.Run(KubeletIP + ":" + fmt.Sprint(config.KubeletAPIPort))
 	}()
+
+	// 注册node
+	k.registerNode()
 
 	// 定时扫描pod的状态并进行相应的处理
 	go pod.ScanPodStatus()
@@ -110,17 +111,21 @@ func (k *Kubelet) registerNode() bool {
 		},
 	}
 
-	url := k.ApiServerConfig.APIServerURL() + config.NodesURI
+	for {
+		// 一致尝试注册直到成功为止
+		url := k.ApiServerConfig.APIServerURL() + config.NodesURI
 
-	statusCode, _, _ := netRequest.PostRequestByTarget(url, node)
+		statusCode, _, _ := netRequest.PostRequestByTarget(url, node)
 
-	if statusCode != config.HttpSuccessCode {
-		log.ErrorLog("register node failed")
-		return false
-	} else {
-		log.InfoLog("register node success")
-		return true
+		if statusCode != config.HttpSuccessCode {
+			log.ErrorLog("register node failed")
+		} else {
+			log.InfoLog("register node success")
+			return true
+		}
+		time.Sleep(15 * time.Second)
 	}
+
 }
 
 // registerKubeletAPI 注册kubelet的API
@@ -159,21 +164,11 @@ func (k *Kubelet) registerKubeletAPI() {
 	// k.KubeletAPIRouter.PATCH(config.PodURI, handlers.UpdatePod)
 	// 删除指定Pod
 	k.KubeletAPIRouter.DELETE(config.PodURI, pod.DeletePod)
-
-	// 获取指定Pod的EphemeralContainers
-	// k.KubeletAPIRouter.GET(config.PodEphemeralContainersURI, handlers.GetPodEphemeralContainers)
-	// 更新Pod的EphemeralContainers
-	// k.KubeletAPIRouter.PUT(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
-	// 部分更新Pod的EphemeralContainers
-	// k.KubeletAPIRouter.PATCH(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
-
-	// 获取指定Pod的日志
-	// k.KubeletAPIRouter.GET(config.PodLogURI, handlers.GetPodLog)
+	// kubelet挂掉了，apiServer用来同步Pod的信息
+	k.KubeletAPIRouter.POST(config.PodsSyncURI, pod.SyncPods)
 
 	// 获取指定Pod的状态
 	k.KubeletAPIRouter.GET(config.PodStatusURI, pod.GetPodStatus)
-	// 更新Pod的状态
-	// k.KubeletAPIRouter.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
 
 	// 执行指定Pod和container的命令
 	k.KubeletAPIRouter.GET(config.PodExecURI, pod.ExecPodContainer)
@@ -184,18 +179,6 @@ func (k *Kubelet) registerKubeletAPI() {
 	k.KubeletAPIRouter.POST(config.PodsURI, pod.CreatePod)
 	// 删除所有Pod
 	// k.KubeletAPIRouter.DELETE(config.PodsURI, handlers.DeletePods)
-
-	// 获取全局所有Pod
-	// k.KubeletAPIRouter.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
-
-	// 获取全部Service
-	// k.KubeletAPIRouter.GET(config.ServicesURI, handlers.GetServices)
-
-	// 获取指定Service
-	// k.KubeletAPIRouter.GET(config.ServiceURI, handlers.GetService)
-
-	// 获取指定Service的状态
-	// k.KubeletAPIRouter.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
 }
 
 // heartbeat 向apiServer发送心跳
