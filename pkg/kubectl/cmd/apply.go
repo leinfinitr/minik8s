@@ -120,10 +120,35 @@ func DeploymentHandler(content []byte) {
 }
 
 func PersistentVolumeHandler(content []byte) {
-
+	var persistentVolume apiObject.PersistentVolume
+	err := translator.ParseApiObjFromYaml(content, &persistentVolume)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	url := config.APIServerURL() + config.PersistentVolumeURI
+	log.DebugLog("Post " + url)
+	_, err = httprequest.PostObjMsg(url, persistentVolume)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
 }
 
 func PersistentVolumeClaimHandler(content []byte) {
+	var pvc apiObject.PersistentVolumeClaim
+	err := translator.ParseApiObjFromYaml(content, &pvc)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	url := config.APIServerURL() + config.PersistentVolumeClaimURI
+	log.DebugLog("Post " + url)
+	_, err = httprequest.PostObjMsg(url, pvc)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
 
 }
 

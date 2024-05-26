@@ -122,7 +122,10 @@ func (a *ApiServer) Register() {
 	a.Router.GET(config.HpaURI, handlers.GetHPA)
 	a.Router.POST(config.HpasURI, handlers.AddHPA)
 	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
-	
+
+	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
+
+	a.Router.POST(config.PersistentVolumeClaimURI, handlers.CreatePVC)
 }
 
 // 函数-------------------------------------------------------------

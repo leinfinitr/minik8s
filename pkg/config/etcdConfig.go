@@ -14,6 +14,8 @@ const (
 	EtcdHpaPrefix        = "/registry/hpa"
 	EtcdServerlessPrefix = "/registry/serverless"
 	EtcdServicePrefix    = "/registry/services"
+	EtcdPvPrefix         = "/registry/pv"
+	EtcdPvcPrefix        = "/registry/pvc"
 )
 
 func NewEtcdConfig() *EtcdConfig {
