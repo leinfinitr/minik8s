@@ -59,10 +59,12 @@ type PodSpec struct {
 type Volume struct {
 	// 存储卷的名称
 	Name string `json:"name" yaml:"name"`
-	//
+	// 空目录
 	EmptyDir EmptyDirVolumeSource `json:"emptyDir" yaml:"emptyDir"`
 	// 存储卷的来源
 	VolumeSource
+	// 持久化卷声明
+	PersistentVolumeClaim PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim" yaml:"persistentVolumeClaim"`
 }
 
 type EmptyDirVolumeSource struct {
@@ -72,14 +74,21 @@ type EmptyDirVolumeSource struct {
 }
 type VolumeSource struct {
 	// 主机路径
-	HostPath *HostPathVolumeSource `json:"hostPath" yaml:"hostPath"`
+	HostPath HostPathVolumeSource `json:"hostPath" yaml:"hostPath"`
 }
 
 type HostPathVolumeSource struct {
 	// 主机路径
 	Path string `json:"path" yaml:"path"`
 	// 主机路径类型
-	Type *string `json:"type" yaml:"type"`
+	Type string `json:"type" yaml:"type"`
+}
+
+type PersistentVolumeClaimVolumeSource struct {
+	// 持久化卷声明的名称
+	ClaimName string `json:"claimName" yaml:"claimName"`
+	// 持久化卷声明的读写模式
+	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
 }
 
 // PodStatus represents the status of a Pod.

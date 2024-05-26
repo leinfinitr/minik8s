@@ -24,10 +24,12 @@ var applyCmd = &cobra.Command{
 type ApplyObject string
 
 const (
-	Pod        ApplyObject = "Pod"
-	Service    ApplyObject = "Service"
-	Deployment ApplyObject = "Deployment"
-	ReplicaSet ApplyObject = "ReplicaSet"
+	Pod                   ApplyObject = "Pod"
+	Service               ApplyObject = "Service"
+	Deployment            ApplyObject = "Deployment"
+	ReplicaSet            ApplyObject = "ReplicaSet"
+	PersistentVolume      ApplyObject = "PersistentVolume"
+	PersistentVolumeClaim ApplyObject = "PersistentVolumeClaim"
 )
 
 func applyHandler(cmd *cobra.Command, args []string) {
@@ -67,6 +69,10 @@ func applyHandler(cmd *cobra.Command, args []string) {
 			ServiceHandler(content)
 		case "Deployment":
 			DeploymentHandler(content)
+		case "PersistentVolume":
+			PersistentVolumeHandler(content)
+		case "PersistentVolumeClaim":
+			PersistentVolumeClaimHandler(content)
 		default:
 			log.ErrorLog("The kind specified is not supported.")
 			os.Exit(1)
@@ -110,6 +116,14 @@ func ServiceHandler(content []byte) {
 }
 
 func DeploymentHandler(content []byte) {
+
+}
+
+func PersistentVolumeHandler(content []byte) {
+
+}
+
+func PersistentVolumeClaimHandler(content []byte) {
 
 }
 
