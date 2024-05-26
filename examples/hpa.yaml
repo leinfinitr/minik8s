@@ -10,15 +10,10 @@ spec:
       name: my-pod
       namespace: my-namespace
   selector:
-      app: my-app
+      app: my-app11
   minReplicas: 1
   maxReplicas: 10
   adjustInterval: 30s
   metrics:
     cpuPercent: 0.5
     memoryPercent: 0.6
-# status:
-#   currentReplicas: 3
-#   desiredReplicas: 5
-#   curCPUPercent: 45
-#   curMemoryPercent: 55

@@ -2,6 +2,7 @@ package specctlrs
 
 import (
 	"encoding/json"
+	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
@@ -27,6 +28,7 @@ func GetAllPodsFromAPIServer() (pods []apiObject.Pod,err error) {
 }
 
 func PodsMatched(pod apiObject.Pod, selector map[string]string) bool {
+	fmt.Println("PodsMatched: ", pod.Metadata.Name, selector)
 	for k, v := range selector {
 		if pod.Metadata.Labels[k] != v {
 			return false

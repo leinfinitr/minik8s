@@ -23,5 +23,6 @@ func NewControllerManager() ControllerManager {
 
 func (cm *ControllerManagerImpl) Run(stopCh <-chan struct{}) {
 	go cm.replicaSetController.Run()
+	go cm.hpaController.Run()
 	<-stopCh
 }

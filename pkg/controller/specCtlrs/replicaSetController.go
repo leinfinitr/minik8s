@@ -38,7 +38,6 @@ func (rc *ReplicaSetControllerImpl) Run() {
 
 func GetAllReplicaSetsFromAPIServer() ( replicaSets []apiObject.ReplicaSet,err error) {
 	url := config.APIServerURL() + config.GlobalReplicaSetsURI
-	url = strings.Replace(url, config.NameSpaceReplace, "", -1)
 	res, err := http.Get(url)
 	if err != nil {
 		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + err.Error())

@@ -1,14 +1,16 @@
 package specctlrs
 
 import (
+	"encoding/json"
+	"fmt"
 	"math"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/executor"
-	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	netRequest "minik8s/tools/netRequest"
 	stringops "minik8s/tools/stringops"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -37,13 +39,14 @@ func (hc *HpaControllerImpl) Run() {
 
 func GetAllHpasFromAPIServer() (hpas []apiObject.HPA,err error) {
 	url := config.APIServerURL() + config.GlobalHpaURI
-	res,err := httprequest.GetObjMsg(url,&hpas,"data")
+	res,err := http.Get(url)
 	if err != nil {
 		log.ErrorLog("GetAllHpasFromAPIServer: " + err.Error())
 		return hpas,err
 	}
-	if res.StatusCode != 200 {
-		log.ErrorLog("GetAllHpasFromAPIServer: " + res.Status)
+	err = json.NewDecoder(res.Body).Decode(&hpas)
+	if err != nil {
+		log.ErrorLog("GetAllHpasFromAPIServer: " + err.Error())
 		return hpas,err
 	}
 	return hpas,nil
@@ -78,7 +81,12 @@ func (hc *HpaControllerImpl) handleHPA(hpa apiObject.HPA,pods []apiObject.Pod) {
 				selectedPods = append(selectedPods,pod)
 			}
 		}
+		fmt.Println("selectedPods: "+strconv.Itoa(len(selectedPods)))
 		hpa.Status.CurrentReplicas = int32(len(selectedPods))
+		if hpa.Status.CurrentReplicas == 0 {
+			log.ErrorLog("handleHPA: "+hpa.Metadata.Namespace+"/"+hpa.Metadata.Name+" no pod selected")
+			return;
+		}
 		if hpa.Status.CurrentReplicas<int32(hpa.Spec.MinReplicas) {
 			err := hc.AddOnePod(hpa,selectedPods[0])
 			if err != nil {
@@ -103,6 +111,7 @@ func (hc *HpaControllerImpl) handleHPA(hpa apiObject.HPA,pods []apiObject.Pod) {
 				log.ErrorLog("handleHPA: "+hpa.Metadata.Namespace+"/"+hpa.Metadata.Name+" add one pod failed")
 			}
 		}
+		fmt.Print("current replicas: "+strconv.Itoa(int(hpa.Status.CurrentReplicas))+" expected replicas: "+strconv.Itoa(expectedNm))
 		if int32(expectedNm) < hpa.Status.CurrentReplicas {
 			err := hc.DeleteOnePod(selectedPods[0])
 			if err != nil {
