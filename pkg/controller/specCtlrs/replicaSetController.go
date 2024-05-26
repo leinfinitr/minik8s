@@ -1,11 +1,12 @@
 package specctlrs
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/executor"
-	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	netRequest "minik8s/tools/netRequest"
 	stringops "minik8s/tools/stringops"
@@ -36,15 +37,17 @@ func (rc *ReplicaSetControllerImpl) Run() {
 
 
 func GetAllReplicaSetsFromAPIServer() ( replicaSets []apiObject.ReplicaSet,err error) {
-	url := config.APIServerURL() + config.ReplicaSetsURI
-	res, err := httprequest.GetObjMsg(url, &replicaSets, "data")
+	url := config.APIServerURL() + config.GlobalReplicaSetsURI
+	url = strings.Replace(url, config.NameSpaceReplace, "", -1)
+	res, err := http.Get(url)
 	if err != nil {
 		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + err.Error())
 		return replicaSets, err 
 	}
-	if res.StatusCode != 200 {
-		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + res.Status)
-		return replicaSets,err
+	err = json.NewDecoder(res.Body).Decode(&replicaSets)
+	if err != nil {
+		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + err.Error())
+		return replicaSets, err
 	}
 	return replicaSets,nil
 }
@@ -139,6 +142,7 @@ func (rc *ReplicaSetControllerImpl) IncreaseReplicas(replicaMeta *apiObject.Obje
 		}
 
 		url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+		fmt.Println(pod.Metadata.Namespace)
 		code, _, err := netRequest.PostRequestByTarget(url, &new_pod)
 
 		if err != nil {
@@ -203,7 +207,7 @@ func (rc *ReplicaSetControllerImpl) UpdateStatus(replicaSet *apiObject.ReplicaSe
 	url := config.APIServerURL() + config.ReplicaSetStatusURI
 	url = strings.Replace(url, config.NameSpaceReplace, replicaSet.Metadata.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, replicaSet.Metadata.Name, -1)
-	code, _, err := netRequest.PutRequestByTarget(url, &newReplicaStatus)
+	code, _, err := netRequest.PostRequestByTarget(url, &newReplicaStatus)
 	if err != nil {
 		log.ErrorLog("replicaController: " + "UpdateStatus error: " + err.Error())
 		return err

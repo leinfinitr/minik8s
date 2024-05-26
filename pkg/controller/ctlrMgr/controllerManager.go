@@ -1,6 +1,6 @@
 package ctlrmgr
 import (
-	specctlrs "minik8s/pkg/apiServer/controller/specCtlrs"
+	specctlrs "minik8s/pkg/controller/specCtlrs"
 )
 type ControllerManager interface {
 	Run(stopCh <-chan struct{})

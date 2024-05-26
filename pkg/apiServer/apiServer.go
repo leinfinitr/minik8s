@@ -98,6 +98,8 @@ func (a *ApiServer) Register() {
 	a.Router.POST(config.PodsURI, handlers.CreatePod)
 	// 删除所有Pod
 	a.Router.DELETE(config.PodsURI, handlers.DeletePods)
+	// 获取全局所有Pod
+	a.Router.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
 
 	// 接受kubeproxy的心跳
 	a.Router.PUT(config.ProxiesStatusURI, handlers.UpdateProxyStatus)

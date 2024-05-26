@@ -171,7 +171,7 @@ func ReplicaSetHandler(content []byte) {
 		log.ErrorLog("The name of the replicaSet is required.")
 		os.Exit(1)
 	}
-	url := config.APIServerURL() + config.ReplicaSetURI
+	url := config.APIServerURL() + config.ReplicaSetsURI
 	url = strings.Replace(url, config.NameSpaceReplace, replicaSet.Metadata.Namespace, -1)
 	log.DebugLog("PUT " + url)
 	resp, err := httprequest.PostObjMsg(url, replicaSet)
