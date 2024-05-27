@@ -136,7 +136,18 @@ func GetGlobalHPAs(c *gin.Context){
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": res})
+	var hpaList []apiObject.HPA
+	for _,v := range res{
+		hpa := apiObject.HPA{}
+		err = json.Unmarshal([]byte(v),&hpa)
+		if err != nil{
+			log.ErrorLog("GetGlobalHPAs: "+err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		hpaList = append(hpaList,hpa)
+	}
+	c.JSON(200, hpaList)	
 }
 
 func UpdateHPAStatus(c *gin.Context){
@@ -160,16 +171,6 @@ func UpdateHPAStatus(c *gin.Context){
 	if err != nil{
 		log.ErrorLog("UpdateHPAStatus: "+err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-	if len(res) == 0{
-		log.ErrorLog("UpdateHPAStatus: not found")
-		c.JSON(404, gin.H{"error": "not found"})
-		return
-	}
-	if len(res) > 1{
-		log.ErrorLog("UpdateHPAStatus: more than one HPA")
-		c.JSON(500, gin.H{"error": "more than one HPA"})
 		return
 	}
 	hpa := apiObject.HPA{}

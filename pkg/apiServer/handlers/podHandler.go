@@ -258,13 +258,18 @@ func GetPods(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resJson, err := json.Marshal(res)
-	if err != nil {
-		log.ErrorLog("GetPods: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
+	var pods []apiObject.Pod
+	for _, v := range res {
+		pod := apiObject.Pod{}
+		err = json.Unmarshal([]byte(v), &pod)
+		if err != nil {
+			log.ErrorLog("GetPods: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		pods = append(pods, pod)
 	}
-	c.JSON(200, gin.H{"data": resJson})
+	c.JSON(200, pods)
 }
 
 // CreatePod 创建Pod
@@ -342,7 +347,7 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{"data": resp})
+	c.JSON(201, gin.H{"data": resp})
 }
 
 // DeletePods 删除所有Pod
@@ -361,13 +366,18 @@ func GetGlobalPods(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resJson, err := json.Marshal(res)
-	if err != nil {
-		log.ErrorLog("GetGlobalPods: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
+	var pods []apiObject.Pod
+	for _, v := range res {
+		pod := apiObject.Pod{}
+		err = json.Unmarshal([]byte(v), &pod)
+		if err != nil {
+			log.ErrorLog("GetPods: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		pods = append(pods, pod)
 	}
-	c.JSON(200, gin.H{"data": resJson})
+	c.JSON(200, pods)
 }
 
 // UpdatePodProps TODO: 更新Pod

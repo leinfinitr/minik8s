@@ -9,6 +9,8 @@ import (
 	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"strings"
+
+	// "minik8s/tools/netRequest"
 	"time"
 
 	"github.com/gin-gonic/gin"

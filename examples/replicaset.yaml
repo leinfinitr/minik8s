@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ReplicaSet
+metadata:
+  name: pod-replica
+  namespace: pod-replica-namespace
+spec:
+  replicas: 3
+  minReadySeconds: 10
+  selector:
+    app: my-app
+  template:
+    metadata:
+      name: my-app-pod
+      namespace: my-app-pod-namespace
+      labels:
+        app: my-app
+    spec:
+      containers:
+        - name: fileserver
+          image: 7143192/fileserver:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080

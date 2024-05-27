@@ -107,6 +107,8 @@ func (a *ApiServer) Register() {
 	a.Router.POST(config.PodsURI, handlers.CreatePod)
 	// 删除所有Pod
 	a.Router.DELETE(config.PodsURI, handlers.DeletePods)
+	// 获取全局所有Pod
+	a.Router.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
 
 	// 接受kubeproxy的心跳
 	a.Router.PUT(config.ProxiesStatusURI, handlers.UpdateProxyStatus)
@@ -133,6 +135,7 @@ func (a *ApiServer) Register() {
 	a.Router.GET(config.HpaURI, handlers.GetHPA)
 	a.Router.POST(config.HpasURI, handlers.AddHPA)
 	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
+	a.Router.PUT(config.HpaStatusURI, handlers.UpdateHPAStatus)
 
 	// 增加monitor的处理函数
 	// 首次注册节点
