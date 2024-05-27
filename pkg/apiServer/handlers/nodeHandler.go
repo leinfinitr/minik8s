@@ -91,6 +91,14 @@ func CreateNode(c *gin.Context) {
 		return
 	}
 
+	// 注册monitor
+	url := config.APIServerURL() + config.MonitorURL
+	if resp, err := httprequest.PutObjMsg(url, node); err != nil || resp.StatusCode != config.HttpSuccessCode {
+		log.WarnLog("CreateNode: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
+
 	// 节点首次注册，直接保存节点信息
 	if node.Kind != apiObject.NodeType {
 		log.WarnLog("CreateNode: node kind is not correct")
@@ -245,7 +253,16 @@ func UpdateNodeStatus(c *gin.Context) {
 		log.InfoLog("UpdateNodeStatus success")
 		c.JSON(config.HttpSuccessCode, "")
 	} else {
-		// 无法联通，说明节点不可用，删除该节点信息
+		// 无法联通，说明节点不可用
+		// 删除monitor配置
+		url := config.APIServerURL() + config.MonitorURL
+		resp, err := httprequest.DelMsg(url, node)
+		if err != nil || resp.StatusCode != config.HttpSuccessCode {
+			log.ErrorLog("UpdateNodeStatus failed")
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		//删除该节点信息
 		etcdclient.EtcdStore.Delete(config.EtcdNodePrefix + "/" + node.Metadata.Name)
 		log.ErrorLog("UpdateNodeStatus failed")
 		c.JSON(config.HttpSuccessCode, "")

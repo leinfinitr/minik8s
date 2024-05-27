@@ -37,7 +37,7 @@ func (a *ApiServer) Run() {
 	}
 
 	// 开辟一个协程，用于定时扫描所有node的状态
-	go a.ScanNodeStatus()
+	go ScanNodeStatus()
 }
 
 // Register 注册路由
@@ -142,7 +142,7 @@ func (a *ApiServer) Register() {
 
 }
 
-func (a *ApiServer) ScanNodeStatus() {
+func ScanNodeStatus() {
 	for {
 		log.InfoLog("Start ScanNodeStatus")
 		// 获取所有节点
