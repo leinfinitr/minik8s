@@ -53,6 +53,8 @@ func PutPrometheusConfig(config *apiObject.PrometheusConfig) error {
 
 // 在首次注册时，在本地节点的prometheus配置文件中追加一个监控项
 func RegisterMonitor(c *gin.Context) {
+	log.InfoLog("Start RegisterMonitor")
+
 	// 1.从请求中获取Node的值
 	var node apiObject.Node
 	if err := c.ShouldBindJSON(&node); err != nil {
@@ -113,7 +115,7 @@ func RegisterMonitor(c *gin.Context) {
 	// curl -X POST http://192.168.1.7:9090/-/reload
 	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
 
-	c.JSON(200, gin.H{"message": "Node registered successfully"})
+	c.JSON(200, gin.H{"message": "monitor registered successfully"})
 }
 
 func DeleteMonitor(c *gin.Context) {

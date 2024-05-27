@@ -69,7 +69,7 @@ func (k *Kubelet) registerNode() bool {
 		// 一致尝试注册直到成功为止
 		url := k.ApiServerConfig.APIServerURL() + config.NodesURI
 
-		statusCode, _, _ := netRequest.PostRequestByTarget(url, k.node)
+		statusCode, _, _ := netRequest.PostRequestByTarget(url, *k.node)
 
 		if statusCode != config.HttpSuccessCode {
 			log.ErrorLog("register node failed")
@@ -139,6 +139,15 @@ func (k *Kubelet) buildNode() {
 
 func (k *Kubelet) UpdateNodeStatusInternal() {
 	log.InfoLog("UpdateNodeStatus")
+
+	// 注册所需的参数
+	HostIP, _ := host.GetHostIP()
+
+	// 获取主机的内存大小
+	capacity := make(map[string]string)
+	totalMemory, _ := host.GetTotalMemory()
+	capacity["memory"] = strconv.FormatUint(totalMemory, 10)
+
 	// 获取主机的内存和CPU使用率
 	allocatable := make(map[string]string)
 	MemoryUsage, _ := host.GetMemoryUsageRate()
@@ -147,11 +156,19 @@ func (k *Kubelet) UpdateNodeStatusInternal() {
 	allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
 
 	nodeStatus := &apiObject.NodeStatus{
+		Capacity:    capacity,
 		Allocatable: allocatable,
+		Phase:       "running",
 		Conditions: []apiObject.NodeCondition{
 			{
-				Type:   "Ready",
+				Type:   "Ready", // Ready: kubelet准备好接受Pod
 				Status: "True",
+			},
+		},
+		Addresses: []apiObject.NodeAddress{
+			{
+				Type:    "InternalIP",
+				Address: HostIP,
 			},
 		},
 	}
@@ -164,21 +181,6 @@ func (k *Kubelet) UpdateNodeStatusInternal() {
 func (k *Kubelet) registerKubeletAPI() {
 	log.DebugLog("register kubelet API")
 	// 该部分实现与 apiServer 中保持一致，每个方法的作用也参考 pkg/apiServer/apiServer.go 中的注释
-
-	// 获取所有节点
-	// k.KubeletAPIRouter.GET(config.NodesURI, handlers.GetNodes)
-	// 创建节点
-	// k.KubeletAPIRouter.POST(config.NodesURI, handlers.CreateNode)
-	// 删除所有节点
-	// k.KubeletAPIRouter.DELETE(config.NodesURI, handlers.DeleteNodes)
-
-	// 获取指定节点
-	// k.KubeletAPIRouter.GET(config.NodeURI, handlers.GetNode)
-	// 更新指定节点
-	// k.KubeletAPIRouter.PUT(config.NodeURI, handlers.UpdateNode)
-	// 部分更新指定节点
-	// k.KubeletAPIRouter.PATCH(config.NodeURI, handlers.UpdateNode)
-	// 删除指定节点
 	// k.KubeletAPIRouter.DELETE(config.NodeURI, handlers.DeleteNode)
 
 	// 获取指定节点的状态
@@ -230,5 +232,5 @@ func (k *Kubelet) UpdateNodeStatus(c *gin.Context) {
 	} else {
 		k.UpdateNodeStatusInternal()
 	}
-	c.JSON(config.HttpSuccessCode, *k.node)
+	c.JSON(config.HttpSuccessCode, k.node.Status)
 }

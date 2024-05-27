@@ -30,14 +30,16 @@ type ApiServer struct {
 
 // Run 启动ApiServer
 func (a *ApiServer) Run() {
-	a.Register()
-	err := a.Router.Run(a.Address + ":" + fmt.Sprint(a.Port))
-	if err != nil {
-		panic(err)
-	}
+	go func() {
+		a.Register()
+		err := a.Router.Run(a.Address + ":" + fmt.Sprint(a.Port))
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	// 开辟一个协程，用于定时扫描所有node的状态
-	go ScanNodeStatus()
+	ScanNodeStatus()
 }
 
 // Register 注册路由
@@ -70,9 +72,7 @@ func (a *ApiServer) Register() {
 	// 获取指定节点的状态
 	a.Router.GET(config.NodeStatusURI, handlers.GetNodeStatus)
 	// 更新指定节点的状态
-	a.Router.PUT(config.NodeStatusURI, handlers.UpdateNodeStatus)
-	// 部分更新指定节点的状态
-	a.Router.PATCH(config.NodeStatusURI, handlers.UpdateNodeStatus)
+	a.Router.PUT(config.NodeStatusURI, handlers.PingNodeStatus)
 
 	// 获取指定Pod
 	a.Router.GET(config.PodURI, handlers.GetPod)
@@ -147,12 +147,10 @@ func (a *ApiServer) Register() {
 
 func ScanNodeStatus() {
 	for {
-		log.InfoLog("Start ScanNodeStatus")
 		// 获取所有节点
 		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
 		if err != nil {
 			log.WarnLog("ScanNodeStatus: " + err.Error())
-			return
 		}
 
 		for _, v := range res {
@@ -160,18 +158,12 @@ func ScanNodeStatus() {
 			err = json.Unmarshal([]byte(v), &node)
 			if err != nil {
 				log.WarnLog("ScanNodeStatus: " + err.Error())
-				return
 			}
 			url := config.APIServerURL() + config.NodesURI + "/" + node.Metadata.Name + "/status"
-			nodeJSON, _ := json.Marshal(node.Status)
-			resp, err := httprequest.PutObjMsg(url, nodeJSON)
-			if err != nil || resp.StatusCode != config.HttpSuccessCode {
-				log.WarnLog("ScanNodeStatus: " + err.Error())
-				return
-			}
+			httprequest.PutObjMsg(url, node)
 		}
 
-		time.Sleep(60 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 
 }

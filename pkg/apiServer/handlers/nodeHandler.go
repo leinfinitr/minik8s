@@ -198,14 +198,16 @@ func GetNodeStatus(c *gin.Context) {
 	log.InfoLog("GetNodeStatus: " + name)
 }
 
-// UpdateNodeStatus 更新指定节点的状态，其实就是试一试能不能联通
-func UpdateNodeStatus(c *gin.Context) {
+// PingNodeStatus 更新指定节点的状态，其实就是试一试能不能联通
+func PingNodeStatus(c *gin.Context) {
 	var node apiObject.Node
 	err := c.ShouldBindJSON(&node)
 	if err != nil {
-		log.ErrorLog("UpdateNodeStatus error: " + err.Error())
+		log.ErrorLog("PingNodeStatus error: " + err.Error())
 		return
 	}
+
+	log.InfoLog("start ping NodeIP: " + node.Status.Addresses[0].Address)
 
 	// 尝试三次，失败则认为节点不可用
 	times := 0
@@ -216,44 +218,52 @@ func UpdateNodeStatus(c *gin.Context) {
 		resp, err := httprequest.GetMsg(url)
 		if err != nil || resp.StatusCode != config.HttpSuccessCode {
 			// 无法联通，说明节点不可用
-			log.ErrorLog("UpdateNodeStatus: Node can't be connected")
+			log.WarnLog("PingNodeStatus: Node can't be connected")
 			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 		} else {
 			success = true
-			newNode := apiObject.Node{}
-			err = json.NewDecoder(resp.Body).Decode(&newNode)
+			newNodeStatus := apiObject.NodeStatus{}
+			err = json.NewDecoder(resp.Body).Decode(&newNodeStatus)
 			if err != nil {
-				log.ErrorLog("UpdateNodeStatus: " + err.Error())
+				log.ErrorLog("PingNodeStatus: " + err.Error())
 				c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 				return
 			}
-			nodeJSON, err := json.Marshal(newNode)
+			node.Status = newNodeStatus
+			nodeJSON, err := json.Marshal(node)
 			if err != nil {
-				log.ErrorLog("UpdateNodeStatus: " + err.Error())
+				log.ErrorLog("PingNodeStatus: " + err.Error())
 				c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 				return
 			}
 			etcdclient.EtcdStore.Put(config.EtcdNodePrefix+"/"+node.Metadata.Name, string(nodeJSON))
 			break
 		}
+		times++
 	}
 
 	if success {
-		log.InfoLog("UpdateNodeStatus success")
+		log.InfoLog("Ping Node success, NodeIp : " + node.Status.Addresses[0].Address)
 		c.JSON(config.HttpSuccessCode, "")
 	} else {
+		log.WarnLog("Ping Node failed : " + node.Status.Addresses[0].Address + " is not available")
 		// 无法联通，说明节点不可用
 		// 删除monitor配置
 		url := config.APIServerURL() + config.MonitorURL
 		resp, err := httprequest.DelMsg(url, node)
 		if err != nil || resp.StatusCode != config.HttpSuccessCode {
-			log.ErrorLog("UpdateNodeStatus failed")
+			log.ErrorLog("PingNodeStatus failed")
 			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 			return
 		}
 		//删除该节点信息
-		etcdclient.EtcdStore.Delete(config.EtcdNodePrefix + "/" + node.Metadata.Name)
-		log.ErrorLog("UpdateNodeStatus failed")
+		err = etcdclient.EtcdStore.Delete(config.EtcdNodePrefix + "/" + node.Metadata.Name)
+		if err != nil {
+			log.ErrorLog("PingNodeStatus failed")
+			c.JSON(config.HttpSuccessCode, "")
+			return
+		}
+		log.WarnLog("PingNodeStatus: Node can't be connected, delete node success")
 		c.JSON(config.HttpSuccessCode, "")
 	}
 }
