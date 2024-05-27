@@ -217,12 +217,9 @@ func (p *podManagerImpl) UpdatePodStatus() error {
 		if pod.Status.Phase == apiObject.PodPending || pod.Status.Phase == apiObject.PodBuilding {
 			continue
 		}
-		for j := 0; j < len(pod.Spec.Containers); j += 1 {
-			container := &pod.Spec.Containers[j]
-			err := p.UpdateContainerStatusHandler(container, pod)
-			if err != nil {
-				log.ErrorLog("Get status failed in container ID : " + container.ContainerID)
-			}
+		err := p.UpdatePodStatusHandler(pod)
+		if err != nil {
+			log.ErrorLog("Get status failed in pod ID : " + pod.GetPodUUID())
 		}
 	}
 	return nil
