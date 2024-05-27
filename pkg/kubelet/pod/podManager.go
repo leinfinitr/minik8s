@@ -208,6 +208,7 @@ func (p *podManagerImpl) RecreatePodContainer(pod *apiObject.Pod) error {
 }
 
 func (p *podManagerImpl) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
+	// TODO: 根据 container 不同的状态进行处理
 	return p.ExecPodHandler(req)
 }
 
@@ -220,7 +221,7 @@ func (p *podManagerImpl) UpdatePodStatus() error {
 			container := &pod.Spec.Containers[j]
 			err := p.UpdateContainerStatusHandler(container, pod)
 			if err != nil {
-				log.ErrorLog("Get status failed in container ID : " + container.ContainerID)
+				log.ErrorLog("Get status failed in container ID " + container.ContainerID + " " + err.Error())
 			}
 		}
 	}

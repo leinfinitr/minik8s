@@ -111,6 +111,7 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	for s.InstanceNum[name] == 0 {
 		time.Sleep(1 * time.Second)
 	}
+	log.DebugLog("Run function " + name + " with param " + param)
 	// 从 Instance 中取出最后一个 Pod
 	pod := s.Instance[name][s.InstanceNum[name]-1]
 	serverless := s.Serverless[name]

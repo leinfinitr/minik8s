@@ -254,7 +254,7 @@ func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.Ex
 	})
 
 	if err != nil {
-		log.ErrorLog("Exec container failed")
+		log.ErrorLog("Exec container failed: " + err.Error())
 		return nil, err
 	}
 

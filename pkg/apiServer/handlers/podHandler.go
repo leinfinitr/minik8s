@@ -446,6 +446,7 @@ func ExecPod(c *gin.Context) {
 		return
 	}
 	// 执行命令
+	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + containerID + "/" + param)
 	execUri := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodExecURI
 	execUri = strings.Replace(execUri, config.NameSpaceReplace, namespace, -1)
 	execUri = strings.Replace(execUri, config.NameReplace, name, -1)
