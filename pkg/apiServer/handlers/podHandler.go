@@ -308,6 +308,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	// 发送创建请求
 	pod.Spec.NodeName = node.Metadata.Name
 	addresses := node.Status.Addresses
 	tep, _ := json.Marshal(addresses)
@@ -317,12 +318,7 @@ func CreatePod(c *gin.Context) {
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
-	fmt.Println("createUri: ", createUri)
-	if err != nil {
-		log.ErrorLog("CreatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
+	log.DebugLog("createUri: " + createUri)
 	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil || resp.StatusCode != config.HttpSuccessCode {
 		log.ErrorLog("Could not post the object message.\n" + err.Error())

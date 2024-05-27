@@ -34,31 +34,30 @@ func (rc *ReplicaSetControllerImpl) Run() {
 	executor.ExecuteInPeriod(ReplicaControllerDelay, ReplicaControllerTimeGap, rc.syncReplicaSet)
 }
 
-
-func GetAllReplicaSetsFromAPIServer() ( replicaSets []apiObject.ReplicaSet,err error) {
+func GetAllReplicaSetsFromAPIServer() (replicaSets []apiObject.ReplicaSet, err error) {
 	url := config.APIServerURL() + config.ReplicaSetsURI
 	res, err := httprequest.GetObjMsg(url, &replicaSets, "data")
 	if err != nil {
 		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + err.Error())
-		return replicaSets, err 
+		return replicaSets, err
 	}
 	if res.StatusCode != 200 {
 		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + res.Status)
-		return replicaSets,err
+		return replicaSets, err
 	}
-	return replicaSets,nil
+	return replicaSets, nil
 }
 func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 	var pods []apiObject.Pod
 	// 1. 获取所有的Pod
-	pods,err := GetAllPodsFromAPIServer()
+	pods, err := GetAllPodsFromAPIServer()
 	if err != nil {
 		log.ErrorLog("syncReplicaSet: " + err.Error())
 		return
 	}
 	// 2. 获取所有的ReplicaSet
 	var replicaSets []apiObject.ReplicaSet
-	replicaSets,err = GetAllReplicaSetsFromAPIServer()
+	replicaSets, err = GetAllReplicaSetsFromAPIServer()
 	if err != nil {
 		log.ErrorLog("syncReplicaSet: " + err.Error())
 		return
@@ -107,7 +106,6 @@ func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 	}
 
 }
-
 
 func (rc *ReplicaSetControllerImpl) IncreaseReplicas(replicaMeta *apiObject.ObjectMeta, pod *apiObject.PodTemplateSpec, num int) error {
 	new_pod := apiObject.Pod{}
@@ -193,7 +191,7 @@ func (rc *ReplicaSetControllerImpl) UpdateStatus(replicaSet *apiObject.ReplicaSe
 		}
 		newReplicaStatus.Conditions = append(newReplicaStatus.Conditions, apiObject.ReplicaSetCondition{
 			Type:               apiObject.PodType,
-			Status:             pod.Status.Phase,
+			Status:             string(pod.Status.Phase),
 			LastTransitionTime: time.Now().String(),
 		})
 	}

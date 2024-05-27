@@ -37,6 +37,8 @@ type Container struct {
 	Resources ResourceRequirements `json:"resources" yaml:"resources"`
 	// 容器的存储卷挂载
 	VolumeMounts []VolumeMount `json:"volumeMounts" yaml:"volumeMounts"`
+	// 容器与主机的挂载
+	Mounts []*Mount `json:"mounts" yaml:"mounts"`
 
 	// 存活探针，用于检测容器是否存活
 	LivenessProbe *Probe `json:"livenessProbe" yaml:"livenessProbe"`
@@ -103,6 +105,16 @@ type VolumeMount struct {
 	Name string `json:"name" yaml:"name"`
 	// 挂载路径
 	MountPath string `json:"mountPath" yaml:"mountPath"`
+	// 是否只读
+	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
+}
+
+// Mount -------------------------------------------
+type Mount struct {
+	// 主机路径
+	HostPath string `json:"hostPath" yaml:"hostPath"`
+	// 容器路径
+	ContainerPath string `json:"containerPath" yaml:"containerPath"`
 	// 是否只读
 	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
 }

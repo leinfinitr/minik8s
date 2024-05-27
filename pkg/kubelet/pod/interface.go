@@ -185,6 +185,8 @@ func ScanPodStatus() {
 		}
 		// 遍历所有的pod
 		for _, pod := range podManager.PodMapByUUID {
+			// 防止协程中因为和主协程共享变量的变化
+			pod := pod
 			// 根据每个pod当前所处的阶段进行相应的操作
 			phase := pod.Status.Phase
 			switch phase {
@@ -198,7 +200,7 @@ func ScanPodStatus() {
 				}()
 				// 其余情况暂不处理
 			default:
-				log.DebugLog("Pod is in phase: " + phase)
+				log.DebugLog("Pod is in phase: " + string(phase))
 
 			}
 		}
