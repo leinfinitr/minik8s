@@ -280,11 +280,16 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 			ContainerId: container.ContainerID,
 		})
 
-		if err != nil {
-			log.ErrorLog("Container status from CRI failed" + err.Error())
-			container.ContainerStatus = apiObject.ContainerUnknown
-			return err
+		if response1 != nil {
+			log.InfoLog("CPU usage" + fmt.Sprint(response1.Stats.Cpu.UsageCoreNanoSeconds.Value))
+			log.InfoLog("Memory usage" + fmt.Sprint(response1.Stats.Memory.UsageBytes.Value))
 		}
+
+		// if err != nil {
+		// 	log.ErrorLog("Container status from CRI failed" + err.Error())
+		// 	container.ContainerStatus = apiObject.ContainerUnknown
+		// 	return err
+		// }
 
 		response2, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
 			ContainerId: container.ContainerID,
@@ -295,7 +300,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 			return err
 		}
 
-		cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response2.Status.FinishedAt) - uint64(response2.Status.StartedAt)))
+		cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)))
 		memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value / memoryAll)
 
 		switch response2.Status.State {
