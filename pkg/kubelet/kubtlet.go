@@ -52,7 +52,7 @@ func (k *Kubelet) Run() {
 	k.registerNode()
 
 	// 定时扫描pod的状态并进行相应的处理
-	go pod.ScanPodStatus()
+	pod.ScanPodStatus()
 
 }
 
