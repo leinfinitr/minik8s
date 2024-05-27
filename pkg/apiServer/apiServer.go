@@ -4,10 +4,15 @@
 package apiServer
 
 import (
+	"encoding/json"
 	"fmt"
+	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
+	httprequest "minik8s/tools/httpRequest"
+	"minik8s/tools/log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +35,9 @@ func (a *ApiServer) Run() {
 	if err != nil {
 		panic(err)
 	}
-	etcdclient.EtcdStore.Delete(config.EtcdNodePrefix)
+
+	// 开辟一个协程，用于定时扫描所有node的状态
+	go a.ScanNodeStatus()
 }
 
 // Register 注册路由
@@ -126,6 +133,43 @@ func (a *ApiServer) Register() {
 	a.Router.GET(config.HpaURI, handlers.GetHPA)
 	a.Router.POST(config.HpasURI, handlers.AddHPA)
 	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
+
+	// 增加monitor的处理函数
+	// 首次注册节点
+	a.Router.PUT(config.MonitorURL, handlers.RegisterMonitor)
+	// 节点失联后，删除相关配置
+	a.Router.DELETE(config.MonitorURL, handlers.DeleteMonitor)
+
+}
+
+func (a *ApiServer) ScanNodeStatus() {
+	for {
+		log.InfoLog("Start ScanNodeStatus")
+		// 获取所有节点
+		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+		if err != nil {
+			log.WarnLog("ScanNodeStatus: " + err.Error())
+			return
+		}
+
+		for _, v := range res {
+			var node apiObject.Node
+			err = json.Unmarshal([]byte(v), &node)
+			if err != nil {
+				log.WarnLog("ScanNodeStatus: " + err.Error())
+				return
+			}
+			url := config.APIServerURL() + config.NodesURI + "/" + node.Metadata.Name + "/status"
+			nodeJSON, _ := json.Marshal(node.Status)
+			resp, err := httprequest.PutObjMsg(url, nodeJSON)
+			if err != nil || resp.StatusCode != config.HttpSuccessCode {
+				log.WarnLog("ScanNodeStatus: " + err.Error())
+				return
+			}
+		}
+
+		time.Sleep(60 * time.Second)
+	}
 
 }
 

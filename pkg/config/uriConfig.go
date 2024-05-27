@@ -37,6 +37,8 @@ const (
 	ServerlessFunctionURI = "/api/v1/serverless/function/:name"
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"
 	ServerlessWorkflowURI = "/api/v1/serverless/workflow/:param"
+
+	MonitorURL = "/api/v1/monitor"
 )
 
 const (

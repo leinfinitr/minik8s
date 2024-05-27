@@ -27,6 +27,9 @@ type Kubelet struct {
 	// KubeletAPIRouter 用来处理kubelet的请求
 	KubeletAPIRouter *gin.Engine
 
+	// 用来存储node的信息
+	node *apiObject.Node
+
 	//plegManager   *lifecycle.PlegManager
 
 	// 用来接受syncLoop发送信号的通道，handler从该通道获取时间信号并响应处理
@@ -59,6 +62,29 @@ func (k *Kubelet) Run() {
 //
 //	通过发送POST请求的方式去注册，默认API："/api/v1/nodes"
 func (k *Kubelet) registerNode() bool {
+
+	if k.node == nil {
+		k.buildNode()
+	}
+
+	for {
+		// 一致尝试注册直到成功为止
+		url := k.ApiServerConfig.APIServerURL() + config.NodesURI
+
+		statusCode, _, _ := netRequest.PostRequestByTarget(url, k.node)
+
+		if statusCode != config.HttpSuccessCode {
+			log.ErrorLog("register node failed")
+		} else {
+			log.InfoLog("register node success")
+			return true
+		}
+		time.Sleep(15 * time.Second)
+	}
+
+}
+
+func (k *Kubelet) buildNode() {
 	// 注册所需的参数
 	HostName, _ := host.GetHostname()
 	HostIP, _ := host.GetHostIP()
@@ -75,7 +101,7 @@ func (k *Kubelet) registerNode() bool {
 	allocatable["memory"] = strconv.FormatFloat(MemoryUsage, 'f', -1, 64)
 	allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
 
-	node := &apiObject.Node{
+	k.node = &apiObject.Node{
 		TypeMeta: apiObject.TypeMeta{
 			Kind:       "Node",
 			APIVersion: "v1",
@@ -111,21 +137,6 @@ func (k *Kubelet) registerNode() bool {
 		},
 	}
 
-	for {
-		// 一致尝试注册直到成功为止
-		url := k.ApiServerConfig.APIServerURL() + config.NodesURI
-
-		statusCode, _, _ := netRequest.PostRequestByTarget(url, node)
-
-		if statusCode != config.HttpSuccessCode {
-			log.ErrorLog("register node failed")
-		} else {
-			log.InfoLog("register node success")
-			return true
-		}
-		time.Sleep(15 * time.Second)
-	}
-
 }
 
 // registerKubeletAPI 注册kubelet的API
@@ -154,7 +165,7 @@ func (k *Kubelet) registerKubeletAPI() {
 	// 更新指定节点的状态
 	// k.KubeletAPIRouter.PUT(config.NodeStatusURI, handlers.UpdateNodeStatus)
 	// 部分更新指定节点的状态
-	// k.KubeletAPIRouter.PATCH(config.NodeStatusURI, handlers.UpdateNodeStatus)
+	k.KubeletAPIRouter.GET(config.NodeStatusURI, k.UpdateNodeStatus)
 
 	// 获取指定Pod
 	// k.KubeletAPIRouter.GET(config.PodURI, handlers.GetPod)
@@ -224,5 +235,14 @@ func NewKubelet() *Kubelet {
 		ApiServerConfig:  *config.NewAPIServerConfig(),
 		PodManager:       pod.GetPodManager(),
 		KubeletAPIRouter: gin.Default(),
+		node:             nil,
 	}
+}
+
+func (k *Kubelet) UpdateNodeStatus(c *gin.Context) {
+	log.InfoLog("UpdateNodeStatus")
+	if k.node == nil {
+		k.buildNode()
+	}
+	c.JSON(config.HttpSuccessCode, *k.node)
 }

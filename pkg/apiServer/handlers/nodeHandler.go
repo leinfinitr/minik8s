@@ -8,6 +8,7 @@ import (
 	"minik8s/pkg/config"
 	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -57,7 +58,7 @@ func CreateNode(c *gin.Context) {
 	}
 
 	if len(res) > 0 {
-		// 节点已经存在，需要对pod进行特殊处理
+		// 节点已经存在，需要对pod进行特殊处理，与kubelet同步pod的信息
 		log.InfoLog("CreateNode: node already exists")
 		c.JSON(config.HttpSuccessCode, "message: node already exists")
 		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdPodPrefix)
@@ -89,6 +90,8 @@ func CreateNode(c *gin.Context) {
 		c.JSON(config.HttpSuccessCode, "message: create node success")
 		return
 	}
+
+	// 节点首次注册，直接保存节点信息
 	if node.Kind != apiObject.NodeType {
 		log.WarnLog("CreateNode: node kind is not correct")
 		c.JSON(config.HttpErrorCode, gin.H{"error": "node kind is not correct"})
@@ -198,19 +201,53 @@ func GetNodeStatus(c *gin.Context) {
 	}
 }
 
-// UpdateNodeStatus 更新指定节点的状态
+// UpdateNodeStatus 更新指定节点的状态，其实就是试一试能不能联通
 func UpdateNodeStatus(c *gin.Context) {
-	name := c.Param("name")
-	log.DebugLog("UpdateNodeStatus: " + name)
-
-	var status apiObject.NodeStatus
-	err := c.ShouldBindJSON(&status)
+	var node apiObject.Node
+	err := c.ShouldBindJSON(&node)
 	if err != nil {
 		log.ErrorLog("UpdateNodeStatus error: " + err.Error())
-
+		return
 	}
 
-	node := nodes[name]
-	node.UpdateNodeStatus(status)
-	c.JSON(config.HttpSuccessCode, "")
+	// 尝试三次，失败则认为节点不可用
+	times := 0
+	success := false
+	for times < 3 {
+		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.NodeStatusURI
+		url = strings.Replace(url, config.NameReplace, node.Metadata.Name, -1)
+		resp, err := httprequest.GetMsg(url)
+		if err != nil || resp.StatusCode != config.HttpSuccessCode {
+			// 无法联通，说明节点不可用
+			log.ErrorLog("UpdateNodeStatus: Node can't be connected")
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		} else {
+			success = true
+			newNode := apiObject.Node{}
+			err = json.NewDecoder(resp.Body).Decode(&newNode)
+			if err != nil {
+				log.ErrorLog("UpdateNodeStatus: " + err.Error())
+				c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+				return
+			}
+			nodeJSON, err := json.Marshal(newNode)
+			if err != nil {
+				log.ErrorLog("UpdateNodeStatus: " + err.Error())
+				c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+				return
+			}
+			etcdclient.EtcdStore.Put(config.EtcdNodePrefix+"/"+node.Metadata.Name, string(nodeJSON))
+			break
+		}
+	}
+
+	if success {
+		log.InfoLog("UpdateNodeStatus success")
+		c.JSON(config.HttpSuccessCode, "")
+	} else {
+		// 无法联通，说明节点不可用，删除该节点信息
+		etcdclient.EtcdStore.Delete(config.EtcdNodePrefix + "/" + node.Metadata.Name)
+		log.ErrorLog("UpdateNodeStatus failed")
+		c.JSON(config.HttpSuccessCode, "")
+	}
 }
