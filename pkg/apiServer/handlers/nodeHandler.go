@@ -13,9 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 一个临时的用于存储 node 信息的 map
-var nodes = make(map[string]apiObject.Node)
-
 // GetNodes 获取所有节点
 func GetNodes(c *gin.Context) {
 	log.InfoLog("GetNodes")
@@ -156,7 +153,6 @@ func BroadcastNode(node apiObject.Node) {
 
 // DeleteNodes 删除所有节点
 func DeleteNodes(c *gin.Context) {
-	nodes = make(map[string]apiObject.Node)
 	log.InfoLog("DeleteNodes")
 }
 
@@ -164,12 +160,12 @@ func DeleteNodes(c *gin.Context) {
 func GetNode(c *gin.Context) {
 	name := c.Param("name")
 	log.InfoLog("GetNode: " + name)
-	for k, v := range nodes {
-		if k == name {
-			c.JSON(config.HttpSuccessCode, v)
-			return
-		}
-	}
+	// for k, v := range nodes {
+	// 	if k == name {
+	// 		c.JSON(config.HttpSuccessCode, v)
+	// 		return
+	// 	}
+	// }
 	c.JSON(config.HttpNotFoundCode, "")
 }
 
@@ -181,7 +177,7 @@ func UpdateNode(c *gin.Context) {
 		log.ErrorLog("UpdateNode error: " + err.Error())
 	}
 	name := c.Param("name")
-	nodes[name] = node
+	// nodes[name] = node
 
 	log.InfoLog("UpdateNode: " + name)
 	c.JSON(config.HttpSuccessCode, "")
@@ -190,7 +186,7 @@ func UpdateNode(c *gin.Context) {
 // DeleteNode 删除指定节点
 func DeleteNode(c *gin.Context) {
 	name := c.Param("name")
-	delete(nodes, name)
+	// delete(nodes, name)
 
 	log.InfoLog("DeleteNode: " + name)
 	c.JSON(config.HttpSuccessCode, "")
@@ -200,13 +196,6 @@ func DeleteNode(c *gin.Context) {
 func GetNodeStatus(c *gin.Context) {
 	name := c.Param("name")
 	log.InfoLog("GetNodeStatus: " + name)
-
-	for k, v := range nodes {
-		if k == name {
-			c.JSON(config.HttpSuccessCode, v.Status)
-			return
-		}
-	}
 }
 
 // UpdateNodeStatus 更新指定节点的状态，其实就是试一试能不能联通

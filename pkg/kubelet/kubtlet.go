@@ -54,8 +54,6 @@ func (k *Kubelet) Run() {
 	// 定时扫描pod的状态并进行相应的处理
 	go pod.ScanPodStatus()
 
-	// kubelet的主线程用于发送心跳
-	k.heartbeat()
 }
 
 // RegisterNode 在kubelet刚开始创建时，需要到apiServer的work node去注册
@@ -139,6 +137,29 @@ func (k *Kubelet) buildNode() {
 
 }
 
+func (k *Kubelet) UpdateNodeStatusInternal() {
+	log.InfoLog("UpdateNodeStatus")
+	// 获取主机的内存和CPU使用率
+	allocatable := make(map[string]string)
+	MemoryUsage, _ := host.GetMemoryUsageRate()
+	CPUUsage, _ := host.GetCPULoad()
+	allocatable["memory"] = strconv.FormatFloat(MemoryUsage, 'f', -1, 64)
+	allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
+
+	nodeStatus := &apiObject.NodeStatus{
+		Allocatable: allocatable,
+		Conditions: []apiObject.NodeCondition{
+			{
+				Type:   "Ready",
+				Status: "True",
+			},
+		},
+	}
+
+	k.node.Status = *nodeStatus
+
+}
+
 // registerKubeletAPI 注册kubelet的API
 func (k *Kubelet) registerKubeletAPI() {
 	log.DebugLog("register kubelet API")
@@ -192,43 +213,6 @@ func (k *Kubelet) registerKubeletAPI() {
 	// k.KubeletAPIRouter.DELETE(config.PodsURI, handlers.DeletePods)
 }
 
-// heartbeat 向apiServer发送心跳
-func (k *Kubelet) heartbeat() {
-	log.DebugLog("start heartbeat")
-	// 每间隔 60s 发送一次心跳
-	for {
-		HostName, _ := host.GetHostname()
-		url := k.ApiServerConfig.APIServerURL() + config.NodesURI + "/" + HostName + "/status"
-		// 获取主机的内存和CPU使用率
-		allocatable := make(map[string]string)
-		MemoryUsage, _ := host.GetMemoryUsageRate()
-		CPUUsage, _ := host.GetCPULoad()
-		allocatable["memory"] = strconv.FormatFloat(MemoryUsage, 'f', -1, 64)
-		allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
-
-		nodeStatus := &apiObject.NodeStatus{
-			Allocatable: allocatable,
-			Conditions: []apiObject.NodeCondition{
-				{
-					Type:   "Ready",
-					Status: "True",
-				},
-			},
-		}
-
-		statusCode, _, _ := netRequest.PutRequestByTarget(url, nodeStatus)
-
-		if statusCode != config.HttpSuccessCode {
-			log.ErrorLog("heartbeat failed")
-		} else {
-			log.DebugLog("heartbeat success")
-		}
-
-		// 间隔60s
-		time.Sleep(60 * time.Second)
-	}
-}
-
 // NewKubelet 创建一个新的Kubelet
 func NewKubelet() *Kubelet {
 	return &Kubelet{
@@ -243,6 +227,8 @@ func (k *Kubelet) UpdateNodeStatus(c *gin.Context) {
 	log.InfoLog("UpdateNodeStatus")
 	if k.node == nil {
 		k.buildNode()
+	} else {
+		k.UpdateNodeStatusInternal()
 	}
 	c.JSON(config.HttpSuccessCode, *k.node)
 }
