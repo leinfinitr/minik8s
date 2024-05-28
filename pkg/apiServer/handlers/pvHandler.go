@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"minik8s/pkg/apiObject"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
 )
 
 // CreatePV 创建PersistentVolume
@@ -17,12 +19,14 @@ func CreatePV(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
 	newPvName := pv.Metadata.Name
 	if newPvName == "" {
 		log.ErrorLog("Create PersistentVolume: name is empty")
 		c.JSON(400, gin.H{"error": "name is empty"})
 		return
 	}
+
 	key := config.EtcdPvPrefix + "/" + newPvName
 	response, _ := etcdclient.EtcdStore.Get(key)
 	if response != "" {

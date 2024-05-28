@@ -10,5 +10,6 @@ spec:
     - name: fileserver
       image: 7143192/fileserver:latest
       imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-c", "while true; do echo 'scale=2000; 4*a(1)' | bc -l -q; done"]
       ports:
         - containerPort: 8080

@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	"minik8s/pkg/kubectl/translator"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/pkg/kubectl/translator"
+	"minik8s/tools/log"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 var serverlessCmd = &cobra.Command{
@@ -22,9 +24,10 @@ var serverlessCmd = &cobra.Command{
 	Run:   serverlessHandler,
 }
 
+// serverlessHandler serverless 指令的处理函数
 func serverlessHandler(cmd *cobra.Command, args []string) {
+	// 如果没有参数，输出 serverless 指令的帮助信息
 	if len(args) == 0 {
-		// 如果没有参数，输出 serverless 指令的帮助信息
 		printHelp()
 		return
 	}

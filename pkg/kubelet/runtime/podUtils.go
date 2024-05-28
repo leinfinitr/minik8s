@@ -357,6 +357,8 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 	}
 
+	log.InfoLog("CPU usage" + fmt.Sprint(cpuUsage))
+	log.InfoLog("Memory usage" + fmt.Sprint(memoryUsage))
 	pod.Status.CpuUsage = cpuUsage
 	pod.Status.MemUsage = memoryUsage
 

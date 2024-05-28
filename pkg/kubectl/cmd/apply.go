@@ -123,10 +123,11 @@ func ServiceHandler(content []byte) {
 		log.ErrorLog("The name of the service is required.")
 		os.Exit(1)
 	}
-	url := config.APIServerURL() + config.ServicesURI
+	url := config.APIServerURL() + config.ServiceURI
 	url = strings.Replace(url, config.NameSpaceReplace, service.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, service.Metadata.Name, -1)
 	log.DebugLog("PUT " + url)
-	resp, err := httprequest.PostObjMsg(url, service)
+	resp, err := httprequest.PutObjMsg(url, service)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
 		os.Exit(1)

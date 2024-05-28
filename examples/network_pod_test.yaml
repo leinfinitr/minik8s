@@ -10,8 +10,9 @@ metadata:
 spec:
   containers:
     - name: webserver
-      image: python:3.8-slim
+      image: python:3.7-alpine
       imagePullPolicy: IfNotPresent
+      Command: ["/bin/sh", "-c", "sleep 600"]
       ports:
         - containerPort: 8080
         - hostPort: 8080

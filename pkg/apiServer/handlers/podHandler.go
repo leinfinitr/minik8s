@@ -145,7 +145,7 @@ func DeletePod(c *gin.Context) {
 	}
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
-	url := "http://" + address + fmt.Sprint(config.KubeletAPIPort)
+	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	delUri := url + config.PodsURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
@@ -485,9 +485,27 @@ func ExecPod(c *gin.Context) {
 		c.JSON(400, "containerID is empty")
 		return
 	}
+
+	// 获取pod所在node的IP
+	res, err = etcdclient.EtcdStore.Get(config.EtcdNodePrefix + "/" + pod.Spec.NodeName)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	node := &apiObject.Node{}
+	err = json.Unmarshal([]byte(res), node)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	addresses := node.Status.Addresses
+	address := addresses[0].Address
+
 	// 执行命令
 	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + containerID + "/" + param)
-	execUri := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodExecURI
+	execUri := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodExecURI
 	execUri = strings.Replace(execUri, config.NameSpaceReplace, namespace, -1)
 	execUri = strings.Replace(execUri, config.NameReplace, name, -1)
 	execUri = strings.Replace(execUri, config.ContainerReplace, containerID, -1)

@@ -102,7 +102,7 @@ func (s *ScaleManagerImpl) IncreaseInstanceNum(name string) {
 // DecreaseInstanceNum 删除一个Serverless Function的实例
 func (s *ScaleManagerImpl) DecreaseInstanceNum(name string) {
 	// 从 Instance 中取出最后一个 Pod
-	pod := s.Instance[name][s.InstanceNum[name]]
+	pod := s.Instance[name][s.InstanceNum[name]-1]
 	// 转发给 apiServer 删除一个 Pod
 	url := config.APIServerURL() + config.PodURI
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
