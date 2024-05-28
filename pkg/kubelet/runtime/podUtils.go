@@ -300,8 +300,17 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 			return err
 		}
 
-		cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)))
-		memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value / memoryAll)
+		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
+			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)))
+		} else {
+			cpuUsage += 0
+		}
+
+		if memoryAll != 0 {
+			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value / memoryAll)
+		} else {
+			memoryUsage += 0
+		}
 
 		switch response2.Status.State {
 		case runtimeapi.ContainerState_CONTAINER_CREATED:
