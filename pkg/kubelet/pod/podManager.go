@@ -17,7 +17,7 @@ type PodManager interface {
 	RestartPod(pod *apiObject.Pod) error
 	DeletePodByUUID(pod *apiObject.Pod) error
 	RecreatePodContainer(pod *apiObject.Pod) error
-	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
+	ExecPodContainer(req *apiObject.ExecReq) (string, error)
 	UpdatePodStatus() error
 }
 
@@ -35,7 +35,7 @@ type podManagerImpl struct {
 	StopPodHandler               func(pod *apiObject.Pod) error
 	DeletePodHandler             func(pod *apiObject.Pod) error
 	RecreateContainerHandler     func(pod *apiObject.Pod) error
-	ExecPodHandler               func(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
+	ExecPodHandler               func(req *apiObject.ExecReq) (string, error)
 	UpdateContainerStatusHandler func(container *apiObject.Container, pod *apiObject.Pod) error
 }
 
@@ -207,8 +207,7 @@ func (p *podManagerImpl) RecreatePodContainer(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (p *podManagerImpl) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
-	// TODO: 根据 container 不同的状态进行处理
+func (p *podManagerImpl) ExecPodContainer(req *apiObject.ExecReq) (string, error) {
 	return p.ExecPodHandler(req)
 }
 

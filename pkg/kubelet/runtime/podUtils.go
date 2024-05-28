@@ -7,6 +7,8 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+	"strings"
+	"time"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
@@ -122,7 +124,7 @@ func (r *RuntimeManager) StartPod(pod *apiObject.Pod) error {
 		if err != nil {
 			errorMsg := fmt.Sprintf("[RPC] Start container failed, containerID: %s", pod.Spec.Containers[i].ContainerID)
 			log.ErrorLog(errorMsg)
-			return err
+			continue
 		}
 		pod.Spec.Containers[i].ContainerStatus = apiObject.ContainerRunning
 
@@ -241,26 +243,50 @@ func (r *RuntimeManager) RecreatePodContainers(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
+func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (string, error) {
 	log.InfoLog("[RPC] Start ExecPodContainer")
 
-	response, err := r.runtimeClient.Exec(context.Background(), &runtimeapi.ExecRequest{
+	// 获取 container 的状态
+	resp, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
 		ContainerId: req.ContainerId,
-		Cmd:         req.Cmd,
-		Tty:         req.Tty,
-		Stdin:       req.Stdin,
-		Stdout:      req.Stdout,
-		Stderr:      req.Stderr,
+		Verbose:     true,
+	})
+	if err != nil {
+		log.ErrorLog("Container status from CRI failed" + err.Error())
+		return "", err
+	}
+	// 如果 container 正在创建则循环等待
+	for resp.Status.State == runtimeapi.ContainerState_CONTAINER_CREATED {
+		resp, err = r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
+			ContainerId: req.ContainerId,
+			Verbose:     true,
+		})
+		if err != nil {
+			log.ErrorLog("Container status from CRI failed" + err.Error())
+			return "", err
+		}
+		time.Sleep(1 * time.Second)
+	}
+	// 如果 container 不是运行状态则返回错误
+	if resp.Status.State != runtimeapi.ContainerState_CONTAINER_RUNNING {
+		log.ErrorLog("Container is not running")
+		return "", errors.New("container is not running")
+	}
+	// 执行 container
+	cmd := strings.Join(req.Cmd, " ")
+	response, err := r.runtimeClient.ExecSync(context.Background(), &runtimeapi.ExecSyncRequest{
+		ContainerId: req.ContainerId,
+		Cmd:         []string{"/bin/sh", "-c", cmd},
 	})
 
 	if err != nil {
 		log.ErrorLog("Exec container failed: " + err.Error())
-		return nil, err
+		return "", err
 	}
-
-	return &apiObject.ExecRsp{
-		Url: response.Url,
-	}, nil
+	log.DebugLog("Exec container success with Stdout: " + string(response.Stdout))
+	log.DebugLog("Exec container success with Stderr: " + string(response.Stderr))
+	// 删除response.Stdout最后的换行
+	return strings.TrimSuffix(string(response.Stdout), "\n"), nil
 }
 
 func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error {
@@ -281,10 +307,12 @@ func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container, p
 		pod.Status.Phase = apiObject.PodSucceeded
 	case runtimeapi.ContainerState_CONTAINER_RUNNING:
 		container.ContainerStatus = apiObject.ContainerRunning
+	case runtimeapi.ContainerState_CONTAINER_EXITED:
+		container.ContainerStatus = apiObject.ContainerExited
 	default:
 		container.ContainerStatus = apiObject.ContainerUnknown
 		pod.Status.Phase = apiObject.PodFailed
-		return errors.New("container status isn't normal")
+		return errors.New("container " + container.ContainerID + " status is unknown")
 	}
 
 	return nil

@@ -222,7 +222,9 @@ func runFunction(serverlessName string, param string) {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	fmt.Println("Result: " + string(body))
+	result := string(body)
+	result = result[1 : len(result)-1]
+	fmt.Println("Result: " + result)
 }
 
 // workflow 执行 serverless 工作流
@@ -258,5 +260,7 @@ func workflow(fileName string, param string) {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	fmt.Println("Result: " + string(body))
+	result := string(body)
+	result = result[1 : len(result)-1]
+	fmt.Println("Result: " + result)
 }

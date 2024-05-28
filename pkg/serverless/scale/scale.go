@@ -129,10 +129,14 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	// 返回结果
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.ErrorLog("Could not read the response body." + err.Error())
+		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	return string(body)
+	result := string(body)
+	// 去掉result中首尾的引号
+	result = result[1 : len(result)-1]
+	log.InfoLog("Run function " + name + " with param " + param + " result: " + result)
+	return result
 }
 
 // AddPod 添加一个Pod

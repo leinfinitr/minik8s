@@ -21,13 +21,23 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 			Volumes: []apiObject.Volume{
 				{
 					Name: serverless.Volume,
+					VolumeSource: apiObject.VolumeSource{
+						HostPath: apiObject.HostPathVolumeSource{
+							Path: serverless.HostPath,
+							Type: apiObject.HostPathDirectory,
+						},
+					},
 				},
 			},
 			Containers: []apiObject.Container{
 				{
-					Name:       serverless.Name,
-					Image:      serverless.Image,
-					Command:    []string{"pip", "install", "-r", "/mnt/requirements.txt"},
+					Name:  serverless.Name,
+					Image: serverless.Image,
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"pip install -r /mnt/requirements.txt && sleep 600",
+					},
 					WorkingDir: "/mnt",
 					VolumeMounts: []apiObject.VolumeMount{
 						{

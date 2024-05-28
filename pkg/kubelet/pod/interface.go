@@ -89,90 +89,6 @@ func GetPodStatus(c *gin.Context) {
 	c.JSON(config.HttpErrorCode, "Pod not found")
 }
 
-// func StartPod(c *gin.Context) {
-// 	var pod apiObject.Pod
-// 	err := c.ShouldBindJSON(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("StartPod error: " + err.Error())
-// 	}
-// 	err = podManager.StartPod(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("StartPod error: " + err.Error())
-// 	} else {
-// 		c.JSON(200, "")
-// 	}
-// }
-
-// func StopPod(c *gin.Context) {
-// 	var pod apiObject.Pod
-// 	err := c.ShouldBindJSON(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("StopPod error: " + err.Error())
-// 	}
-// 	err = podManager.StopPod(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("StopPod error: " + err.Error())
-// 	} else {
-// 		c.JSON(200, "")
-// 	}
-// }
-
-// func RestartPod(c *gin.Context) {
-// 	var pod apiObject.Pod
-// 	err := c.ShouldBindJSON(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("RestartPod error: " + err.Error())
-// 	}
-// 	err = podManager.RestartPod(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("RestartPod error: " + err.Error())
-// 	} else {
-// 		c.JSON(200, "")
-// 	}
-// }
-
-// func DeletePodByUUID(c *gin.Context) {
-// 	var pod apiObject.Pod
-// 	err := c.ShouldBindJSON(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("DeletePodByUUID error: " + err.Error())
-// 	}
-// 	err = podManager.DeletePodByUUID(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("DeletePodByUUID error: " + err.Error())
-// 	} else {
-// 		c.JSON(200, "")
-// 	}
-// }
-
-// func RecreatePodContainer(c *gin.Context) {
-// 	var pod apiObject.Pod
-// 	err := c.ShouldBindJSON(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("RecreatePodContainer error: " + err.Error())
-// 	}
-// 	err = podManager.RecreatePodContainer(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("RecreatePodContainer error: " + err.Error())
-// 	} else {
-// 		c.JSON(200, "")
-// 	}
-// }
-
-// func ExecPodContainer(c *gin.Context) {
-// 	var pod apiObject.Pod
-// 	err := c.ShouldBindJSON(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("ExecPodContainer error: " + err.Error())
-// 	}
-// 	err = podManager.ExecPodContainer(&pod)
-// 	if err != nil {
-// 		log.ErrorLog("ExecPodContainer error: " + err.Error())
-// 	} else {
-// 		c.JSON(200, "")
-// 	}
-// }
-
 // ScanPodStatus 用于扫描 pod 的状态，根据 pod 的状态进行相应的操作
 func ScanPodStatus() {
 	log.DebugLog("start scan pod status")
@@ -200,8 +116,7 @@ func ScanPodStatus() {
 				}()
 				// 其余情况暂不处理
 			default:
-				log.DebugLog("Pod is in phase: " + string(phase))
-
+				log.DebugLog("Pod" + pod.Metadata.Name + " is in phase: " + string(phase))
 			}
 		}
 		// 间隔10s
@@ -220,14 +135,15 @@ func ExecPodContainer(c *gin.Context) {
 	exec.Tty = true
 	exec.Stdin = true
 	exec.Stdout = true
-	exec.Stderr = true
+	exec.Stderr = false
 
 	rep, err := podManager.ExecPodContainer(exec)
 	if err != nil {
 		log.ErrorLog("ExecPodContainer error: " + err.Error())
 		c.JSON(config.HttpErrorCode, err.Error())
 	} else {
-		c.JSON(200, rep.Url)
+		log.DebugLog("ExecPodContainer success: " + rep)
+		c.JSON(config.HttpSuccessCode, rep)
 	}
 }
 

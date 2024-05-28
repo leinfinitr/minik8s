@@ -84,7 +84,7 @@ type HostPathVolumeSource struct {
 	// 主机路径
 	Path string `json:"path" yaml:"path"`
 	// 主机路径类型
-	Type *HostPathType `json:"type" yaml:"type"`
+	Type HostPathType `json:"type" yaml:"type"`
 }
 
 type PersistentVolumeClaimVolumeSource struct {

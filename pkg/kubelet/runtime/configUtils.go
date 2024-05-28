@@ -14,7 +14,7 @@ func (r *RuntimeManager) getPodSandBoxConfig(pod *apiObject.Pod) (*runtimeapi.Po
 			Name:      pod.Metadata.Name,
 			Namespace: pod.Metadata.Namespace,
 			Uid:       pod.Metadata.UUID,
-			Attempt:   0,
+			Attempt:   1,
 		},
 		Labels:      pod.Metadata.Labels,
 		Annotations: pod.Metadata.Annotations,

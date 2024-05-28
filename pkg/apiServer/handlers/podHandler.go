@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
@@ -422,14 +423,14 @@ func ExecPod(c *gin.Context) {
 	res, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
 		log.ErrorLog("ExecPod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, err.Error())
 		return
 	}
 	pod := &apiObject.Pod{}
 	err = json.Unmarshal([]byte(res), pod)
 	if err != nil {
 		log.ErrorLog("ExecPod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, err.Error())
 		return
 	}
 	// 取出containerID
@@ -442,7 +443,7 @@ func ExecPod(c *gin.Context) {
 	}
 	if containerID == "" {
 		log.ErrorLog("ExecPod: containerID is empty")
-		c.JSON(400, gin.H{"error": "containerID is empty"})
+		c.JSON(400, "containerID is empty")
 		return
 	}
 	// 执行命令
@@ -455,8 +456,18 @@ func ExecPod(c *gin.Context) {
 	resp, err := httprequest.GetMsg(execUri)
 	if err != nil {
 		log.ErrorLog("ExecPod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, err.Error())
 		return
 	}
-	c.JSON(200, gin.H{"data": resp})
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.ErrorLog("ExecPod: " + err.Error())
+		c.JSON(500, err.Error())
+		return
+	}
+	result := string(body)
+	// 去掉result中首尾的引号
+	result = result[1 : len(result)-1]
+	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + containerID + "/" + param + " success: " + result)
+	c.JSON(200, result)
 }

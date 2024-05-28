@@ -4,4 +4,4 @@ volume: serverless-volume
 hostPath: /root/minik8s/examples
 requirements: requirements.txt
 functionFile: subtract.py
-command: python3 subtract.py
+command: python subtract.py

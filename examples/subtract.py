@@ -1,7 +1,7 @@
 import sys
 
 def add_one(number):
-    return number - 1
+    return number - 7
 
 if __name__ == "__main__":
     # 检查是否有命令行参数传入
