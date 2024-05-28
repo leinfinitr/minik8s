@@ -98,13 +98,13 @@ type PodPhase string
 
 // 参考：https://kubernetes.io/zh-cn/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
 //
-//		Pending（悬决）   Pod 已被 Kubernetes 系统接受，但尚未分配至 Node 或者尚未传送至 Containerd 进行创建.
-//	 	Building (创建中) Pod 已经被分配到具体的 Node 节点进行创建，此时正在创建 PodSandbox 或者 Containers，或者正在准备镜像
-//		Succeeded（成功创建） Pod 中的所有容器都已成功创建，但是Pod还未被运行。
-//		Running（运行中） Pod 已经成功运行，且正常提供 Pod 功能，有kubelet负责其容错。
-//		Failed（失败）    Pod 中的所有容器都已终止，并且至少有一个容器是因为失败终止。也就是说，容器以非 0 状态退出或者被系统终止。
-//		Unknown（未知）   因为某些原因无法取得 Pod 的状态。这种情况通常是因为与 Pod 所在主机通信失败。
-//		Terminating（需要终止） Pod 已被请求终止，但是该终止请求还没有被发送到底层容器。Pod 仍然在运行。
+//	Pending（悬决）：Pod 已被 Kubernetes 系统接受，但尚未分配至 Node 或者尚未传送至 Containerd 进行创建.
+//	Building (创建中)： Pod 已经被分配到具体的 Node 节点进行创建，此时正在创建 PodSandbox 或者 Containers，或者正在准备镜像
+//	Succeeded（成功创建）：Pod 中的所有容器都已成功创建，但是Pod还未被运行。
+//	Running（运行中）：Pod 已经成功运行，且正常提供 Pod 功能，有kubelet负责其容错。
+//	Failed（失败）：Pod 中的所有容器都已终止，并且至少有一个容器是因为失败终止。也就是说，容器以非 0 状态退出或者被系统终止。
+//	Unknown（未知）：因为某些原因无法取得 Pod 的状态。这种情况通常是因为与 Pod 所在主机通信失败。
+//	Terminating（需要终止）：Pod 已被请求终止，但是该终止请求还没有被发送到底层容器。Pod 仍然在运行。
 const (
 	PodPending     = "Pending"
 	PodBuilding    = "Building"

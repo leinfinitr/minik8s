@@ -1,7 +1,7 @@
 image: python:3.7-alpine
 name: add
 volume: serverless-volume
-hostPath: /root/minik8s/examples
+hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
 functionFile: add.py
 command: python add.py

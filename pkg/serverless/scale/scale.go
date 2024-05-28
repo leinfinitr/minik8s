@@ -99,10 +99,24 @@ func (s *ScaleManagerImpl) IncreaseInstanceNum(name string) {
 	log.InfoLog("Create a new pod for " + name + " with name " + pod.Metadata.Name)
 }
 
-// DecreaseInstanceNum 减少一个Serverless Function的实例
+// DecreaseInstanceNum 删除一个Serverless Function的实例
 func (s *ScaleManagerImpl) DecreaseInstanceNum(name string) {
+	// 从 Instance 中取出最后一个 Pod
+	pod := s.Instance[name][s.InstanceNum[name]]
+	// 转发给 apiServer 删除一个 Pod
+	url := config.APIServerURL() + config.PodURI
+	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+	_, err := httprequest.DelMsg(url)
+	if err != nil {
+		log.ErrorLog("Could not delete the object message." + err.Error())
+		os.Exit(1)
+	}
+	// 从 Instance 中删除
+	s.Instance[name] = s.Instance[name][:s.InstanceNum[name]]
 	s.InstanceNum[name]--
-	// TODO: 删除一个Serverless Function实例
+
+	log.InfoLog("Delete a pod for " + name + " with name " + pod.Metadata.Name)
 }
 
 // RunFunction 运行Serverless Function
