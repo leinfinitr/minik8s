@@ -14,10 +14,6 @@ spec:
       targetPort: 8080
       protocol: TCP
       name: file-service
-    - port: 3000
-      targetPort: 3000
-      protocol: TCP
-      name: data-service
   selector:
     app: my-app
   

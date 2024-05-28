@@ -29,14 +29,14 @@ type podManagerImpl struct {
 	EventQueue chan EventType
 
 	/* 不同事件的处理函数 */
-	AddPodHandler                func(pod *apiObject.Pod) error
-	StartPodHandler              func(pod *apiObject.Pod) error
-	RestartPodHandler            func(pod *apiObject.Pod) error
-	StopPodHandler               func(pod *apiObject.Pod) error
-	DeletePodHandler             func(pod *apiObject.Pod) error
-	RecreateContainerHandler     func(pod *apiObject.Pod) error
-	ExecPodHandler               func(req *apiObject.ExecReq) (string, error)
-	UpdateContainerStatusHandler func(container *apiObject.Container, pod *apiObject.Pod) error
+	AddPodHandler            func(pod *apiObject.Pod) error
+	StartPodHandler          func(pod *apiObject.Pod) error
+	RestartPodHandler        func(pod *apiObject.Pod) error
+	StopPodHandler           func(pod *apiObject.Pod) error
+	DeletePodHandler         func(pod *apiObject.Pod) error
+	RecreateContainerHandler func(pod *apiObject.Pod) error
+	ExecPodHandler           func(req *apiObject.ExecReq) (string, error)
+	UpdatePodStatusHandler   func(pod *apiObject.Pod) error
 }
 
 /* Singleton pattern */
@@ -50,16 +50,16 @@ func GetPodManager() PodManager {
 
 		runtimeMgr := runtime.GetRuntimeManager()
 		podManager = &podManagerImpl{
-			PodMapByUUID:                 newMapUUIDToPod,
-			EventQueue:                   eventChan,
-			AddPodHandler:                runtimeMgr.CreatePod,
-			StartPodHandler:              runtimeMgr.StartPod,
-			RestartPodHandler:            runtimeMgr.RestartPod,
-			StopPodHandler:               runtimeMgr.StopPod,
-			DeletePodHandler:             runtimeMgr.DeletePod,
-			RecreateContainerHandler:     runtimeMgr.RecreatePodContainers,
-			ExecPodHandler:               runtimeMgr.ExecPodContainer,
-			UpdateContainerStatusHandler: runtimeMgr.UpdateContainerStatus,
+			PodMapByUUID:             newMapUUIDToPod,
+			EventQueue:               eventChan,
+			AddPodHandler:            runtimeMgr.CreatePod,
+			StartPodHandler:          runtimeMgr.StartPod,
+			RestartPodHandler:        runtimeMgr.RestartPod,
+			StopPodHandler:           runtimeMgr.StopPod,
+			DeletePodHandler:         runtimeMgr.DeletePod,
+			RecreateContainerHandler: runtimeMgr.RecreatePodContainers,
+			ExecPodHandler:           runtimeMgr.ExecPodContainer,
+			UpdatePodStatusHandler:   runtimeMgr.UpdatePodStatus,
 		}
 	}
 
@@ -216,14 +216,10 @@ func (p *podManagerImpl) UpdatePodStatus() error {
 		if pod.Status.Phase == apiObject.PodPending || pod.Status.Phase == apiObject.PodBuilding {
 			continue
 		}
-		for j := 0; j < len(pod.Spec.Containers); j += 1 {
-			container := &pod.Spec.Containers[j]
-			err := p.UpdateContainerStatusHandler(container, pod)
-			if err != nil {
-				log.ErrorLog("Get status failed in container ID " + container.ContainerID + " " + err.Error())
-			}
+		err := p.UpdatePodStatusHandler(pod)
+		if err != nil {
+			log.ErrorLog("Get Pod status failed" + err.Error())
 		}
 	}
-
 	return nil
 }

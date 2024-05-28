@@ -1,16 +1,20 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/spf13/cobra"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/httpRequest"
+	"minik8s/tools/log"
 	"minik8s/tools/stringops"
+	"net/http"
 	"os"
 	"strings"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/spf13/cobra"
 )
 
 var getCmd = &cobra.Command{
@@ -18,6 +22,10 @@ var getCmd = &cobra.Command{
 	Short: "Get a resource by filename or stdin",
 	Long:  "Get resources by filenames, stdin, resources and names, or by resources and label selector",
 	Run:   getHandler,
+}
+
+func init(){
+	getCmd.PersistentFlags().StringP("namespace", "n", "", "Namespace")
 }
 
 func getHandler(cmd *cobra.Command, args []string) {
@@ -53,10 +61,11 @@ func getHandler(cmd *cobra.Command, args []string) {
 			namespace = "default"
 		}
 		switch resourceType {
-		case "pod":
+		case apiObject.PodType:
 			getPodHandler(namespace)
-		case "service":
-		case "deployment":
+		case apiObject.ServiceType:
+		case apiObject.ReplicaSetType:
+			getReplicaSetHandler(namespace)
 		}
 	}
 }
@@ -110,16 +119,36 @@ func getPodHandler(namespace string) {
 	url := config.APIServerURL() + config.PodsURI
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	var pods []apiObject.Pod
-	code, err := httprequest.GetObjMsg(url, &pods, "data")
+	resp,err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error: ", err)
+		log.ErrorLog("GetPod: " + err.Error())
 		os.Exit(1)
 	}
-	if code.StatusCode != 200 {
-		fmt.Println("Error: Failed to get pods")
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&pods)
+	if err != nil {
+		log.ErrorLog("GetPod: " + err.Error())
 		os.Exit(1)
 	}
 	printPodsResult(pods)
+}
+
+func getReplicaSetHandler(namespace string){
+	url := config.APIServerURL() + config.ReplicaSetsURI
+	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+	var replicaSets []apiObject.ReplicaSet
+	resp,err := http.Get(url)
+	if err != nil {
+		log.ErrorLog("GetReplicaSet: " + err.Error())
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&replicaSets)
+	if err != nil {
+		log.ErrorLog("GetReplicaSet: " + err.Error())
+		os.Exit(1)
+	}
+	printReplicasetsResult(replicaSets)
 }
 
 func printPodsResult(pods []apiObject.Pod) {
@@ -154,5 +183,24 @@ func printPodResult(pod apiObject.Pod, writer table.Writer) {
 		pod.Metadata.Name,
 		coloredStatus, // 使用包装了颜色的status
 		pod.Spec.NodeName,
+	})
+}
+
+func printReplicasetsResult(replicaSets []apiObject.ReplicaSet) {
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Kind", "Name", "Replicas", "Selector"})
+	for _, rs := range replicaSets {
+		printReplicaSetResult(rs, writer)
+	}
+	writer.Render()
+}
+
+func printReplicaSetResult(rs apiObject.ReplicaSet, writer table.Writer) {
+	writer.AppendRow(table.Row{
+		"ReplicaSet",
+		rs.Metadata.Name,
+		rs.Spec.Replicas,
+		rs.Spec.Selector,
 	})
 }

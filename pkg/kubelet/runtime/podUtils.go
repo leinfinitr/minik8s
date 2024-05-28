@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
+	"minik8s/tools/host"
 	"minik8s/tools/log"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ type PodUtils interface {
 	GetPodSandboxStatus(podId string) (*runtimeapi.PodSandboxStatus, error)
 	RecreatePodContainer(pod *apiObject.Pod) error
 	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
-	UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error
+	UpdatePodStatus(pod *apiObject.Pod) error
 }
 
 // CreatePod 在这里，我们创建一个Pod相当于是创建一个Sandbox，并且会创建Pod内部的所有容器
@@ -289,30 +290,56 @@ func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (string, error
 	return strings.TrimSuffix(string(response.Stdout), "\n"), nil
 }
 
-func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error {
-	response, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
-		ContainerId: container.ContainerID,
-		Verbose:     true, // change the verbose status
-	})
+func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 
+	// 记录所有容器的资源占用情况
+	var cpuUsage, memoryUsage float64
+
+	memoryAll, err := host.GetTotalMemory()
 	if err != nil {
-		log.ErrorLog("Container status from CRI failed" + err.Error())
-		container.ContainerStatus = apiObject.ContainerUnknown
+		log.ErrorLog("GetTotalMemory failed" + err.Error())
 		return err
 	}
 
-	switch response.Status.State {
-	case runtimeapi.ContainerState_CONTAINER_CREATED:
-		container.ContainerStatus = apiObject.ContainerCreated
-		pod.Status.Phase = apiObject.PodSucceeded
-	case runtimeapi.ContainerState_CONTAINER_RUNNING:
-		container.ContainerStatus = apiObject.ContainerRunning
-	case runtimeapi.ContainerState_CONTAINER_EXITED:
-		container.ContainerStatus = apiObject.ContainerExited
-	default:
-		container.ContainerStatus = apiObject.ContainerUnknown
-		pod.Status.Phase = apiObject.PodFailed
-		return errors.New("container " + container.ContainerID + " status is unknown")
+	for _, container := range pod.Spec.Containers {
+		response1, err := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
+			ContainerId: container.ContainerID,
+		})
+
+		if err != nil {
+			log.ErrorLog("Container status from CRI failed" + err.Error())
+			container.ContainerStatus = apiObject.ContainerUnknown
+			return err
+		}
+
+		response2, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
+			ContainerId: container.ContainerID,
+		})
+		if err != nil {
+			log.ErrorLog("Container status from CRI failed" + err.Error())
+			container.ContainerStatus = apiObject.ContainerUnknown
+			return err
+		}
+
+		cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response2.Status.FinishedAt) - uint64(response2.Status.StartedAt)))
+		memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value / memoryAll)
+
+		switch response2.Status.State {
+		case runtimeapi.ContainerState_CONTAINER_CREATED:
+			container.ContainerStatus = apiObject.ContainerCreated
+			pod.Status.Phase = apiObject.PodSucceeded
+		case runtimeapi.ContainerState_CONTAINER_RUNNING:
+			container.ContainerStatus = apiObject.ContainerRunning
+		case runtimeapi.ContainerState_CONTAINER_EXITED:
+			container.ContainerStatus = apiObject.ContainerExited
+		default:
+			container.ContainerStatus = apiObject.ContainerUnknown
+			pod.Status.Phase = apiObject.PodFailed
+			return errors.New("container " + container.ContainerID + " status is unknown")
+		}
+
+		pod.Status.CpuUsage = cpuUsage
+		pod.Status.MemUsage = memoryUsage
 	}
 
 	return nil

@@ -3,9 +3,11 @@
 package pod
 
 import (
+	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+	// "minik8s/tools/netRequest"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -118,6 +120,15 @@ func ScanPodStatus() {
 			default:
 				log.DebugLog("Pod" + pod.Metadata.Name + " is in phase: " + string(phase))
 			}
+			// url := config.APIServerURL() + config.PodStatusURI
+			// code,_,err := netRequest.PutRequestByTarget(url,pod.Status)
+			// if code != config.HttpSuccessCode {
+			// 	log.ErrorLog("heartbeat failed")
+			// }
+			// if err != nil {
+			// 	log.ErrorLog("heartbeat failed")
+			// }
+			fmt.Println("WoW1z")
 		}
 		// 间隔10s
 		time.Sleep(10 * time.Second)

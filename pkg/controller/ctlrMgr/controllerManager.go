@@ -1,6 +1,6 @@
 package ctlrmgr
 import (
-	specctlrs "minik8s/pkg/apiServer/controller/specCtlrs"
+	specctlrs "minik8s/pkg/controller/specCtlrs"
 )
 type ControllerManager interface {
 	Run(stopCh <-chan struct{})
@@ -23,5 +23,6 @@ func NewControllerManager() ControllerManager {
 
 func (cm *ControllerManagerImpl) Run(stopCh <-chan struct{}) {
 	go cm.replicaSetController.Run()
+	go cm.hpaController.Run()
 	<-stopCh
 }

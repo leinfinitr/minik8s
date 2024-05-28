@@ -30,9 +30,9 @@ type JobSpec struct {
 // PodTemplateSpec 是Pod的模板定义，包含了Pod的规范和标签选择器。
 type PodTemplateSpec struct {
 	// 对象的元数据
-	Metadata ObjectMeta
+	Metadata ObjectMeta `json:"metadata" yaml:"metadata"`
 	// Pod的规格
-	Spec PodSpec
+	Spec PodSpec `json:"spec" yaml:"spec"`
 }
 
 // JobStatus 描述了Job当前的运行状态，如已完成Pod数量、失败次数等。

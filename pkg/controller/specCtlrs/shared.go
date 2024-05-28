@@ -1,13 +1,16 @@
 package specctlrs
-import(
+
+import (
+	"encoding/json"
+	"fmt"
 	"minik8s/pkg/apiObject"
-	httprequest "minik8s/tools/httpRequest"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+	"net/http"
 )
 func GetAllPodsFromAPIServer() (pods []apiObject.Pod,err error) {
 	url := config.APIServerURL() + config.PodsGlobalURI
-	res, err := httprequest.GetObjMsg(url, &pods, "data")
+	res, err := http.Get(url)
 	if err != nil {
 		log.ErrorLog("GetAllPodsFromAPIServer: " + err.Error())
 		return pods,err
@@ -16,10 +19,16 @@ func GetAllPodsFromAPIServer() (pods []apiObject.Pod,err error) {
 		log.ErrorLog("GetAllPodsFromAPIServer: " + res.Status)
 		return pods,err
 	}
+	err = json.NewDecoder(res.Body).Decode(&pods)
+	if err != nil {
+		log.ErrorLog("GetAllPodsFromAPIServer: " + err.Error())
+		return pods,err
+	}
 	return pods,nil
 }
 
 func PodsMatched(pod apiObject.Pod, selector map[string]string) bool {
+	fmt.Println("PodsMatched: ", pod.Metadata.Name, selector)
 	for k, v := range selector {
 		if pod.Metadata.Labels[k] != v {
 			return false

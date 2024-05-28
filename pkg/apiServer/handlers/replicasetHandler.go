@@ -1,12 +1,14 @@
 package handlers
 
 import (
-	"minik8s/tools/log"
-	"minik8s/pkg/config"
-	"github.com/gin-gonic/gin"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"encoding/json"
+	"fmt"
 	"minik8s/pkg/apiObject"
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
@@ -28,7 +30,8 @@ func GetReplicaSet(c *gin.Context){
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	resJson, err := json.Marshal(res)
+	var resJson apiObject.ReplicaSet
+	err = json.Unmarshal([]byte(res), &resJson)
 	if err != nil{
 		log.ErrorLog("GetReplicaSet: "+err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -57,6 +60,7 @@ func GetReplicaSets(c *gin.Context){
 		err = json.Unmarshal([]byte(v), &rs)
 		if err != nil{
 			log.ErrorLog("GetReplicaSets: "+err.Error())
+			fmt.Println(err.Error())
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
