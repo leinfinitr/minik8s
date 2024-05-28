@@ -1,6 +1,6 @@
 import sys
 
-def add_one(number):
+def add_seven(number):
     return number - 7
 
 if __name__ == "__main__":
@@ -10,7 +10,7 @@ if __name__ == "__main__":
     else:
         try:
             number = int(sys.argv[1])
-            result = add_one(number)
+            result = add_seven(number)
             print(result)
         except ValueError:
             print(0)

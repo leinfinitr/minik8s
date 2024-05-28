@@ -62,7 +62,7 @@ func serverlessHandler(cmd *cobra.Command, args []string) {
 		}
 		runFunction(args[1], args[2])
 	case "workflow":
-		if len(args) != 2 {
+		if len(args) != 3 {
 			log.ErrorLog("The number of parameters is incorrect: workflow [file.txt] [param]")
 			return
 		}
@@ -249,7 +249,7 @@ func workflow(fileName string, param string) {
 	// 转发给 serverless 服务端口处理
 	url := config.ServerlessURL() + config.ServerlessWorkflowURI
 	url = strings.Replace(url, config.ParamReplace, param, -1)
-	response, err := httprequest.PostObjMsg(url, content)
+	response, err := httprequest.PostObjMsg(url, string(content))
 	if err != nil {
 		log.ErrorLog(err.Error())
 		os.Exit(1)

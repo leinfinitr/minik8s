@@ -1,0 +1,4 @@
+subtract
+add
+IF EQUALS 10 THEN add ELSE subtract
+FOR 3 TIMES DO add

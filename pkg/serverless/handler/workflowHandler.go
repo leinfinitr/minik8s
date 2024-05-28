@@ -20,6 +20,7 @@ func RunServerlessWorkflow(c *gin.Context) {
 		return
 	}
 	param := c.Param("param")
+	log.DebugLog("workflow content: " + content)
 	// 将 workflow 内容按行分割
 	workflow := strings.Split(content, "\n")
 
@@ -51,6 +52,9 @@ func RunServerlessWorkflow(c *gin.Context) {
 			param = handleFunction(words[0], param)
 		}
 	}
+
+	// 返回最终结果
+	c.JSON(200, param)
 }
 
 // handleFunction 处理 function 关键字
