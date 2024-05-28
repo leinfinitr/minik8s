@@ -160,7 +160,7 @@ func deleteServerless(serverlessName string) {
 	// 转发给 serverless 服务端口处理
 	url := config.ServerlessURL() + config.ServerlessFunctionURI
 	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
-	res, err := httprequest.DelMsg(url)
+	res, err := httprequest.DelMsg(url, nil)
 	if err != nil {
 		log.ErrorLog(err.Error())
 		os.Exit(1)

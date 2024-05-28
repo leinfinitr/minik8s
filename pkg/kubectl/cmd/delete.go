@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubectl/translator"
-	"minik8s/tools/httpRequest"
-	"minik8s/tools/reflectProp"
+	httprequest "minik8s/tools/httpRequest"
+	reflectprop "minik8s/tools/reflectProp"
 	"net/http"
 	"os"
 	"reflect"
+
+	"github.com/spf13/cobra"
 )
 
 var deletedCmd = &cobra.Command{
@@ -78,7 +79,7 @@ func deleteHandler(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 		url := config.APIServerURL() + "/api/v1/namespaces/" + namespace + "/" + kind + "/" + name
-		resp, err := httprequest.DelMsg(url)
+		resp, err := httprequest.DelMsg(url, obj)
 		if err != nil {
 			fmt.Println("Error: Could not delete the object.")
 			os.Exit(1)

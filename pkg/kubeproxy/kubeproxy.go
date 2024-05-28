@@ -82,9 +82,7 @@ func (k *Kubeproxy) updateService(c *gin.Context) {
 
 	// 更新service
 	if _, ok := k.serviceUUIDMap[service.Metadata.UUID]; !ok {
-		log.ErrorLog("UpdateService error: service not exists")
-		c.JSON(config.HttpErrorCode, gin.H{"error": "service not exists"})
-		return
+		log.WarnLog("UpdateService error: service not exists")
 	}
 	k.serviceUUIDMap[service.Metadata.UUID] = service
 
@@ -145,30 +143,29 @@ func (k *Kubeproxy) Run() {
 	// 主线程，用于接受并转发来自与apiServer通信端口的请求
 	k.registerKubeproxyAPI()
 	kubeproxyIP, _ := host.GetHostIP()
-	_ = k.proxyAPIRouter.Run(kubeproxyIP + ":" + fmt.Sprint(config.KubeproxyAPIPort))
+	// 在proxy刚启动时，向apiServer注册自己
+	go k.registerProxy()
 
-	// 创建用于发送心跳的线程
-	go k.heartbeat()
+	_ = k.proxyAPIRouter.Run(kubeproxyIP + ":" + fmt.Sprint(config.KubeproxyAPIPort))
 }
 
-func (k *Kubeproxy) heartbeat() {
-	log.InfoLog("[Kubeproxy] ProxyStatus")
+func (k *Kubeproxy) registerProxy() {
+	log.InfoLog("[Kubeproxy] Register to apiServer")
 
-	// 每间隔60s发送一次心跳
+	// 一直尝试直到注册成功
 	for {
-		HostName, _ := host.GetHostname()
-		hostIP, _ := host.GetHostIP()
-		url := k.apiServerConfig.APIServerURL() + config.ProxyStatusURI + "/" + HostName + "/status"
+		url := k.apiServerConfig.APIServerURL() + config.ProxyStatusURI
 
-		statusCode, _, _ := netRequest.PutRequestByTarget(url, hostIP)
+		statusCode, _, _ := netRequest.PostRequestByTarget(url, nil)
 
 		if statusCode != config.HttpSuccessCode {
-			log.ErrorLog("kubeproxy heartbeat failed")
+			log.ErrorLog("kubeproxy register failed")
 		} else {
-			log.DebugLog("kubeproxy heartbeat success")
+			log.DebugLog("kubeproxy register success")
+			return
 		}
 
-		time.Sleep(60 * time.Second)
+		time.Sleep(15 * time.Second)
 	}
 
 }

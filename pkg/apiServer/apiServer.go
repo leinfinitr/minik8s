@@ -4,9 +4,15 @@
 package apiServer
 
 import (
+	"encoding/json"
 	"fmt"
+	"minik8s/pkg/apiObject"
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
+	httprequest "minik8s/tools/httpRequest"
+	"minik8s/tools/log"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,11 +30,16 @@ type ApiServer struct {
 
 // Run 启动ApiServer
 func (a *ApiServer) Run() {
-	a.Register()
-	err := a.Router.Run(a.Address + ":" + fmt.Sprint(a.Port))
-	if err != nil {
-		panic(err)
-	}
+	go func() {
+		a.Register()
+		err := a.Router.Run(a.Address + ":" + fmt.Sprint(a.Port))
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	// 开辟一个协程，用于定时扫描所有node的状态
+	ScanNodeStatus()
 }
 
 // Register 注册路由
@@ -61,9 +72,7 @@ func (a *ApiServer) Register() {
 	// 获取指定节点的状态
 	a.Router.GET(config.NodeStatusURI, handlers.GetNodeStatus)
 	// 更新指定节点的状态
-	a.Router.PUT(config.NodeStatusURI, handlers.UpdateNodeStatus)
-	// 部分更新指定节点的状态
-	a.Router.PATCH(config.NodeStatusURI, handlers.UpdateNodeStatus)
+	a.Router.PUT(config.NodeStatusURI, handlers.PingNodeStatus)
 
 	// 获取指定Pod
 	a.Router.GET(config.PodURI, handlers.GetPod)
@@ -103,12 +112,14 @@ func (a *ApiServer) Register() {
 
 	// 接受kubeproxy的心跳
 	a.Router.PUT(config.ProxiesStatusURI, handlers.UpdateProxyStatus)
+	// 接受kubeproxy的注册
+	a.Router.POST(config.ProxyStatusURI, handlers.RegisterProxy)
 	// 获取指定Service
 	a.Router.GET(config.ServiceURI, handlers.GetService)
 	// 更新指定Service
 	a.Router.PUT(config.ServiceURI, handlers.PutService)
 	// 删除制定Service
-	a.Router.DELETE(config.ServiceURI, handlers.GetService)
+	a.Router.DELETE(config.ServiceURI, handlers.DeleteService)
 
 	a.Router.GET(config.ReplicaSetsURI, handlers.GetReplicaSets)
 	a.Router.GET(config.GlobalReplicaSetsURI, handlers.GetGlobalReplicaSets)
@@ -128,6 +139,36 @@ func (a *ApiServer) Register() {
 	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
 
 	a.Router.POST(config.PersistentVolumeClaimURI, handlers.CreatePVC)
+
+	// 增加monitor的处理函数
+	// 首次注册节点
+	a.Router.PUT(config.MonitorURL, handlers.RegisterMonitor)
+	// 节点失联后，删除相关配置
+	a.Router.DELETE(config.MonitorURL, handlers.DeleteMonitor)
+
+}
+
+func ScanNodeStatus() {
+	for {
+		// 获取所有节点
+		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+		if err != nil {
+			log.WarnLog("ScanNodeStatus: " + err.Error())
+		}
+
+		for _, v := range res {
+			var node apiObject.Node
+			err = json.Unmarshal([]byte(v), &node)
+			if err != nil {
+				log.WarnLog("ScanNodeStatus: " + err.Error())
+			}
+			url := config.APIServerURL() + config.NodesURI + "/" + node.Metadata.Name + "/status"
+			httprequest.PutObjMsg(url, node)
+		}
+
+		time.Sleep(10 * time.Second)
+	}
+
 }
 
 // 函数-------------------------------------------------------------

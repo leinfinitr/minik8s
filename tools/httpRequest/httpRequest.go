@@ -25,11 +25,16 @@ func PostObjMsg(url string, obj interface{}) (*http.Response, error) {
 	return resp, nil
 }
 
-func DelMsg(url string) (*http.Response, error) {
-	req, err := http.NewRequest("DELETE", url, nil)
+func DelMsg(url string, obj interface{}) (*http.Response, error) {
+	jsonStr, err := json.Marshal(obj)
 	if err != nil {
 		return nil, err
 	}
+	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

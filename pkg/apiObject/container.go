@@ -40,14 +40,6 @@ type Container struct {
 	// 容器与主机的挂载
 	Mounts []*Mount `json:"mounts" yaml:"mounts"`
 
-	// 存活探针，用于检测容器是否存活
-	LivenessProbe *Probe `json:"livenessProbe" yaml:"livenessProbe"`
-	// 就绪探针，用于检测容器是否就绪
-	ReadinessProbe *Probe `json:"readinessProbe" yaml:"readinessProbe"`
-	// 启动探针，用于检测容器是否启动
-	StartupProbe *Probe `json:"startupProbe" yaml:"startupProbe"`
-	// 容器的生命周期
-	Lifecycle *Lifecycle `json:"lifecycle" yaml:"lifecycle"`
 	// 镜像拉取策略
 	ImagePullPolicy string `json:"imagePullPolicy" yaml:"imagePullPolicy"`
 
@@ -93,13 +85,12 @@ type ResourceRequirements struct {
 
 type ResourceList map[ResourceName]Quantity
 
-// ResourceName 资源名称，包括CPU、内存
+// 资源名称，包括CPU、内存
 type ResourceName string
 
-// Quantity 资源数量
+// 源数量
 type Quantity string
 
-// VolumeMount -------------------------------------------
 type VolumeMount struct {
 	// 存储卷的名称
 	Name string `json:"name" yaml:"name"`
@@ -109,7 +100,6 @@ type VolumeMount struct {
 	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
 }
 
-// Mount -------------------------------------------
 type Mount struct {
 	// 主机路径
 	HostPath string `json:"hostPath" yaml:"hostPath"`
@@ -117,29 +107,6 @@ type Mount struct {
 	ContainerPath string `json:"containerPath" yaml:"containerPath"`
 	// 是否只读
 	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
-}
-
-// Probe -------------------------------------------
-type Probe struct {
-	// 探针处理器
-	Handler Handler `json:"handler" yaml:"handler"`
-	// 初始延迟时间
-	InitialDelaySeconds int32 `json:"initialDelaySeconds" yaml:"initialDelaySeconds"`
-	// 超时时间
-	TimeoutSeconds int32 `json:"timeoutSeconds" yaml:"timeoutSeconds"`
-	// 周期时间
-	PeriodSeconds int32 `json:"periodSeconds" yaml:"periodSeconds"`
-	// 成功阈值
-	SuccessThreshold int32 `json:"successThreshold" yaml:"successThreshold"`
-	// 失败阈值
-	FailureThreshold int32 `json:"failureThreshold" yaml:"failureThreshold"`
-}
-
-type Handler struct {
-	// 执行处理器
-	Exec *ExecAction `json:"exec" yaml:"exec"`
-	// HTTP处理器
-	HTTPGet *HTTPGetAction `json:"httpGet" yaml:"httpGet"`
 }
 
 type ExecAction struct {
@@ -156,12 +123,4 @@ type HTTPGetAction struct {
 	Host string `json:"host" yaml:"host"`
 	// 请求协议
 	Scheme string `json:"scheme" yaml:"scheme"`
-}
-
-// Lifecycle -------------------------------------------
-type Lifecycle struct {
-	// 启动后的生命周期
-	PostStart *Handler `json:"postStart" yaml:"postStart"`
-	// 停止前的生命周期
-	PreStop *Handler `json:"preStop" yaml:"preStop"`
 }

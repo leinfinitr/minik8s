@@ -107,7 +107,7 @@ func (s *ScaleManagerImpl) DecreaseInstanceNum(name string) {
 	url := config.APIServerURL() + config.PodURI
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
-	_, err := httprequest.DelMsg(url)
+	_, err := httprequest.DelMsg(url, nil)
 	if err != nil {
 		log.ErrorLog("Could not delete the object message." + err.Error())
 		os.Exit(1)

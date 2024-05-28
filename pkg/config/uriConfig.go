@@ -14,6 +14,7 @@ const (
 	PodExecURI                = "/api/v1/namespaces/:namespace/pods/:name/exec/:container/:param"
 	PodsURI                   = "/api/v1/namespaces/:namespace/pods"
 	PodsGlobalURI             = "/api/v1/pods"
+	PodsSyncURI               = "/api/v1/pods/sync"
 
 	ProxyStatusURI   = "/api/v1/proxy"
 	ProxiesStatusURI = "/api/v1/proxy/:name"
@@ -42,6 +43,8 @@ const (
 
 	PersistentVolumeClaimURI  = "/api/v1/pvc"
 	PersistentVolumeClaimsURI = "/api/v1/pvc/:name"
+
+	MonitorURL = "/api/v1/monitor"
 )
 
 const (

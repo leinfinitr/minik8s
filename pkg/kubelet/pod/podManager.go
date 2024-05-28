@@ -19,6 +19,7 @@ type PodManager interface {
 	RecreatePodContainer(pod *apiObject.Pod) error
 	ExecPodContainer(req *apiObject.ExecReq) (string, error)
 	UpdatePodStatus() error
+	SyncPods(pods *[]apiObject.Pod) error
 }
 
 /*  */
@@ -218,8 +219,20 @@ func (p *podManagerImpl) UpdatePodStatus() error {
 		}
 		err := p.UpdatePodStatusHandler(pod)
 		if err != nil {
-			log.ErrorLog("Get Pod status failed" + err.Error())
+			log.ErrorLog("Get status failed in pod ID : " + pod.GetPodUUID())
 		}
+	}
+	return nil
+}
+
+func (p *podManagerImpl) SyncPods(pods *[]apiObject.Pod) error {
+	// 把apiServer的pods信息同步到本地
+	if len(p.PodMapByUUID) != 0 {
+		log.DebugLog("PodMapByUUID is not empty")
+		return nil
+	}
+	for _, pod := range *pods {
+		p.PodMapByUUID[pod.GetPodUUID()] = &pod
 	}
 	return nil
 }

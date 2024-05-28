@@ -27,6 +27,9 @@ type Kubelet struct {
 	// KubeletAPIRouter 用来处理kubelet的请求
 	KubeletAPIRouter *gin.Engine
 
+	// 用来存储node的信息
+	node *apiObject.Node
+
 	//plegManager   *lifecycle.PlegManager
 
 	// 用来接受syncLoop发送信号的通道，handler从该通道获取时间信号并响应处理
@@ -37,8 +40,6 @@ type Kubelet struct {
 }
 
 func (k *Kubelet) Run() {
-	k.registerNode()
-
 	// 用于接受并转发来自与apiServer通信端口的请求
 	go func() {
 		k.registerKubeletAPI()
@@ -47,17 +48,41 @@ func (k *Kubelet) Run() {
 		_ = k.KubeletAPIRouter.Run(KubeletIP + ":" + fmt.Sprint(config.KubeletAPIPort))
 	}()
 
-	// 定时扫描pod的状态并进行相应的处理
-	go pod.ScanPodStatus()
+	// 注册node
+	k.registerNode()
 
-	// kubelet的主线程用于发送心跳
-	k.heartbeat()
+	// 定时扫描pod的状态并进行相应的处理
+	pod.ScanPodStatus()
+
 }
 
 // RegisterNode 在kubelet刚开始创建时，需要到apiServer的work node去注册
 //
 //	通过发送POST请求的方式去注册，默认API："/api/v1/nodes"
 func (k *Kubelet) registerNode() bool {
+
+	if k.node == nil {
+		k.buildNode()
+	}
+
+	for {
+		// 一致尝试注册直到成功为止
+		url := k.ApiServerConfig.APIServerURL() + config.NodesURI
+
+		statusCode, _, _ := netRequest.PostRequestByTarget(url, *k.node)
+
+		if statusCode != config.HttpSuccessCode {
+			log.ErrorLog("register node failed")
+		} else {
+			log.InfoLog("register node success")
+			return true
+		}
+		time.Sleep(15 * time.Second)
+	}
+
+}
+
+func (k *Kubelet) buildNode() {
 	// 注册所需的参数
 	HostName, _ := host.GetHostname()
 	HostIP, _ := host.GetHostIP()
@@ -74,7 +99,7 @@ func (k *Kubelet) registerNode() bool {
 	allocatable["memory"] = strconv.FormatFloat(MemoryUsage, 'f', -1, 64)
 	allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
 
-	node := &apiObject.Node{
+	k.node = &apiObject.Node{
 		TypeMeta: apiObject.TypeMeta{
 			Kind:       "Node",
 			APIVersion: "v1",
@@ -110,38 +135,52 @@ func (k *Kubelet) registerNode() bool {
 		},
 	}
 
-	url := k.ApiServerConfig.APIServerURL() + config.NodesURI
+}
 
-	statusCode, _, _ := netRequest.PostRequestByTarget(url, node)
+func (k *Kubelet) UpdateNodeStatusInternal() {
+	log.InfoLog("UpdateNodeStatus")
 
-	if statusCode != config.HttpSuccessCode {
-		log.ErrorLog("register node failed")
-		return false
-	} else {
-		log.InfoLog("register node success")
-		return true
+	// 注册所需的参数
+	HostIP, _ := host.GetHostIP()
+
+	// 获取主机的内存大小
+	capacity := make(map[string]string)
+	totalMemory, _ := host.GetTotalMemory()
+	capacity["memory"] = strconv.FormatUint(totalMemory, 10)
+
+	// 获取主机的内存和CPU使用率
+	allocatable := make(map[string]string)
+	MemoryUsage, _ := host.GetMemoryUsageRate()
+	CPUUsage, _ := host.GetCPULoad()
+	allocatable["memory"] = strconv.FormatFloat(MemoryUsage, 'f', -1, 64)
+	allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
+
+	nodeStatus := &apiObject.NodeStatus{
+		Capacity:    capacity,
+		Allocatable: allocatable,
+		Phase:       "running",
+		Conditions: []apiObject.NodeCondition{
+			{
+				Type:   "Ready", // Ready: kubelet准备好接受Pod
+				Status: "True",
+			},
+		},
+		Addresses: []apiObject.NodeAddress{
+			{
+				Type:    "InternalIP",
+				Address: HostIP,
+			},
+		},
 	}
+
+	k.node.Status = *nodeStatus
+
 }
 
 // registerKubeletAPI 注册kubelet的API
 func (k *Kubelet) registerKubeletAPI() {
 	log.DebugLog("register kubelet API")
 	// 该部分实现与 apiServer 中保持一致，每个方法的作用也参考 pkg/apiServer/apiServer.go 中的注释
-
-	// 获取所有节点
-	// k.KubeletAPIRouter.GET(config.NodesURI, handlers.GetNodes)
-	// 创建节点
-	// k.KubeletAPIRouter.POST(config.NodesURI, handlers.CreateNode)
-	// 删除所有节点
-	// k.KubeletAPIRouter.DELETE(config.NodesURI, handlers.DeleteNodes)
-
-	// 获取指定节点
-	// k.KubeletAPIRouter.GET(config.NodeURI, handlers.GetNode)
-	// 更新指定节点
-	// k.KubeletAPIRouter.PUT(config.NodeURI, handlers.UpdateNode)
-	// 部分更新指定节点
-	// k.KubeletAPIRouter.PATCH(config.NodeURI, handlers.UpdateNode)
-	// 删除指定节点
 	// k.KubeletAPIRouter.DELETE(config.NodeURI, handlers.DeleteNode)
 
 	// 获取指定节点的状态
@@ -149,7 +188,7 @@ func (k *Kubelet) registerKubeletAPI() {
 	// 更新指定节点的状态
 	// k.KubeletAPIRouter.PUT(config.NodeStatusURI, handlers.UpdateNodeStatus)
 	// 部分更新指定节点的状态
-	// k.KubeletAPIRouter.PATCH(config.NodeStatusURI, handlers.UpdateNodeStatus)
+	k.KubeletAPIRouter.GET(config.NodeStatusURI, k.UpdateNodeStatus)
 
 	// 获取指定Pod
 	// k.KubeletAPIRouter.GET(config.PodURI, handlers.GetPod)
@@ -159,21 +198,11 @@ func (k *Kubelet) registerKubeletAPI() {
 	// k.KubeletAPIRouter.PATCH(config.PodURI, handlers.UpdatePod)
 	// 删除指定Pod
 	k.KubeletAPIRouter.DELETE(config.PodURI, pod.DeletePod)
-
-	// 获取指定Pod的EphemeralContainers
-	// k.KubeletAPIRouter.GET(config.PodEphemeralContainersURI, handlers.GetPodEphemeralContainers)
-	// 更新Pod的EphemeralContainers
-	// k.KubeletAPIRouter.PUT(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
-	// 部分更新Pod的EphemeralContainers
-	// k.KubeletAPIRouter.PATCH(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
-
-	// 获取指定Pod的日志
-	// k.KubeletAPIRouter.GET(config.PodLogURI, handlers.GetPodLog)
+	// kubelet挂掉了，apiServer用来同步Pod的信息
+	k.KubeletAPIRouter.POST(config.PodsSyncURI, pod.SyncPods)
 
 	// 获取指定Pod的状态
 	k.KubeletAPIRouter.GET(config.PodStatusURI, pod.GetPodStatus)
-	// 更新Pod的状态
-	// k.KubeletAPIRouter.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
 
 	// 执行指定Pod和container的命令
 	k.KubeletAPIRouter.GET(config.PodExecURI, pod.ExecPodContainer)
@@ -184,55 +213,6 @@ func (k *Kubelet) registerKubeletAPI() {
 	k.KubeletAPIRouter.POST(config.PodsURI, pod.CreatePod)
 	// 删除所有Pod
 	// k.KubeletAPIRouter.DELETE(config.PodsURI, handlers.DeletePods)
-
-	// 获取全局所有Pod
-	// k.KubeletAPIRouter.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
-
-	// 获取全部Service
-	// k.KubeletAPIRouter.GET(config.ServicesURI, handlers.GetServices)
-
-	// 获取指定Service
-	// k.KubeletAPIRouter.GET(config.ServiceURI, handlers.GetService)
-
-	// 获取指定Service的状态
-	// k.KubeletAPIRouter.GET(config.ServiceStatusURI, handlers.GetServiceStatus)
-}
-
-// heartbeat 向apiServer发送心跳
-func (k *Kubelet) heartbeat() {
-	log.DebugLog("start heartbeat")
-	// 每间隔 60s 发送一次心跳
-	for {
-		HostName, _ := host.GetHostname()
-		url := k.ApiServerConfig.APIServerURL() + config.NodesURI + "/" + HostName + "/status"
-		// 获取主机的内存和CPU使用率
-		allocatable := make(map[string]string)
-		MemoryUsage, _ := host.GetMemoryUsageRate()
-		CPUUsage, _ := host.GetCPULoad()
-		allocatable["memory"] = strconv.FormatFloat(MemoryUsage, 'f', -1, 64)
-		allocatable["cpu"] = strconv.FormatFloat(CPUUsage[0], 'f', -1, 64)
-
-		nodeStatus := &apiObject.NodeStatus{
-			Allocatable: allocatable,
-			Conditions: []apiObject.NodeCondition{
-				{
-					Type:   "Ready",
-					Status: "True",
-				},
-			},
-		}
-
-		statusCode, _, _ := netRequest.PutRequestByTarget(url, nodeStatus)
-
-		if statusCode != config.HttpSuccessCode {
-			log.ErrorLog("heartbeat failed")
-		} else {
-			log.DebugLog("heartbeat success")
-		}
-
-		// 间隔60s
-		time.Sleep(60 * time.Second)
-	}
 }
 
 // NewKubelet 创建一个新的Kubelet
@@ -241,5 +221,16 @@ func NewKubelet() *Kubelet {
 		ApiServerConfig:  *config.NewAPIServerConfig(),
 		PodManager:       pod.GetPodManager(),
 		KubeletAPIRouter: gin.Default(),
+		node:             nil,
 	}
+}
+
+func (k *Kubelet) UpdateNodeStatus(c *gin.Context) {
+	log.InfoLog("UpdateNodeStatus")
+	if k.node == nil {
+		k.buildNode()
+	} else {
+		k.UpdateNodeStatusInternal()
+	}
+	c.JSON(config.HttpSuccessCode, k.node.Status)
 }
