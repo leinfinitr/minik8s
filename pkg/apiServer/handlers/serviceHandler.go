@@ -17,20 +17,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO: UpdateProxy 更新Proxy的状态
-func UpdateProxyStatus(c *gin.Context) {
-	// var node apiObject.Node
-	// err := c.ShouldBindJSON(&node)
-	// if err != nil {
-	// 	log.ErrorLog("UpdateNode error: " + err.Error())
-	// }
-	// name := c.Param("name")
-	// nodes[name] = node
-
-	// log.InfoLog("UpdateNode: " + name)
-	// c.JSON(config.HttpSuccessCode, "")
-}
-
 func RegisterProxy(c *gin.Context) {
 	// 某个proxy初次注册，检查是否已经有service存在，如果有则将service发送给proxy
 	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdServicePrefix)

@@ -118,7 +118,7 @@ func CreateNode(c *gin.Context) {
 	// nodes[node.Metadata.Name] = node
 	log.InfoLog("CreateNode: " + node.Metadata.Name + " Node IP: " + node.Status.Addresses[0].Address)
 	c.JSON(config.HttpSuccessCode, "message: create node success")
-	// TODO: 将信息广播给所有node
+	// 将信息广播给所有node
 	BroadcastNode(node)
 }
 

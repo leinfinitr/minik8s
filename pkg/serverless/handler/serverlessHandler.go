@@ -130,8 +130,6 @@ func UpdateServerlessFunction(c *gin.Context) {
 		return
 	}
 
-	// TODO: 更新 volume 中的文件
-
 	c.JSON(200, "Update serverless "+serverlessName+" success")
 }
 

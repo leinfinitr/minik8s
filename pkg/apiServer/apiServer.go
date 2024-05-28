@@ -110,8 +110,6 @@ func (a *ApiServer) Register() {
 	// 获取全局所有Pod
 	a.Router.GET(config.PodsGlobalURI, handlers.GetGlobalPods)
 
-	// 接受kubeproxy的心跳
-	a.Router.PUT(config.ProxiesStatusURI, handlers.UpdateProxyStatus)
 	// 接受kubeproxy的注册
 	a.Router.POST(config.ProxyStatusURI, handlers.RegisterProxy)
 	// 获取指定Service

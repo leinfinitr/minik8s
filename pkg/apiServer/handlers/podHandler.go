@@ -108,7 +108,7 @@ func DeletePod(c *gin.Context) {
 	}
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	log.WarnLog("DeletePods: " + namespace + "/" + name)
-	res,err := etcdclient.EtcdStore.Get(key)
+	res, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -129,9 +129,8 @@ func DeletePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	// TODO 删除kube-controller-manager中的Endpoint
-	// TODO 发送删除请求到kubelet
-	res,err = etcdclient.EtcdStore.Get(config.EtcdNodePrefix + "/" + nodeName)
+	// 发送删除请求到kubelet
+	res, err = etcdclient.EtcdStore.Get(config.EtcdNodePrefix + "/" + nodeName)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -412,7 +411,7 @@ func GetGlobalPods(c *gin.Context) {
 	c.JSON(200, pods)
 }
 
-// UpdatePodProps TODO: 更新Pod
+// UpdatePodProps 更新Pod
 func UpdatePodProps(new *apiObject.Pod) {
 	podBytes, err := json.Marshal(new)
 	if err != nil {

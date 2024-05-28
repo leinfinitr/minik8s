@@ -47,8 +47,6 @@ func GetPodManager() PodManager {
 	if podManager == nil {
 		newMapUUIDToPod := make(map[string]*apiObject.Pod)
 		eventChan := make(chan EventType)
-		// TODO：此处需要获取所有pod的信息，接口应当放在podUtils中，来更新map，未实现
-
 		runtimeMgr := runtime.GetRuntimeManager()
 		podManager = &podManagerImpl{
 			PodMapByUUID:             newMapUUIDToPod,

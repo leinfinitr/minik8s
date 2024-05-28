@@ -22,7 +22,6 @@ func GetRuntimeManager() *RuntimeManager {
 	}
 	defer cancel()
 
-	// TODO：从全局获取endpoint，然后需要获得与本地containerd的cnn
 	if runtimeManager == nil {
 		runtimeManager = &RuntimeManager{
 			runtimeClient: runtimeapi.NewRuntimeServiceClient(cnn),
