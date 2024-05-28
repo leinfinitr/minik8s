@@ -326,18 +326,6 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 			return err
 		}
 
-		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
-			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)))
-		} else {
-			cpuUsage += 0
-		}
-
-		if memoryAll != 0 {
-			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value / memoryAll)
-		} else {
-			memoryUsage += 0
-		}
-
 		switch response2.Status.State {
 		case runtimeapi.ContainerState_CONTAINER_CREATED:
 			container.ContainerStatus = apiObject.ContainerCreated
@@ -352,9 +340,25 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 			return errors.New("container " + container.ContainerID + " status is unknown")
 		}
 
-		pod.Status.CpuUsage = cpuUsage
-		pod.Status.MemUsage = memoryUsage
+		if container.ContainerStatus != apiObject.ContainerRunning {
+			continue
+		}
+
+		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
+			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)))
+		} else {
+			cpuUsage += 0
+		}
+
+		if memoryAll != 0 {
+			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value / memoryAll)
+		} else {
+			memoryUsage += 0
+		}
 	}
+
+	pod.Status.CpuUsage = cpuUsage
+	pod.Status.MemUsage = memoryUsage
 
 	return nil
 }

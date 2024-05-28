@@ -65,9 +65,9 @@ type ContainerPort struct {
 	HostIP string `json:"hostIP" yaml:"hostIP"`
 }
 
+// 端口协议
 type Protocol string
 
-// EnvVar -------------------------------------------
 type EnvVar struct {
 	// 环境变量的名称
 	Name string `json:"name" yaml:"name"`
@@ -75,7 +75,6 @@ type EnvVar struct {
 	Value string `json:"value" yaml:"value"`
 }
 
-// ResourceRequirements -------------------------------------------
 type ResourceRequirements struct {
 	// 资源限制
 	Limits ResourceList `json:"limits" yaml:"limits"`
@@ -83,6 +82,7 @@ type ResourceRequirements struct {
 	Requests ResourceList `json:"requests" yaml:"requests"`
 }
 
+// 资源列表
 type ResourceList map[ResourceName]Quantity
 
 // 资源名称，包括CPU、内存
