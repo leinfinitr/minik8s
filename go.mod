@@ -28,6 +28,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -37,6 +38,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
+	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
@@ -80,6 +82,7 @@ require (
 	github.com/distribution/reference v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jedib0t/go-pretty/v6 v6.5.9
+	github.com/melbahja/goph v1.4.0
 	go.etcd.io/etcd/client/v3 v3.5.13
 	google.golang.org/grpc v1.59.0
 	k8s.io/cri-api v0.30.0

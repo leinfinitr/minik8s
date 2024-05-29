@@ -36,6 +36,13 @@ const (
 	ServerlessFunctionURI = "/api/v1/serverless/function/:name"
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"
 	ServerlessWorkflowURI = "/api/v1/serverless/workflow/:param"
+
+
+	JobsURI = "/api/v1/namespaces/:namespace/jobs"
+	JobURI  = "/api/v1/namespaces/:namespace/jobs/:name"
+	JobStatusURI = "/api/v1/namespaces/:namespace/jobs/:name/status"
+	JobsCodeURI = "/api/v1/namespaces/:namespace/jobs/code"
+	JobCodeURI = "/api/v1/namespaces/:namespace/jobs/:name/code"
 )
 
 const (

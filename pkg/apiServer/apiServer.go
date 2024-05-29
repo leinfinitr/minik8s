@@ -125,6 +125,16 @@ func (a *ApiServer) Register() {
 	a.Router.POST(config.HpasURI, handlers.AddHPA)
 	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
 	a.Router.PUT(config.HpaStatusURI, handlers.UpdateHPAStatus)
+
+	a.Router.GET(config.JobURI, handlers.GetJob)
+	a.Router.GET(config.JobsURI, handlers.GetJobs)
+	a.Router.POST(config.JobsURI, handlers.AddJob)
+	a.Router.DELETE(config.JobURI, handlers.DeleteJob)
+	a.Router.GET(config.JobStatusURI, handlers.GetJobStatus)
+	a.Router.PUT(config.JobStatusURI, handlers.UpdateJobStatus)
+	a.Router.POST(config.JobsCodeURI, handlers.AddJobCode)
+	a.Router.GET(config.JobCodeURI, handlers.GetJobCode)
+	a.Router.PUT(config.JobCodeURI, handlers.UpdateJobCode)
 }
 
 // 函数-------------------------------------------------------------
