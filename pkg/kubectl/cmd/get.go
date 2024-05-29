@@ -56,6 +56,25 @@ func getHandler(cmd *cobra.Command, args []string) {
 				os.Exit(1)
 			}
 			printNodesResult(nodes)
+		}else if resourceType == apiObject.ContainerType{
+			var pods []apiObject.Pod
+			url := config.APIServerURL() + config.PodsURI
+			res, err := http.Get(url)
+			if err != nil {
+				fmt.Println("Error: ", err)
+				os.Exit(1)
+			}
+			defer res.Body.Close()
+			err = json.NewDecoder(res.Body).Decode(&pods)
+			if err != nil {
+				log.ErrorLog("GetPod: " + err.Error())
+				os.Exit(1)
+			}
+			var containers []apiObject.Container
+			for _, pod := range pods {
+				containers = append(containers, pod.Spec.Containers...)
+			}
+			printContainersResult(containers)
 		}
 		namespace, _ := cmd.Flags().GetString("namespace")
 		if namespace == "" {
@@ -81,7 +100,40 @@ func printNodesResult(nodes []apiObject.Node) {
 	}
 	writer.Render()
 }
+func printContainersResult(containers []apiObject.Container) {
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Kind", "Name", "Image", "Status", "Ports"})
+	for _, container := range containers {
+		printContainerResult(container, writer)
+	}
+	writer.Render()
+}
+func printContainerResult(container apiObject.Container, writer table.Writer) {
+	// 根据状态为Status单元格选择颜色
+	var statusColor text.Colors
+	switch container.ContainerStatus {
+	case apiObject.ContainerRunning:
+		statusColor = text.Colors{text.FgGreen}
+	case apiObject.ContainerUnknown:
+		statusColor = text.Colors{text.FgYellow}
+	case apiObject.ContainerExited:
+		statusColor = text.Colors{text.FgRed}
+	default:
+		statusColor = text.Colors{text.FgWhite}
+	}
 
+	// 应用颜色到Status
+	coloredStatus := statusColor.Sprint(container.ContainerStatus)
+
+	writer.AppendRow(table.Row{
+		"Container",
+		container.Name,
+		container.Image,
+		coloredStatus, // 使用包装了颜色的status
+		container.Ports,
+	})
+}
 func printNodeResult(node apiObject.Node, writer table.Writer) {
 	// 根据状态为Status单元格选择颜色
 	var statusColor text.Colors
