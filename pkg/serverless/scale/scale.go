@@ -64,7 +64,7 @@ func (s *ScaleManagerImpl) Run() {
 				continue
 			}
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(60 * time.Second)
 	}
 }
 
