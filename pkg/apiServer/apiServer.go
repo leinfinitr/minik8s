@@ -124,8 +124,11 @@ func (a *ApiServer) Register() {
 	a.Router.POST(config.HpasURI, handlers.AddHPA)
 	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
 	a.Router.PUT(config.HpaStatusURI, handlers.UpdateHPAStatus)
+
+	// 创建持久化卷
 	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
 
+	// 创建持久化卷声明
 	a.Router.POST(config.PersistentVolumeClaimURI, handlers.CreatePVC)
 
 	// 增加monitor的处理函数

@@ -12,6 +12,15 @@ const (
 )
 
 const (
+	// Retain 保留持久卷，当删除PVC的时候，PV仍然存在且不能被绑定
+	Retain PersistentVolumeReclaimPolicy = "Retain"
+	// Recycle 回收持久卷，当删除PVC的时候，PV会清空所有数据并准备重用
+	Recycle PersistentVolumeReclaimPolicy = "Recycle"
+	// Delete 删除持久卷，当删除PVC的时候，PV会被删除
+	Delete PersistentVolumeReclaimPolicy = "Delete"
+)
+
+const (
 	// VolumePending 用于尚未绑定且不可用的PersistentVolumes
 	VolumePending PersistentVolumePhase = "Pending"
 	// VolumeAvailable 用于尚未绑定且可用的PersistentVolumes
@@ -43,25 +52,20 @@ type PersistentVolumeSpec struct {
 	// 访问模式
 	AccessModes []PersistentVolumeAccessMode `json:"accessModes" yaml:"accessModes"`
 	// 回收策略
-	PersistentVolumeReclaimPolicy string `json:"persistentVolumeReclaimPolicy" yaml:"persistentVolumeReclaimPolicy"`
-	// 本地创建持久化卷
-	Local LocalServer `json:"local" yaml:"local"`
+	ReclaimPolicy PersistentVolumeReclaimPolicy `json:"reclaimPolicy" yaml:"reclaimPolicy"`
 	// 远程创建持久化卷
 	Remote NetworkFileSystem `json:"remote" yaml:"remote"`
 }
 
 type PersistentVolumeAccessMode string
 
-type LocalServer struct {
-	// 本机存储路径
-	Path string `json:"path" yaml:"path"`
-}
+type PersistentVolumeReclaimPolicy string
 
 type NetworkFileSystem struct {
 	// NFS服务器的IP地址
 	ServerIP string `json:"serverIP" yaml:"serverIP"`
 	// 在NFS服务器上的共享目录路径
-	RemotePath string `json:"remotePath" yaml:"remotePath"`
+	RemotePath string `json:"path" yaml:"path"`
 }
 
 type PersistentVolumeStatus struct {

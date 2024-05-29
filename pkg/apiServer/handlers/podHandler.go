@@ -12,6 +12,7 @@ import (
 
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
+	"minik8s/pkg/persistentVolume"
 	"minik8s/tools/log"
 
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
@@ -311,7 +312,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-
+	// 检查pod的name和namespace是否为空
 	newPodName := pod.Metadata.Name
 	newPodNamespace := pod.Metadata.Namespace
 	if newPodName == "" || newPodNamespace == "" {
@@ -319,7 +320,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
-
+	// 判断pod是否已经存在
 	key := config.EtcdPodPrefix + "/" + pod.Metadata.Namespace + "/" + pod.Metadata.Name
 	response, _ := etcdclient.EtcdStore.Get(key)
 	if response != "" {
@@ -327,11 +328,39 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
 	}
-	log.InfoLog("CreatePod: " + newPodNamespace + "/" + newPodName)
-
-	// 生成 UUID
+	// 若pod使用了pvc，则检查pvc是否存在
+	if pod.Spec.Volumes != nil {
+		for _, volume := range pod.Spec.Volumes {
+			if volume.PersistentVolumeClaim != nil {
+				pvcKey := config.EtcdPvcPrefix + "/" + pod.Metadata.Namespace + "/" + volume.PersistentVolumeClaim.ClaimName
+				pvcResponse, _ := etcdclient.EtcdStore.Get(pvcKey)
+				// 若pvc不存在，则返回错误
+				if pvcResponse == "" {
+					log.ErrorLog("CreatePod: PVC not found")
+					c.JSON(400, gin.H{"error": "PVC not found"})
+					return
+				}
+				// 若pvc存在，则检查pvc的状态是否为Pending
+				pvc := &apiObject.PersistentVolumeClaim{}
+				err = json.Unmarshal([]byte(pvcResponse), pvc)
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				if pvc.Status.Phase != apiObject.ClaimPending {
+					log.ErrorLog("CreatePod: PVC is not pending")
+					c.JSON(400, gin.H{"error": "PVC is not pending"})
+					return
+				}
+				// 将PVC绑定到PV
+				persistentVolume.BindPvc()
+			}
+		}
+	}
+	// 完成检查，生成 UUID
 	pod.Metadata.UUID = uuid.New().String()
-
+	log.InfoLog("CreatePod: " + newPodNamespace + "/" + newPodName)
 	// 发送的时候筛选 node
 	ScheduledUri := config.SchedulerURL() + config.SchedulerConfigPath
 	resp, err := http.Get(ScheduledUri)
@@ -347,8 +376,8 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	// 得到node的IP
 	pod.Spec.NodeName = node.Metadata.Name
+	// 得到node的IP
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
 	log.DebugLog("CreatePod: " + address)

@@ -83,7 +83,7 @@ type Volume struct {
 	// 存储卷的来源
 	VolumeSource
 	// 持久化卷声明
-	PersistentVolumeClaim PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim" yaml:"persistentVolumeClaim"`
+	PersistentVolumeClaim *PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim" yaml:"persistentVolumeClaim"`
 }
 
 type EmptyDirVolumeSource struct {

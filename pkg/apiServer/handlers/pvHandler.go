@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"net/http"
+	"os/exec"
+
 	"github.com/gin-gonic/gin"
 
 	"minik8s/pkg/apiObject"
@@ -16,32 +19,37 @@ func CreatePV(c *gin.Context) {
 	err := c.ShouldBindJSON(pv)
 	if err != nil {
 		log.ErrorLog("CreatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
 		return
 	}
 
-	newPvName := pv.Metadata.Name
-	if newPvName == "" {
-		log.ErrorLog("Create PersistentVolume: name is empty")
-		c.JSON(400, gin.H{"error": "name is empty"})
+	pvName := pv.Metadata.Name
+	pvNamespace := pv.Metadata.Namespace
+	if pvName == "" || pvNamespace == "" {
+		log.ErrorLog("Create PersistentVolume: name or namespace is empty")
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": "name or namespace is empty"})
 		return
 	}
 
-	key := config.EtcdPvPrefix + "/" + newPvName
+	key := config.EtcdPvPrefix + "/" + pvNamespace + "/" + pvName
 	response, _ := etcdclient.EtcdStore.Get(key)
 	if response != "" {
 		log.ErrorLog("Create PersistentVolume: pv already exists" + response)
-		c.JSON(400, gin.H{"error": "pv already exists"})
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": "pv already exists"})
 		return
 	}
-	log.InfoLog("CreatePv: " + newPvName)
+	log.InfoLog("CreatePv: " + key)
 
-	// 优先创建本地pv
-	if pv.Spec.Local.Path != "" {
-		// TODO: 创建本地挂载目录
-	} else {
-		// TODO: 创建远程挂载目录
+	// 将本地目录 /pvclient/:namespace/:name 挂载到服务器目录 /pvserver/:namespace/:name
+	mountCmd := "mount -t nfs " + config.NFSServer + ":/pvserver/" + pvNamespace + "/" + pvName + " /pvclient/" + pvNamespace + "/" + pvName
+	cmd := exec.Command("sh", "-c", mountCmd)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.ErrorLog("Create PersistentVolume: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
+	log.InfoLog("Create PersistentVolume: " + string(output))
 
-	c.JSON(200, gin.H{"data": "Create PersistentVolume " + newPvName})
+	c.JSON(200, gin.H{"data": "Create PersistentVolume " + pvName})
 }
