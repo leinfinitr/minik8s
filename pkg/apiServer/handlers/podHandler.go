@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	specctlrs "minik8s/pkg/controller/specCtlrs"
 	"net/http"
 	"strings"
 
@@ -12,7 +13,6 @@ import (
 
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
-	"minik8s/pkg/persistentVolume"
 	"minik8s/tools/log"
 
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
@@ -354,7 +354,12 @@ func CreatePod(c *gin.Context) {
 					return
 				}
 				// 将PVC绑定到PV
-				persistentVolume.BindPvc()
+				err = specctlrs.PvControllerInstance.BindPvc(pvc)
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
 			}
 		}
 	}

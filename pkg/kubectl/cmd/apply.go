@@ -165,14 +165,14 @@ func PersistentVolumeClaimHandler(content []byte) {
 		log.ErrorLog("Could not unmarshal the yaml file.")
 		os.Exit(1)
 	}
+
 	url := config.APIServerURL() + config.PersistentVolumeClaimURI
-	log.DebugLog("Post " + url)
-	_, err = httprequest.PostObjMsg(url, pvc)
+	resp, err := httprequest.PostObjMsg(url, pvc)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
 		os.Exit(1)
 	}
-
+	ApplyResultDisplay(PersistentVolumeClaim, resp)
 }
 
 func HpaHandler(content []byte) {

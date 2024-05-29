@@ -11,6 +11,7 @@ type ControllerManager interface {
 type ControllerManagerImpl struct {
 	replicaSetController specctlrs.ReplicaSetController
 	hpaController        specctlrs.HpaController
+	pvController         specctlrs.PvController
 }
 
 func NewControllerManager() ControllerManager {
@@ -22,11 +23,16 @@ func NewControllerManager() ControllerManager {
 	if err != nil {
 		panic(err)
 	}
-	return &ControllerManagerImpl{replicaSetController: newrc, hpaController: newhc}
+	newpc, err := specctlrs.NewPvController()
+	if err != nil {
+		panic(err)
+	}
+	return &ControllerManagerImpl{replicaSetController: newrc, hpaController: newhc, pvController: newpc}
 }
 
 func (cm *ControllerManagerImpl) Run(stopCh <-chan struct{}) {
 	go cm.replicaSetController.Run()
 	go cm.hpaController.Run()
+	go cm.pvController.Run()
 	<-stopCh
 }
