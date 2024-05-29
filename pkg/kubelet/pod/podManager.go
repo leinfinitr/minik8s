@@ -74,6 +74,11 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 	}
 
 	p.PodMapByUUID[uuid] = pod
+	if _, ok := p.PodMapByUUID[uuid]; !ok {
+		log.ErrorLog("Pod has not been added")
+		return errors.New("pod message has been handled")
+	}
+
 	pod.Status.Phase = apiObject.PodBuilding
 
 	err := p.AddPodHandler(pod)
