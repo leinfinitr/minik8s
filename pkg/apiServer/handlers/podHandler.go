@@ -378,7 +378,7 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, gin.H{"data": resp})
+	c.JSON(201, reaJson)
 }
 
 // DeletePods 删除所有Pod
