@@ -31,7 +31,6 @@ func serverlessHandler(cmd *cobra.Command, args []string) {
 		printHelp()
 		return
 	}
-
 	// 如果有参数，根据参数执行相应的操作
 	switch args[0] {
 	case "create":

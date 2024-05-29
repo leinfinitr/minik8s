@@ -3,13 +3,15 @@ package scale
 import (
 	"fmt"
 	"io"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"os"
 	"strings"
 	"time"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 type ScaleManagerImpl struct {

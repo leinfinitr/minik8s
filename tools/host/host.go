@@ -1,12 +1,13 @@
 package host
 
 import (
-	"minik8s/tools/log"
 	"net"
 	"os"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+
+	"minik8s/tools/log"
 )
 
 // GetHostname 获取当前主机的主机名

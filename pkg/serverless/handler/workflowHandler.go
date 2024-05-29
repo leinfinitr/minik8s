@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"minik8s/tools/log"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"minik8s/tools/log"
 )
 
 // RunServerlessWorkflow 运行Serverless Workflow
@@ -49,18 +50,12 @@ func RunServerlessWorkflow(c *gin.Context) {
 		case "FOR":
 			param = handleFor(words, param)
 		default:
-			param = handleFunction(words[0], param)
+			param = RunFunction(words[0], param)
 		}
 	}
 
 	// 返回最终结果
 	c.JSON(200, param)
-}
-
-// handleFunction 处理 function 关键字
-func handleFunction(name string, param string) string {
-	log.DebugLog("handleFunction: " + name)
-	return RunFunction(name, param)
 }
 
 // handleIf 处理 IF 关键字
@@ -69,27 +64,27 @@ func handleIf(words []string, param string) string {
 	switch words[1] {
 	case "EQUALS":
 		if words[2] == param {
-			return handleFunction(words[4], param)
+			return RunFunction(words[4], param)
 		} else {
-			return handleFunction(words[6], param)
+			return RunFunction(words[6], param)
 		}
 	case "NEQ":
 		if words[2] != param {
-			return handleFunction(words[4], param)
+			return RunFunction(words[4], param)
 		} else {
-			return handleFunction(words[6], param)
+			return RunFunction(words[6], param)
 		}
 	case "GREATER":
 		if words[2] > param {
-			return handleFunction(words[4], param)
+			return RunFunction(words[4], param)
 		} else {
-			return handleFunction(words[6], param)
+			return RunFunction(words[6], param)
 		}
 	case "LESS":
 		if words[2] < param {
-			return handleFunction(words[4], param)
+			return RunFunction(words[4], param)
 		} else {
-			return handleFunction(words[6], param)
+			return RunFunction(words[6], param)
 		}
 	default:
 		log.ErrorLog("handleIf: unknown keyword")
@@ -108,7 +103,7 @@ func handleFor(words []string, param string) string {
 	}
 	// 循环执行 function
 	for i := 0; i < times; i++ {
-		param = handleFunction(words[4], param)
+		param = RunFunction(words[4], param)
 	}
 	return param
 }
