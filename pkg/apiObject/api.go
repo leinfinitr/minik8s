@@ -32,4 +32,4 @@ const (
 	ContainerType  = "Container"
 )
 
-var AllTypeList = []string{PodType, ServiceType, ReplicaSetType, NodeType}
+var AllTypeList = []string{PodType, ServiceType, ReplicaSetType, NodeType, HpaType, ContainerType}
