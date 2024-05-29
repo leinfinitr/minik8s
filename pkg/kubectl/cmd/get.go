@@ -56,7 +56,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 				os.Exit(1)
 			}
 			printNodesResult(nodes)
-		}else if resourceType == apiObject.ContainerType{
+		} else if resourceType == apiObject.ContainerType {
 			var pods []apiObject.Pod
 			url := config.APIServerURL() + config.PodsGlobalURI
 			res, err := http.Get(url)
@@ -113,18 +113,28 @@ func printContainerResult(container apiObject.Container, writer table.Writer) {
 	// 根据状态为Status单元格选择颜色
 	var statusColor text.Colors
 	switch container.ContainerStatus {
+	case apiObject.ContainerCreated:
+		statusColor = text.Colors{text.FgGreen}
 	case apiObject.ContainerRunning:
 		statusColor = text.Colors{text.FgGreen}
-	case apiObject.ContainerUnknown:
-		statusColor = text.Colors{text.FgYellow}
 	case apiObject.ContainerExited:
 		statusColor = text.Colors{text.FgRed}
+	case apiObject.ContainerUncreated:
+		statusColor = text.Colors{text.FgYellow}
+	case apiObject.ContainerUnknown:
+		statusColor = text.Colors{text.FgWhite}
 	default:
 		statusColor = text.Colors{text.FgWhite}
 	}
-
+	var containerStatusMap = map[apiObject.ContainerStatus]string{
+		apiObject.ContainerCreated:   "Created",
+		apiObject.ContainerRunning:   "Running",
+		apiObject.ContainerExited:    "Exited",
+		apiObject.ContainerUncreated: "Uncreated",
+		apiObject.ContainerUnknown:   "Unknown",
+	}
 	// 应用颜色到Status
-	coloredStatus := statusColor.Sprint(container.ContainerStatus)
+	coloredStatus := statusColor.Sprint(containerStatusMap[container.ContainerStatus])
 
 	writer.AppendRow(table.Row{
 		"Container",
@@ -187,7 +197,7 @@ func getPodHandler(namespace string) {
 	printPodsResult(pods)
 }
 
-func getServiceHandler(namespace string){
+func getServiceHandler(namespace string) {
 	url := config.APIServerURL() + config.ServicesURI
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	var services []apiObject.Service
