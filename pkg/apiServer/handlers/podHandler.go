@@ -146,7 +146,7 @@ func DeletePod(c *gin.Context) {
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
 	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
-	delUri := url + config.PodsURI
+	delUri := url + config.PodURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
 	_, err = httprequest.DelMsg(delUri, nil)
