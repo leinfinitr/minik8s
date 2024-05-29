@@ -7,7 +7,7 @@ import (
 
 	"minik8s/pkg/config"
 	"minik8s/pkg/serverless/handler"
-	"minik8s/pkg/serverless/scale"
+	"minik8s/pkg/serverless/manager"
 	"minik8s/tools/log"
 )
 
@@ -19,7 +19,7 @@ type ServerlessServer struct {
 	// 转发请求
 	Router *gin.Engine
 	// 自动扩容控制
-	Scale scale.ScaleManagerImpl
+	Scale manager.ScaleManagerImpl
 }
 
 // Run 启动ServerlessServer
@@ -53,6 +53,9 @@ func (s *ServerlessServer) Register() {
 
 	// 运行Serverless Workflow
 	s.Router.POST(config.ServerlessWorkflowURI, handler.RunServerlessWorkflow)
+
+	// 绑定事件
+	s.Router.POST(config.ServerlessEventURI, handler.BindEvent)
 }
 
 // NewServerlessServer 创建一个新的ServerlessServer
@@ -61,6 +64,6 @@ func NewServerlessServer() *ServerlessServer {
 		Address: config.ServerlessAddress,
 		Port:    config.ServerlessPort,
 		Router:  gin.Default(),
-		Scale:   *scale.NewScaleManager(),
+		Scale:   *manager.NewScaleManager(),
 	}
 }

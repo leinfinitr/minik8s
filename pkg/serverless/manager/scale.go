@@ -1,4 +1,4 @@
-package scale
+package manager
 
 import (
 	"fmt"

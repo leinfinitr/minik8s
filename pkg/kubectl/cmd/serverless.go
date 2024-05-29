@@ -69,6 +69,12 @@ func serverlessHandler(cmd *cobra.Command, args []string) {
 			return
 		}
 		workflow(args[1], args[2])
+	case "event":
+		if len(args) != 2 {
+			log.ErrorLog("The number of parameters is incorrect: event [file.yaml]")
+			return
+		}
+		event(args[1])
 	default:
 		printHelp()
 	}
@@ -82,7 +88,8 @@ func printHelp() {
 	serverless get # 获取所有 serverless 环境
 	serverless update [serverless name] [xxx.py] # 更新指定 serverless 环境函数
 	serverless run [serverless name] [param] # 运行指定 serverless 环境
-	serverless workflow [xxx.txt] [param] # 执行 serverless 工作流`
+	serverless workflow [xxx.txt] [param] # 执行 serverless 工作流
+	serverless event [xxx.yaml] # 绑定 serverless 环境事件`
 	println(help)
 }
 
@@ -265,4 +272,44 @@ func workflow(fileName string, param string) {
 	result := string(body)
 	result = result[1 : len(result)-1]
 	fmt.Println("Result: " + result)
+}
+
+// event 绑定 serverless 环境事件
+func event(fileName string) {
+	// 检查文件是否存在
+	fileInfo, err := os.Stat(fileName)
+	if err != nil {
+		log.ErrorLog("The file " + fileName + " does not exist.")
+		os.Exit(1)
+	}
+	if fileInfo.IsDir() {
+		log.ErrorLog("The file " + fileName + " is a directory.")
+		os.Exit(1)
+	}
+	// 读取文件内容
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		log.ErrorLog("Could not read the file specified.")
+		os.Exit(1)
+	}
+	// 解析 yaml 文件
+	var serverlessEvent apiObject.ServerlessEvent
+	err = translator.ParseApiObjFromYaml(content, &serverlessEvent)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	// 转发给 serverless 服务端口处理
+	url := config.ServerlessURL() + config.ServerlessEventURI
+	response, err := httprequest.PostObjMsg(url, serverlessEvent)
+	if err != nil {
+		log.ErrorLog(err.Error())
+		os.Exit(1)
+	}
+	// 输出结果
+	if response.StatusCode == 200 {
+		fmt.Println("Success binding event: " + string(serverlessEvent.Type) + " " + serverlessEvent.Params + " " + serverlessEvent.Name + " " + serverlessEvent.Args)
+	} else {
+		fmt.Println("Failed binding event: " + string(serverlessEvent.Type) + " " + serverlessEvent.Params + " " + serverlessEvent.Name + " " + serverlessEvent.Args)
+	}
 }

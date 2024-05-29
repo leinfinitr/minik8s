@@ -35,6 +35,7 @@ const (
 	ServerlessFunctionURI = "/api/v1/serverless/function/:name"
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"
 	ServerlessWorkflowURI = "/api/v1/serverless/workflow/:param"
+	ServerlessEventURI    = "/api/v1/serverless/event"
 
 	PersistentVolumeURI  = "/api/v1/pv"
 	PersistentVolumesURI = "/api/v1/pv/:name"

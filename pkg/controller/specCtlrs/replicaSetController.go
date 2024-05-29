@@ -79,14 +79,14 @@ func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 			}
 		}
 		if len(selectedPods) < int(rs.Spec.Replicas) {
-			log.InfoLog("syncReplicaSet: " + rs.Metadata.Name + " need to scale")
+			log.InfoLog("syncReplicaSet: " + rs.Metadata.Name + " need to manager")
 			// 3. 如果Pod数量不足，则创建Pod
 			err := rc.IncreaseReplicas(&rs.Metadata, &rs.Spec.Template, int(rs.Spec.Replicas)-len(selectedPods))
 			if err != nil {
 				log.ErrorLog("syncReplicaSet: " + err.Error())
 			}
 		} else if len(selectedPods) > int(rs.Spec.Replicas) {
-			log.InfoLog("syncReplicaSet: " + rs.Metadata.Name + " need to scale")
+			log.InfoLog("syncReplicaSet: " + rs.Metadata.Name + " need to manager")
 			// 4. 如果Pod数量过多，则删除Pod
 			err := rc.DecreaseReplicas(selectedPods, len(selectedPods)-int(rs.Spec.Replicas))
 			if err != nil {
