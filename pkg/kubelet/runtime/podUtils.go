@@ -7,6 +7,7 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/host"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"strings"
 	"time"
@@ -362,6 +363,13 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 	log.InfoLog(fmt.Sprintf("Memory usage %E: ", memoryUsage))
 	pod.Status.CpuUsage = cpuUsage
 	pod.Status.MemUsage = memoryUsage
-
+	
+	url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodStatusURI
+	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+	res, err := httprequest.PutObjMsg(url, pod.Status)
+	if err != nil || res.StatusCode != 200 {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+	}
 	return nil
 }
