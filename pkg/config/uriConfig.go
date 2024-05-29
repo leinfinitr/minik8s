@@ -40,6 +40,7 @@ const (
 
 	JobsURI      = "/api/v1/namespaces/:namespace/jobs"
 	JobURI       = "/api/v1/namespaces/:namespace/jobs/:name"
+	GlobalJobURI = "/api/v1/jobs"
 	JobStatusURI = "/api/v1/namespaces/:namespace/jobs/:name/status"
 	JobsCodeURI  = "/api/v1/namespaces/:namespace/jobs/code"
 	JobCodeURI   = "/api/v1/namespaces/:namespace/jobs/:name/code"

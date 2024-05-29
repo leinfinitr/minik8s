@@ -137,6 +137,7 @@ func (a *ApiServer) Register() {
 
 	a.Router.GET(config.JobURI, handlers.GetJob)
 	a.Router.GET(config.JobsURI, handlers.GetJobs)
+	a.Router.GET(config.GlobalJobURI, handlers.GetGlobalJobs)
 	a.Router.POST(config.JobsURI, handlers.AddJob)
 	a.Router.DELETE(config.JobURI, handlers.DeleteJob)
 	a.Router.GET(config.JobStatusURI, handlers.GetJobStatus)

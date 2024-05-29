@@ -12,6 +12,27 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+func GetGlobalJobs(c *gin.Context) {
+	log.InfoLog("GetGlobalJobs")
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdJobPrefix)
+	if err != nil {
+		log.ErrorLog("GetGlobalJobs: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	var jobs []apiObject.Job
+	for _, v := range res {
+		var job apiObject.Job
+		err = json.Unmarshal([]byte(v), &job)
+		if err != nil {
+			log.ErrorLog("GetGlobalJobs: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		jobs = append(jobs, job)
+	}
+	c.JSON(200, jobs)
+}
 
 func GetJobs(c *gin.Context) {
 	namespace := c.Param("namespace")
