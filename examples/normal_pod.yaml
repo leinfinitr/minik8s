@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: network-pod
+  namespace: default
+  labels:
+    app: my-app
+  annotations:
+    description: "An example pod of fileserver and downloader"
+spec:
+  containers:
+    - name: fileserver
+      image: 7143192/fileserver:latest
+      imagePullPolicy: IfNotPresent
+      # command: ["/bin/sh", "-c", "while true; do echo 'scale=2000; 4*a(1)' | bc -l -q; done"]
+      ports:
+        - containerPort: 8000
+        - targetPort: 8000

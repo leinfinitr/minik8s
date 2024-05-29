@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"minik8s/pkg/apiObject"
+	"minik8s/tools/conversion"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
@@ -13,20 +14,20 @@ func (r *RuntimeManager) getPodSandBoxConfig(pod *apiObject.Pod) (*runtimeapi.Po
 			Name:      pod.Metadata.Name,
 			Namespace: pod.Metadata.Namespace,
 			Uid:       pod.Metadata.UUID,
-			Attempt:   0,
+			Attempt:   1,
 		},
 		Labels:      pod.Metadata.Labels,
 		Annotations: pod.Metadata.Annotations,
 	}
 
-	// TODO:需要获取config中基本的DNS信息，暂时不需要
+	// TODO: 需要获取config中基本的DNS信息，暂时不需要
 
 	podSandboxConfig.Hostname = pod.Spec.NodeName
 	podSandboxConfig.LogDirectory = "/var/log/pods" //`/var/log/pods/<NAMESPACE>_<NAME>_<UID>/`
 
-	// TODO:这里可能还需要实现端口映射
+	// TODO: 这里可能还需要实现端口映射
 
-	// TODO:默认需要生成关于linux的配置
+	// TODO: 默认需要生成关于linux的配置
 	linuxConfig, err := r.getPodSandBoxLinuxConfig()
 	if err != nil {
 		return nil, nil
@@ -63,13 +64,15 @@ func (r *RuntimeManager) getContainerConfig(container *apiObject.Container, sand
 	config := &runtimeapi.ContainerConfig{
 		Metadata: &runtimeapi.ContainerMetadata{
 			Name:    container.Name,
-			Attempt: 0,
+			Attempt: 1,
 		},
 		Image: &runtimeapi.ImageSpec{
 			Image:              imageRef,
 			UserSpecifiedImage: container.Image,
 		},
-		Command: container.Command,
+		Command:    container.Command,
+		WorkingDir: container.WorkingDir,
+		Mounts:     conversion.MountsToMounts(container.Mounts),
 	}
 
 	return config, nil

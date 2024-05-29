@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
@@ -107,19 +108,48 @@ func DeletePod(c *gin.Context) {
 	}
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	log.WarnLog("DeletePods: " + namespace + "/" + name)
-	err := etcdclient.EtcdStore.Delete(key)
+	res, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	// TODO 删除kube-controller-manager中的Endpoint
-	// TODO 发送删除请求到kubelet
-	url := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort)
-	delUri := url + config.PodsURI
+	pod := &apiObject.Pod{}
+	err = json.Unmarshal([]byte(res), pod)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	nodeName := pod.Spec.NodeName
+	// 删除etcd中的Pod
+	err = etcdclient.EtcdStore.Delete(key)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	// 发送删除请求到kubelet
+	res, err = etcdclient.EtcdStore.Get(config.EtcdNodePrefix + "/" + nodeName)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	node := &apiObject.Node{}
+	err = json.Unmarshal([]byte(res), node)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	addresses := node.Status.Addresses
+	address := addresses[0].Address
+	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
+	delUri := url + config.PodURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
-	_, err = httprequest.DelMsg(delUri)
+	_, err = httprequest.DelMsg(delUri, nil)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -313,6 +343,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	// 发送创建请求
 	pod.Spec.NodeName = node.Metadata.Name
 	addresses := node.Status.Addresses
 	tep, _ := json.Marshal(addresses)
@@ -322,12 +353,7 @@ func CreatePod(c *gin.Context) {
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
-	fmt.Println("createUri: ", createUri)
-	if err != nil {
-		log.ErrorLog("CreatePod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
+	log.DebugLog("createUri: " + createUri)
 	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil || resp.StatusCode != config.HttpSuccessCode {
 		log.ErrorLog("Could not post the object message.\n" + err.Error())
@@ -352,7 +378,7 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, gin.H{"data": resp})
+	c.JSON(201, reaJson)
 }
 
 // DeletePods 删除所有Pod
@@ -385,7 +411,7 @@ func GetGlobalPods(c *gin.Context) {
 	c.JSON(200, pods)
 }
 
-// UpdatePodProps TODO: 更新Pod
+// UpdatePodProps 更新Pod
 func UpdatePodProps(new *apiObject.Pod) {
 	podBytes, err := json.Marshal(new)
 	if err != nil {
@@ -436,14 +462,14 @@ func ExecPod(c *gin.Context) {
 	res, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
 		log.ErrorLog("ExecPod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, err.Error())
 		return
 	}
 	pod := &apiObject.Pod{}
 	err = json.Unmarshal([]byte(res), pod)
 	if err != nil {
 		log.ErrorLog("ExecPod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, err.Error())
 		return
 	}
 	// 取出containerID
@@ -456,11 +482,30 @@ func ExecPod(c *gin.Context) {
 	}
 	if containerID == "" {
 		log.ErrorLog("ExecPod: containerID is empty")
-		c.JSON(400, gin.H{"error": "containerID is empty"})
+		c.JSON(400, "containerID is empty")
 		return
 	}
+
+	// 获取pod所在node的IP
+	res, err = etcdclient.EtcdStore.Get(config.EtcdNodePrefix + "/" + pod.Spec.NodeName)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	node := &apiObject.Node{}
+	err = json.Unmarshal([]byte(res), node)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	addresses := node.Status.Addresses
+	address := addresses[0].Address
+
 	// 执行命令
-	execUri := config.KubeletLocalURLPrefix + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodExecURI
+	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + containerID + "/" + param)
+	execUri := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodExecURI
 	execUri = strings.Replace(execUri, config.NameSpaceReplace, namespace, -1)
 	execUri = strings.Replace(execUri, config.NameReplace, name, -1)
 	execUri = strings.Replace(execUri, config.ContainerReplace, containerID, -1)
@@ -468,8 +513,18 @@ func ExecPod(c *gin.Context) {
 	resp, err := httprequest.GetMsg(execUri)
 	if err != nil {
 		log.ErrorLog("ExecPod: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, err.Error())
 		return
 	}
-	c.JSON(200, gin.H{"data": resp})
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.ErrorLog("ExecPod: " + err.Error())
+		c.JSON(500, err.Error())
+		return
+	}
+	result := string(body)
+	// 去掉result中首尾的引号
+	result = result[1 : len(result)-1]
+	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + containerID + "/" + param + " success: " + result)
+	c.JSON(200, result)
 }

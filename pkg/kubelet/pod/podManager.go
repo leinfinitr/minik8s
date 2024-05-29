@@ -17,8 +17,9 @@ type PodManager interface {
 	RestartPod(pod *apiObject.Pod) error
 	DeletePodByUUID(pod *apiObject.Pod) error
 	RecreatePodContainer(pod *apiObject.Pod) error
-	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
+	ExecPodContainer(req *apiObject.ExecReq) (string, error)
 	UpdatePodStatus() error
+	SyncPods(pods *[]apiObject.Pod) error
 }
 
 /*  */
@@ -29,14 +30,14 @@ type podManagerImpl struct {
 	EventQueue chan EventType
 
 	/* 不同事件的处理函数 */
-	AddPodHandler                func(pod *apiObject.Pod) error
-	StartPodHandler              func(pod *apiObject.Pod) error
-	RestartPodHandler            func(pod *apiObject.Pod) error
-	StopPodHandler               func(pod *apiObject.Pod) error
-	DeletePodHandler             func(pod *apiObject.Pod) error
-	RecreateContainerHandler     func(pod *apiObject.Pod) error
-	ExecPodHandler               func(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
-	UpdateContainerStatusHandler func(container *apiObject.Container, pod *apiObject.Pod) error
+	AddPodHandler            func(pod *apiObject.Pod) error
+	StartPodHandler          func(pod *apiObject.Pod) error
+	RestartPodHandler        func(pod *apiObject.Pod) error
+	StopPodHandler           func(pod *apiObject.Pod) error
+	DeletePodHandler         func(pod *apiObject.Pod) error
+	RecreateContainerHandler func(pod *apiObject.Pod) error
+	ExecPodHandler           func(req *apiObject.ExecReq) (string, error)
+	UpdatePodStatusHandler   func(pod *apiObject.Pod) error
 }
 
 /* Singleton pattern */
@@ -46,20 +47,18 @@ func GetPodManager() PodManager {
 	if podManager == nil {
 		newMapUUIDToPod := make(map[string]*apiObject.Pod)
 		eventChan := make(chan EventType)
-		// TODO：此处需要获取所有pod的信息，接口应当放在podUtils中，来更新map，未实现
-
 		runtimeMgr := runtime.GetRuntimeManager()
 		podManager = &podManagerImpl{
-			PodMapByUUID:                 newMapUUIDToPod,
-			EventQueue:                   eventChan,
-			AddPodHandler:                runtimeMgr.CreatePod,
-			StartPodHandler:              runtimeMgr.StartPod,
-			RestartPodHandler:            runtimeMgr.RestartPod,
-			StopPodHandler:               runtimeMgr.StopPod,
-			DeletePodHandler:             runtimeMgr.DeletePod,
-			RecreateContainerHandler:     runtimeMgr.RecreatePodContainers,
-			ExecPodHandler:               runtimeMgr.ExecPodContainer,
-			UpdateContainerStatusHandler: runtimeMgr.UpdateContainerStatus,
+			PodMapByUUID:             newMapUUIDToPod,
+			EventQueue:               eventChan,
+			AddPodHandler:            runtimeMgr.CreatePod,
+			StartPodHandler:          runtimeMgr.StartPod,
+			RestartPodHandler:        runtimeMgr.RestartPod,
+			StopPodHandler:           runtimeMgr.StopPod,
+			DeletePodHandler:         runtimeMgr.DeletePod,
+			RecreateContainerHandler: runtimeMgr.RecreatePodContainers,
+			ExecPodHandler:           runtimeMgr.ExecPodContainer,
+			UpdatePodStatusHandler:   runtimeMgr.UpdatePodStatus,
 		}
 	}
 
@@ -75,6 +74,11 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 	}
 
 	p.PodMapByUUID[uuid] = pod
+	if _, ok := p.PodMapByUUID[uuid]; !ok {
+		log.ErrorLog("Pod has not been added")
+		return errors.New("pod message has been handled")
+	}
+
 	pod.Status.Phase = apiObject.PodBuilding
 
 	err := p.AddPodHandler(pod)
@@ -207,7 +211,7 @@ func (p *podManagerImpl) RecreatePodContainer(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (p *podManagerImpl) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
+func (p *podManagerImpl) ExecPodContainer(req *apiObject.ExecReq) (string, error) {
 	return p.ExecPodHandler(req)
 }
 
@@ -216,14 +220,22 @@ func (p *podManagerImpl) UpdatePodStatus() error {
 		if pod.Status.Phase == apiObject.PodPending || pod.Status.Phase == apiObject.PodBuilding {
 			continue
 		}
-		for j := 0; j < len(pod.Spec.Containers); j += 1 {
-			container := &pod.Spec.Containers[j]
-			err := p.UpdateContainerStatusHandler(container, pod)
-			if err != nil {
-				log.ErrorLog("Get status failed in container ID : " + container.ContainerID)
-			}
+		err := p.UpdatePodStatusHandler(pod)
+		if err != nil {
+			log.ErrorLog("Get status failed in pod ID : " + pod.GetPodUUID())
 		}
 	}
+	return nil
+}
 
+func (p *podManagerImpl) SyncPods(pods *[]apiObject.Pod) error {
+	// 把apiServer的pods信息同步到本地
+	if len(p.PodMapByUUID) != 0 {
+		log.DebugLog("PodMapByUUID is not empty")
+		return nil
+	}
+	for _, pod := range *pods {
+		p.PodMapByUUID[pod.GetPodUUID()] = &pod
+	}
 	return nil
 }

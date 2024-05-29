@@ -11,6 +11,7 @@ import (
 	netRequest "minik8s/tools/netRequest"
 	stringops "minik8s/tools/stringops"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -35,32 +36,31 @@ func (rc *ReplicaSetControllerImpl) Run() {
 	executor.ExecuteInPeriod(ReplicaControllerDelay, ReplicaControllerTimeGap, rc.syncReplicaSet)
 }
 
-
-func GetAllReplicaSetsFromAPIServer() ( replicaSets []apiObject.ReplicaSet,err error) {
+func GetAllReplicaSetsFromAPIServer() (replicaSets []apiObject.ReplicaSet, err error) {
 	url := config.APIServerURL() + config.GlobalReplicaSetsURI
 	res, err := http.Get(url)
 	if err != nil {
 		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + err.Error())
-		return replicaSets, err 
+		return replicaSets, err
 	}
 	err = json.NewDecoder(res.Body).Decode(&replicaSets)
 	if err != nil {
 		log.ErrorLog("GetAllReplicaSetsFromAPIServer: " + err.Error())
 		return replicaSets, err
 	}
-	return replicaSets,nil
+	return replicaSets, nil
 }
 func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 	var pods []apiObject.Pod
 	// 1. 获取所有的Pod
-	pods,err := GetAllPodsFromAPIServer()
+	pods, err := GetAllPodsFromAPIServer()
 	if err != nil {
 		log.ErrorLog("syncReplicaSet: " + err.Error())
 		return
 	}
 	// 2. 获取所有的ReplicaSet
 	var replicaSets []apiObject.ReplicaSet
-	replicaSets,err = GetAllReplicaSetsFromAPIServer()
+	replicaSets, err = GetAllReplicaSetsFromAPIServer()
 	if err != nil {
 		log.ErrorLog("syncReplicaSet: " + err.Error())
 		return
@@ -110,7 +110,6 @@ func (rc *ReplicaSetControllerImpl) syncReplicaSet() {
 
 }
 
-
 func (rc *ReplicaSetControllerImpl) IncreaseReplicas(replicaMeta *apiObject.ObjectMeta, pod *apiObject.PodTemplateSpec, num int) error {
 	new_pod := apiObject.Pod{}
 	new_pod.Metadata = pod.Metadata
@@ -150,6 +149,7 @@ func (rc *ReplicaSetControllerImpl) IncreaseReplicas(replicaMeta *apiObject.Obje
 		}
 
 		if code != http.StatusCreated {
+			log.ErrorLog("codeNum"+ strconv.Itoa(code))
 			log.ErrorLog("replicaController: " + "AddPodsNums code is not 201")
 			errStr += "code is not 200"
 		}
@@ -196,7 +196,7 @@ func (rc *ReplicaSetControllerImpl) UpdateStatus(replicaSet *apiObject.ReplicaSe
 		}
 		newReplicaStatus.Conditions = append(newReplicaStatus.Conditions, apiObject.ReplicaSetCondition{
 			Type:               apiObject.PodType,
-			Status:             pod.Status.Phase,
+			Status:             string(pod.Status.Phase),
 			LastTransitionTime: time.Now().String(),
 		})
 	}

@@ -1,6 +1,0 @@
-image: python:3.7-alpine
-name: subtract
-volume: serverless-volume
-requirements:
-  - numpy
-functionFile: subtract.py

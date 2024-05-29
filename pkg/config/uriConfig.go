@@ -14,6 +14,7 @@ const (
 	PodExecURI                = "/api/v1/namespaces/:namespace/pods/:name/exec/:container/:param"
 	PodsURI                   = "/api/v1/namespaces/:namespace/pods"
 	PodsGlobalURI             = "/api/v1/pods"
+	PodsSyncURI               = "/api/v1/pods/sync"
 
 	ProxyStatusURI   = "/api/v1/proxy"
 	ProxiesStatusURI = "/api/v1/proxy/:name"
@@ -37,12 +38,19 @@ const (
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"
 	ServerlessWorkflowURI = "/api/v1/serverless/workflow/:param"
 
-
-	JobsURI = "/api/v1/namespaces/:namespace/jobs"
-	JobURI  = "/api/v1/namespaces/:namespace/jobs/:name"
+	JobsURI      = "/api/v1/namespaces/:namespace/jobs"
+	JobURI       = "/api/v1/namespaces/:namespace/jobs/:name"
 	JobStatusURI = "/api/v1/namespaces/:namespace/jobs/:name/status"
-	JobsCodeURI = "/api/v1/namespaces/:namespace/jobs/code"
-	JobCodeURI = "/api/v1/namespaces/:namespace/jobs/:name/code"
+	JobsCodeURI  = "/api/v1/namespaces/:namespace/jobs/code"
+	JobCodeURI   = "/api/v1/namespaces/:namespace/jobs/:name/code"
+
+	PersistentVolumeURI  = "/api/v1/pv"
+	PersistentVolumesURI = "/api/v1/pv/:name"
+
+	PersistentVolumeClaimURI  = "/api/v1/pvc"
+	PersistentVolumeClaimsURI = "/api/v1/pvc/:name"
+
+	MonitorURL = "/api/v1/monitor"
 )
 
 const (

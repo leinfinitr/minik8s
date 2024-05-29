@@ -17,18 +17,71 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO: UpdateProxy 更新Proxy的状态
-func UpdateProxyStatus(c *gin.Context) {
-	// var node apiObject.Node
-	// err := c.ShouldBindJSON(&node)
-	// if err != nil {
-	// 	log.ErrorLog("UpdateNode error: " + err.Error())
-	// }
-	// name := c.Param("name")
-	// nodes[name] = node
+func RegisterProxy(c *gin.Context) {
+	// 某个proxy初次注册，检查是否已经有service存在，如果有则将service发送给proxy
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdServicePrefix)
+	if err != nil {
+		log.ErrorLog("RegisterProxy: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
 
-	// log.InfoLog("UpdateNode: " + name)
-	// c.JSON(config.HttpSuccessCode, "")
+	var services []apiObject.Service
+	for _, v := range res {
+		var service apiObject.Service
+		err = json.Unmarshal([]byte(v), &service)
+		if err != nil {
+			log.ErrorLog("RegisterProxy: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		services = append(services, service)
+	}
+
+	// 如果kubeproxy所在的node没有注册，则返回错误
+	var node apiObject.Node
+	res, err = etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+	for _, v := range res {
+		err = json.Unmarshal([]byte(v), &node)
+		if err != nil {
+			log.ErrorLog("RegisterProxy: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		if node.Status.Addresses[0].Address == c.ClientIP() {
+			break
+		}
+	}
+
+	if node.Status.Addresses[0].Address != c.ClientIP() {
+		log.ErrorLog("RegisterProxy: node not exists, IP: " + c.ClientIP() + " node: " + node.Metadata.Name)
+		c.JSON(config.HttpErrorCode, gin.H{"error": "node not exists"})
+		return
+	}
+
+	// 向proxy发送serviceEvent
+	for _, service := range services {
+		var serviceEvent entity.ServiceEvent
+		serviceEvent.Action = entity.UpdateEvent
+		serviceEvent.Service = service
+		serviceEvent.Endpoints = *Selector(&service)
+
+		// 向proxy发送serviceEvent
+		url := "http://" + c.ClientIP() + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.ServiceURI
+		url = strings.Replace(url, config.NameSpaceReplace, service.Metadata.Namespace, -1)
+		url = strings.Replace(url, config.NameReplace, service.Metadata.Name, -1)
+		res, err := httprequest.PostObjMsg(url, serviceEvent)
+		if err != nil || res.StatusCode != config.HttpSuccessCode {
+			log.ErrorLog("RegisterProxy: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+
+	}
+
+	log.InfoLog("RegisterProxy Successfully")
+	c.JSON(config.HttpSuccessCode, "RegisterProxy Successfully")
+
 }
 
 // GetServices 获取所有Service
@@ -44,6 +97,59 @@ func GetService(c *gin.Context) {
 	namespace := c.Param("namespace")
 
 	println("GetService: " + namespace + "/" + name)
+}
+
+func DeleteService(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("name")
+
+	key := config.EtcdServicePrefix + "/" + namespace + "/" + name
+	response, err := etcdclient.EtcdStore.Get(key)
+	if response == "" || err != nil {
+		log.ErrorLog("DeleteService error: service not exists")
+		c.JSON(400, gin.H{"error": "service not exists"})
+		return
+	}
+	var service apiObject.Service
+	err = json.Unmarshal([]byte(response), &service)
+	if err != nil {
+		log.ErrorLog("DeleteService error: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 把deleteEvent发送给所有的Node
+	var serviceEvent entity.ServiceEvent
+	serviceEvent.Action = entity.DeleteEvent
+	serviceEvent.Service = service
+	serviceEvent.Endpoints = *Selector(&service)
+
+	// 获取所有的Node信息
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+	if err != nil {
+		log.WarnLog("GetNodes: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
+	for _, v := range res {
+		var node apiObject.Node
+		err = json.Unmarshal([]byte(v), &node)
+		if err != nil {
+			log.WarnLog("GetNodes: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.ServiceURI
+		url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+		url = strings.Replace(url, config.NameReplace, name, -1)
+		res, err := httprequest.PostObjMsg(url, serviceEvent)
+		if err != nil || res.StatusCode != config.HttpSuccessCode {
+			log.ErrorLog("DeleteService: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	etcdclient.EtcdStore.Delete(key)
 }
 
 // GetService 获取指定Service
@@ -67,9 +173,9 @@ func PutService(c *gin.Context) {
 	key := config.EtcdServicePrefix + "/" + newServiceNamespace + "/" + newServiceName
 	response, _ := etcdclient.EtcdStore.Get(key)
 	if response != "" {
-		serviceEvent.Action = "UpdateService"
+		serviceEvent.Action = entity.UpdateEvent
 	} else {
-		serviceEvent.Action = "CreateService"
+		serviceEvent.Action = entity.CreateEvent
 	}
 
 	service.Metadata.UUID = uuid.New().String()
@@ -112,7 +218,7 @@ func PutService(c *gin.Context) {
 		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.ServiceURI
 		url = strings.Replace(url, config.NameSpaceReplace, newServiceNamespace, -1)
 		url = strings.Replace(url, config.NameReplace, newServiceName, -1)
-		if serviceEvent.Action == "CreateService" {
+		if serviceEvent.Action == entity.CreateEvent {
 			res, err := httprequest.PutObjMsg(url, serviceEvent)
 			if err != nil || res.StatusCode != 200 {
 				log.ErrorLog("PutService: errorUrl: " + url + "error: " + err.Error())

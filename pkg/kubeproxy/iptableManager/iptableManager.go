@@ -2,8 +2,10 @@ package iptableManager
 
 import (
 	"fmt"
+	"math/rand"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/entity"
+	"minik8s/tools/host"
 	"minik8s/tools/log"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -42,6 +44,13 @@ func (i *iptableManager) init_iptable() {
 	log.InfoLog("[KUBEPROXY]: init iptables")
 
 	i.iptable, _ = iptables.New()
+
+	i.iptable.ClearAndDeleteChain("nat", "OUTPUT")
+	i.iptable.ClearAndDeleteChain("nat", "PREROUTING")
+	i.iptable.ClearAndDeleteChain("nat", "POSTROUTING")
+	i.iptable.ClearAndDeleteChain("nat", "KUBE-MARK-MASQ")
+	i.iptable.ClearAndDeleteChain("nat", "KUBE-NODEPORTS")
+	i.iptable.ClearAndDeleteChain("nat", "KUBE-SERVICES")
 
 	//设置NAT表的策略
 	i.iptable.ChangePolicy("nat", "PREROUTING", "ACCEPT")
@@ -101,7 +110,12 @@ func (i *iptableManager) CreateService(createEvent *entity.ServiceEvent) error {
 			targetPort := portConfig.TargetPort
 			nodePort := portConfig.NodePort
 			protocol := portConfig.Protocol
-			err := i.setIPtableForNodePort(serviceName, "", port, targetPort, nodePort, protocol, podsIPList)
+			nodeIP, err := host.GetHostIP()
+			if err != nil {
+				log.ErrorLog("CreateService error: " + err.Error())
+				return err
+			}
+			err = i.setIPtableForNodePort(serviceName, nodeIP, port, targetPort, nodePort, protocol, podsIPList)
 			if err != nil {
 				log.ErrorLog("CreateService error: " + err.Error())
 				return err
@@ -123,11 +137,10 @@ func (i *iptableManager) setIPTableForClusterIP(serviceName string, clusterIP st
 	log.InfoLog("[KUBEPROXY]: serviceName:" + serviceName + " clusterIP:" + clusterIP + " port:" + fmt.Sprintf("%d", port) + " targetPort:" + fmt.Sprintf("%d", targetPort))
 
 	// 为该Service Port创建一个独有的KUBE—SVC链
-	kubeSvc := "KUBE-SVC-" + serviceName + "-" + fmt.Sprintf("%d", port)
+	kubeSvc := "KUBE-SVC-" + randomString()
 	err := i.iptable.NewChain("nat", kubeSvc)
 	if err != nil {
-		log.ErrorLog("KUBE-SVC NewChain error: " + err.Error())
-		return err
+		log.WarnLog("KUBE-SVC NewChain error: " + err.Error())
 	}
 
 	// 在KUBE-SERVICES链中添加规则转发至KUBE-SVC链
@@ -138,7 +151,7 @@ func (i *iptableManager) setIPTableForClusterIP(serviceName string, clusterIP st
 	}
 
 	// 在KUBE-SERVICES链中添加规则，标记数据包
-	err = i.iptable.Insert("nat", "KUBE-SERVICES", 1, "-d", clusterIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", port), "-j", "KUBE-MARK-MASQ")
+	err = i.iptable.Insert("nat", "KUBE-SERVICES", 1, "-d", clusterIP, "-p", string(protocol), "-m", "comment", "--comment", serviceName, "--dport", fmt.Sprintf("%d", port), "-j", "KUBE-MARK-MASQ")
 	if err != nil {
 		log.ErrorLog("KUBE-SERVICES Mark error: " + err.Error())
 		return err
@@ -148,11 +161,10 @@ func (i *iptableManager) setIPTableForClusterIP(serviceName string, clusterIP st
 	podsLen := len(podsIPList)
 	for j, podIP := range podsIPList {
 		// 为每个pod创建一个独有的KUBE-SEP链
-		kubeSep := "KUBE-SEP-" + serviceName + "-" + fmt.Sprintf("%d", port) + "-" + fmt.Sprintf("%d", j)
+		kubeSep := "KUBE-SEP-" + randomString()
 		err = i.iptable.NewChain("nat", kubeSep)
 		if err != nil {
-			log.ErrorLog("KUBE-SEP NewChain error: " + err.Error())
-			return err
+			log.WarnLog("KUBE-SEP NewChain error: " + err.Error())
 		}
 
 		// 在KUBE-SVC链中添加规则转发至KUBE-SEP链，默认采用随机算法
@@ -190,19 +202,18 @@ func (i *iptableManager) setIPTableForClusterIP(serviceName string, clusterIP st
 }
 
 // 注意，NodePort的实现和ClusterIP的实现存在差异，会多出一条链
-func (i *iptableManager) setIPtableForNodePort(serviceName string, clusterIP string, port int32, targetPort int32, nodePort int32, protocol apiObject.Protocol, podsIPList []string) error {
-	log.InfoLog("[KUBEPROXY]: NodePort  serviceName:" + serviceName + " clusterIP:" + clusterIP + " port:" + fmt.Sprintf("%d", port) + " targetPort:" + fmt.Sprintf("%d", targetPort) + " nodePort:" + fmt.Sprintf("%d", nodePort))
+func (i *iptableManager) setIPtableForNodePort(serviceName string, NodeIP string, port int32, targetPort int32, nodePort int32, protocol apiObject.Protocol, podsIPList []string) error {
+	log.InfoLog("[KUBEPROXY]: NodePort  serviceName:" + serviceName + " clusterIP:" + NodeIP + " port:" + fmt.Sprintf("%d", port) + " targetPort:" + fmt.Sprintf("%d", targetPort) + " nodePort:" + fmt.Sprintf("%d", nodePort))
 
 	// 为该Service Port创建一个独有的KUBE—SVC链
-	kubeSvc := "KUBE-SVC-" + serviceName + "-" + fmt.Sprintf("%d", port)
+	kubeSvc := "KUBE-SVC-" + randomString()
 	err := i.iptable.NewChain("nat", kubeSvc)
 	if err != nil {
-		log.ErrorLog("KUBE-SVC NewChain error: " + err.Error())
-		return err
+		log.WarnLog("KUBE-SVC NewChain error: " + err.Error())
 	}
 
 	// 在KUBE-SERVICES链末尾添加规则，转发至KUBE-NODEPORTS链
-	err = i.iptable.AppendUnique("nat", "KUBE-SERVICES", "-m", "Kubenetes service nodeport; NOTE: this must be the last rule in this chain",
+	err = i.iptable.AppendUnique("nat", "KUBE-SERVICES", "-m", "comment", "--comment", "Kubenetes Nodeport",
 		"-p", string(protocol), "-j", "KUBE-NODEPORTS")
 	if err != nil {
 		log.ErrorLog("KUBE-SERVICES Append error: " + err.Error())
@@ -210,7 +221,7 @@ func (i *iptableManager) setIPtableForNodePort(serviceName string, clusterIP str
 	}
 
 	// 在KUBE-NODEPORTS链中添加规则，转发至KUBE-SVC链
-	err = i.iptable.Insert("nat", "KUBE-NODEPORTS", 1, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", kubeSvc)
+	err = i.iptable.Insert("nat", "KUBE-NODEPORTS", 1, "-p", string(protocol), "-d", NodeIP, "-m", "comment", "--comment", serviceName, "--dport", fmt.Sprintf("%d", nodePort), "-j", kubeSvc)
 	if err != nil {
 		log.ErrorLog("KUBE-NODEPORTS Append error: " + err.Error())
 		return err
@@ -224,7 +235,7 @@ func (i *iptableManager) setIPtableForNodePort(serviceName string, clusterIP str
 	}
 
 	// 在KUBE-SVC链的上一条规则的前面添加规则，标记数据包
-	err = i.iptable.Insert("nat", kubeSvc, 1, "-d", clusterIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", port), "-j", "KUBE-MARK-MASQ")
+	err = i.iptable.Insert("nat", kubeSvc, 1, "-d", NodeIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "KUBE-MARK-MASQ")
 	if err != nil {
 		log.ErrorLog("KUBE-SVC Mark error: " + err.Error())
 		return err
@@ -234,11 +245,10 @@ func (i *iptableManager) setIPtableForNodePort(serviceName string, clusterIP str
 	podsLen := len(podsIPList)
 	for j, podIP := range podsIPList {
 		// 为每个pod创建一个独有的KUBE-SEP链
-		kubeSep := "KUBE-SEP-" + serviceName + "-" + fmt.Sprintf("%d", port) + "-" + fmt.Sprintf("%d", j)
+		kubeSep := "KUBE-SEP-" + randomString()
 		err = i.iptable.NewChain("nat", kubeSep)
 		if err != nil {
-			log.ErrorLog("KUBE-SEP NewChain error: " + err.Error())
-			return err
+			log.WarnLog("KUBE-SEP NewChain error: " + err.Error())
 		}
 
 		// 在KUBE-SVC链中添加规则转发至KUBE-SEP链，默认采用随机算法
@@ -258,14 +268,14 @@ func (i *iptableManager) setIPtableForNodePort(serviceName string, clusterIP str
 		}
 
 		// 在KUBE-SEP链中添加规则，转发至对应的pod
-		err = i.iptable.Append("nat", kubeSep, "-d", clusterIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", port), "-j", "DNAT", "--to-destination", podIP+":"+fmt.Sprintf("%d", targetPort))
+		err = i.iptable.Append("nat", kubeSep, "-d", NodeIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "DNAT", "--to-destination", podIP+":"+fmt.Sprintf("%d", targetPort))
 		if err != nil {
 			log.ErrorLog("KUBE-SEP DNAT error: " + err.Error())
 			return err
 		}
 
 		// 在KUBE-SEP链中添加规则，标记数据包
-		err = i.iptable.Insert("nat", kubeSep, 1, "-d", clusterIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", port), "-j", "KUBE-MARK-MASQ")
+		err = i.iptable.Insert("nat", kubeSep, 1, "-d", NodeIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "KUBE-MARK-MASQ")
 		if err != nil {
 			log.ErrorLog("KUBE-SEP Mark error: " + err.Error())
 			return err
@@ -302,24 +312,21 @@ func (i *iptableManager) DeleteService(deleteEvent *entity.ServiceEvent) error {
 			// 在KUBE-SERVICES链中删除转发转发规则
 			err := i.iptable.Delete("nat", "KUBE-SERVICES", "-d", deleteEvent.Service.Spec.ClusterIP, "-p", string(portConfig.Protocol), "--dport", fmt.Sprintf("%d", port), "-j", "KUBE-SVC-"+serviceName+"-"+fmt.Sprintf("%d", port))
 			if err != nil {
-				log.ErrorLog("DeleteService error: " + err.Error())
-				return err
+				log.WarnLog("DeleteService error: " + err.Error())
 			}
 
 			// 删除KUBE-SVC链
 			kubeSvc := "KUBE-SVC-" + serviceName + "-" + fmt.Sprintf("%d", port)
-			err = i.iptable.DeleteChain("nat", kubeSvc)
+			err = i.iptable.ClearAndDeleteChain("nat", kubeSvc)
 			if err != nil {
-				log.ErrorLog("KUBE-SVC DeleteChain error: " + err.Error())
-				return err
+				log.WarnLog("KUBE-SVC DeleteChain error: " + err.Error())
 			}
 
 			// 删除KUBE-SEP链
 			for j := 0; j < len(i.service2Endpoint[serviceName]); j++ {
-				err = i.iptable.DeleteChain("nat", "KUBE-SEP-"+serviceName+"-"+fmt.Sprintf("%d", port)+"-"+fmt.Sprintf("%d", j))
+				err = i.iptable.ClearAndDeleteChain("nat", "KUBE-SEP-"+serviceName+"-"+fmt.Sprint(port)+"-"+fmt.Sprint(j))
 				if err != nil {
-					log.ErrorLog("KUBE-SEP DeleteChain error: " + err.Error())
-					return err
+					log.WarnLog("KUBE-SEP DeleteChain error: " + err.Error())
 				}
 			}
 
@@ -330,24 +337,21 @@ func (i *iptableManager) DeleteService(deleteEvent *entity.ServiceEvent) error {
 			// 在KUBE-NODEPORTS链中删除转发规则
 			err := i.iptable.Delete("nat", "KUBE-NODEPORTS", "-p", string(portConfig.Protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "KUBE-SVC-"+serviceName+"-"+fmt.Sprintf("%d", portConfig.Port))
 			if err != nil {
-				log.ErrorLog("DeleteService error: " + err.Error())
-				return err
+				log.WarnLog("DeleteService error: " + err.Error())
 			}
 
 			// 删除KUBE-SVC链
 			kubeSvc := "KUBE-SVC-" + serviceName + "-" + fmt.Sprintf("%d", portConfig.Port)
-			err = i.iptable.DeleteChain("nat", kubeSvc)
+			err = i.iptable.ClearAndDeleteChain("nat", kubeSvc)
 			if err != nil {
-				log.ErrorLog("KUBE-SVC DeleteChain error: " + err.Error())
-				return err
+				log.WarnLog("KUBE-SVC DeleteChain error: " + err.Error())
 			}
 
 			// 删除KUBE-SEP链
 			for j := 0; j < len(i.service2Endpoint[serviceName]); j++ {
-				err = i.iptable.DeleteChain("nat", "KUBE-SEP-"+serviceName+"-"+fmt.Sprintf("%d", portConfig.Port)+"-"+fmt.Sprintf("%d", j))
+				err = i.iptable.ClearAndDeleteChain("nat", "KUBE-SEP-"+serviceName+"-"+fmt.Sprint(portConfig.Port)+"-"+fmt.Sprint(j))
 				if err != nil {
-					log.ErrorLog("KUBE-SEP DeleteChain error: " + err.Error())
-					return err
+					log.WarnLog("KUBE-SEP DeleteChain error: " + err.Error())
 				}
 			}
 		}
@@ -357,4 +361,16 @@ func (i *iptableManager) DeleteService(deleteEvent *entity.ServiceEvent) error {
 
 	}
 	return nil
+}
+
+// 随机生成10个数字字母混合的字符串
+func randomString() string {
+	str := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	bytes := []byte(str)
+	result := []byte{}
+	r := rand.New(rand.NewSource(99))
+	for i := 0; i < 10; i++ {
+		result = append(result, bytes[r.Intn(len(bytes))])
+	}
+	return string(result)
 }

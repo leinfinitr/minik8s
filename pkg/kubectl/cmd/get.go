@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
-	"minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"minik8s/tools/stringops"
 	"net/http"
@@ -24,7 +23,7 @@ var getCmd = &cobra.Command{
 	Run:   getHandler,
 }
 
-func init(){
+func init() {
 	getCmd.PersistentFlags().StringP("namespace", "n", "", "Namespace")
 }
 
@@ -43,15 +42,17 @@ func getHandler(cmd *cobra.Command, args []string) {
 	}
 	if len(args) == 1 {
 		if resourceType == apiObject.NodeType {
-			url := config.APIServerURL() + config.PodsURI
+			url := config.APIServerURL() + config.NodesURI
 			var nodes []apiObject.Node
-			code, err := httprequest.GetObjMsg(url, &nodes, "data")
+			res, err := http.Get(url)
 			if err != nil {
 				fmt.Println("Error: ", err)
 				os.Exit(1)
 			}
-			if code.StatusCode != 200 {
-				fmt.Println("Error: Failed to get nodes")
+			defer res.Body.Close()
+			err = json.NewDecoder(res.Body).Decode(&nodes)
+			if err != nil {
+				log.ErrorLog("GetNodes: " + err.Error())
 				os.Exit(1)
 			}
 			printNodesResult(nodes)
@@ -64,6 +65,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 		case apiObject.PodType:
 			getPodHandler(namespace)
 		case apiObject.ServiceType:
+			getServiceHandler(namespace)
 		case apiObject.ReplicaSetType:
 			getReplicaSetHandler(namespace)
 		}
@@ -119,7 +121,7 @@ func getPodHandler(namespace string) {
 	url := config.APIServerURL() + config.PodsURI
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	var pods []apiObject.Pod
-	resp,err := http.Get(url)
+	resp, err := http.Get(url)
 	if err != nil {
 		log.ErrorLog("GetPod: " + err.Error())
 		os.Exit(1)
@@ -133,11 +135,29 @@ func getPodHandler(namespace string) {
 	printPodsResult(pods)
 }
 
-func getReplicaSetHandler(namespace string){
+func getServiceHandler(namespace string){
+	url := config.APIServerURL() + config.ServicesURI
+	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+	var services []apiObject.Service
+	resp, err := http.Get(url)
+	if err != nil {
+		log.ErrorLog("GetService: " + err.Error())
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&services)
+	if err != nil {
+		log.ErrorLog("GetService: " + err.Error())
+		os.Exit(1)
+	}
+	printServicesResult(services)
+
+}
+func getReplicaSetHandler(namespace string) {
 	url := config.APIServerURL() + config.ReplicaSetsURI
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
 	var replicaSets []apiObject.ReplicaSet
-	resp,err := http.Get(url)
+	resp, err := http.Get(url)
 	if err != nil {
 		log.ErrorLog("GetReplicaSet: " + err.Error())
 		os.Exit(1)
@@ -149,6 +169,29 @@ func getReplicaSetHandler(namespace string){
 		os.Exit(1)
 	}
 	printReplicasetsResult(replicaSets)
+}
+
+func printServicesResult(services []apiObject.Service) {
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Kind", "Name", "ClusterIP", "Ports"})
+	for _, service := range services {
+		printServiceResult(service, writer)
+	}
+	writer.Render()
+}
+
+func printServiceResult(service apiObject.Service, writer table.Writer) {
+	ports := ""
+	for _, port := range service.Spec.Ports {
+		ports += fmt.Sprintf("%d/%s ", port.Port, port.Protocol)
+	}
+	writer.AppendRow(table.Row{
+		"Service",
+		service.Metadata.Name,
+		service.Spec.ClusterIP,
+		ports,
+	})
 }
 
 func printPodsResult(pods []apiObject.Pod) {

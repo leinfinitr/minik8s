@@ -24,11 +24,13 @@ var applyCmd = &cobra.Command{
 type ApplyObject string
 
 const (
-	Pod        ApplyObject = "Pod"
-	Service    ApplyObject = "Service"
-	Deployment ApplyObject = "Deployment"
-	ReplicaSet ApplyObject = "ReplicaSet"
-	Hpa        ApplyObject = "Hpa"
+	Pod                   ApplyObject = "Pod"
+	Service               ApplyObject = "Service"
+	Deployment            ApplyObject = "Deployment"
+	ReplicaSet            ApplyObject = "ReplicaSet"
+	PersistentVolume      ApplyObject = "PersistentVolume"
+	PersistentVolumeClaim ApplyObject = "PersistentVolumeClaim"
+	Hpa                   ApplyObject = "Hpa"
 )
 
 func applyHandler(cmd *cobra.Command, args []string) {
@@ -68,6 +70,10 @@ func applyHandler(cmd *cobra.Command, args []string) {
 			ServiceHandler(content)
 		case "Deployment":
 			DeploymentHandler(content)
+		case "PersistentVolume":
+			PersistentVolumeHandler(content)
+		case "PersistentVolumeClaim":
+			PersistentVolumeClaimHandler(content)
 		case "Hpa":
 			HpaHandler(content)
 		case "ReplicaSet":
@@ -117,10 +123,11 @@ func ServiceHandler(content []byte) {
 		log.ErrorLog("The name of the service is required.")
 		os.Exit(1)
 	}
-	url := config.APIServerURL() + config.ServicesURI
+	url := config.APIServerURL() + config.ServiceURI
 	url = strings.Replace(url, config.NameSpaceReplace, service.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, service.Metadata.Name, -1)
 	log.DebugLog("PUT " + url)
-	resp, err := httprequest.PostObjMsg(url, service)
+	resp, err := httprequest.PutObjMsg(url, service)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
 		os.Exit(1)
@@ -129,6 +136,39 @@ func ServiceHandler(content []byte) {
 }
 
 func DeploymentHandler(content []byte) {
+
+}
+
+func PersistentVolumeHandler(content []byte) {
+	var persistentVolume apiObject.PersistentVolume
+	err := translator.ParseApiObjFromYaml(content, &persistentVolume)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	url := config.APIServerURL() + config.PersistentVolumeURI
+	log.DebugLog("Post " + url)
+	_, err = httprequest.PostObjMsg(url, persistentVolume)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
+}
+
+func PersistentVolumeClaimHandler(content []byte) {
+	var pvc apiObject.PersistentVolumeClaim
+	err := translator.ParseApiObjFromYaml(content, &pvc)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	url := config.APIServerURL() + config.PersistentVolumeClaimURI
+	log.DebugLog("Post " + url)
+	_, err = httprequest.PostObjMsg(url, pvc)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
 
 }
 

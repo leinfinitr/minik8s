@@ -22,7 +22,7 @@ func CreateServerless(c *gin.Context) {
 		c.JSON(400, err.Error())
 	}
 
-	// 检查 serverless 对象是否存储在 etcd
+	// 检查 serverless 对应的 pod 对象是否存储在 etcd
 	key := config.EtcdServerlessPrefix + "/" + serverless.Name
 	response, _ := etcdclient.EtcdStore.Get(key)
 	if response != "" {
@@ -33,8 +33,6 @@ func CreateServerless(c *gin.Context) {
 
 	// 根据 serverless 对象创建一个 pod 对象
 	pod := conversion.ServerlessToPod(serverless)
-
-	// TODO: 将函数文件存入 volume
 
 	// 将 pod 对象存入 etcd
 	podJson, err := json.Marshal(pod)
@@ -131,8 +129,6 @@ func UpdateServerlessFunction(c *gin.Context) {
 		c.JSON(400, err.Error())
 		return
 	}
-
-	// TODO: 更新 volume 中的文件
 
 	c.JSON(200, "Update serverless "+serverlessName+" success")
 }

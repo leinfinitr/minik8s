@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
+	"minik8s/tools/host"
 	"minik8s/tools/log"
+	"strings"
+	"time"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
@@ -20,7 +23,7 @@ type PodUtils interface {
 	GetPodSandboxStatus(podId string) (*runtimeapi.PodSandboxStatus, error)
 	RecreatePodContainer(pod *apiObject.Pod) error
 	ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error)
-	UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error
+	UpdatePodStatus(pod *apiObject.Pod) error
 }
 
 // CreatePod 在这里，我们创建一个Pod相当于是创建一个Sandbox，并且会创建Pod内部的所有容器
@@ -122,7 +125,7 @@ func (r *RuntimeManager) StartPod(pod *apiObject.Pod) error {
 		if err != nil {
 			errorMsg := fmt.Sprintf("[RPC] Start container failed, containerID: %s", pod.Spec.Containers[i].ContainerID)
 			log.ErrorLog(errorMsg)
-			return err
+			continue
 		}
 		pod.Spec.Containers[i].ContainerStatus = apiObject.ContainerRunning
 
@@ -241,51 +244,124 @@ func (r *RuntimeManager) RecreatePodContainers(pod *apiObject.Pod) error {
 	return nil
 }
 
-func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (*apiObject.ExecRsp, error) {
+func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (string, error) {
 	log.InfoLog("[RPC] Start ExecPodContainer")
 
-	response, err := r.runtimeClient.Exec(context.Background(), &runtimeapi.ExecRequest{
+	// 获取 container 的状态
+	resp, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
 		ContainerId: req.ContainerId,
-		Cmd:         req.Cmd,
-		Tty:         req.Tty,
-		Stdin:       req.Stdin,
-		Stdout:      req.Stdout,
-		Stderr:      req.Stderr,
+		Verbose:     true,
 	})
-
-	if err != nil {
-		log.ErrorLog("Exec container failed")
-		return nil, err
-	}
-
-	return &apiObject.ExecRsp{
-		Url: response.Url,
-	}, nil
-}
-
-func (r *RuntimeManager) UpdateContainerStatus(container *apiObject.Container, pod *apiObject.Pod) error {
-	response, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
-		ContainerId: container.ContainerID,
-		Verbose:     true, // change the verbose status
-	})
-
 	if err != nil {
 		log.ErrorLog("Container status from CRI failed" + err.Error())
-		container.ContainerStatus = apiObject.ContainerUnknown
+		return "", err
+	}
+	// 如果 container 正在创建则循环等待
+	for resp.Status.State == runtimeapi.ContainerState_CONTAINER_CREATED {
+		resp, err = r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
+			ContainerId: req.ContainerId,
+			Verbose:     true,
+		})
+		if err != nil {
+			log.ErrorLog("Container status from CRI failed" + err.Error())
+			return "", err
+		}
+		time.Sleep(1 * time.Second)
+	}
+	// 如果 container 不是运行状态则返回错误
+	if resp.Status.State != runtimeapi.ContainerState_CONTAINER_RUNNING {
+		log.ErrorLog("Container is not running")
+		return "", errors.New("container is not running")
+	}
+	// 执行 container
+	cmd := strings.Join(req.Cmd, " ")
+	response, err := r.runtimeClient.ExecSync(context.Background(), &runtimeapi.ExecSyncRequest{
+		ContainerId: req.ContainerId,
+		Cmd:         []string{"/bin/sh", "-c", cmd},
+	})
+
+	if err != nil {
+		log.ErrorLog("Exec container failed: " + err.Error())
+		return "", err
+	}
+	log.DebugLog("Exec container success with Stdout: " + string(response.Stdout))
+	log.DebugLog("Exec container success with Stderr: " + string(response.Stderr))
+	// 删除response.Stdout最后的换行
+	return strings.TrimSuffix(string(response.Stdout), "\n"), nil
+}
+
+func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
+
+	log.InfoLog("[RPC] Start UpdatePodStatus")
+
+	// 记录所有容器的资源占用情况
+	var cpuUsage, memoryUsage float64
+
+	memoryAll, err := host.GetTotalMemory()
+	if err != nil {
+		log.ErrorLog("GetTotalMemory failed" + err.Error())
 		return err
 	}
 
-	switch response.Status.State {
-	case runtimeapi.ContainerState_CONTAINER_CREATED:
-		container.ContainerStatus = apiObject.ContainerCreated
-		pod.Status.Phase = apiObject.PodSucceeded
-	case runtimeapi.ContainerState_CONTAINER_RUNNING:
-		container.ContainerStatus = apiObject.ContainerRunning
-	default:
-		container.ContainerStatus = apiObject.ContainerUnknown
-		pod.Status.Phase = apiObject.PodFailed
-		return errors.New("container status isn't normal")
+	for _, container := range pod.Spec.Containers {
+		response1, err := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
+			ContainerId: container.ContainerID,
+		})
+
+		// if err != nil {
+		// 	log.ErrorLog("Container status from CRI failed" + err.Error())
+		// 	container.ContainerStatus = apiObject.ContainerUnknown
+		// 	return err
+		// }
+
+		response2, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
+			ContainerId: container.ContainerID,
+		})
+		if err != nil {
+			log.ErrorLog("Container status from CRI failed" + err.Error())
+			container.ContainerStatus = apiObject.ContainerUnknown
+			return err
+		}
+
+		switch response2.Status.State {
+		case runtimeapi.ContainerState_CONTAINER_CREATED:
+			container.ContainerStatus = apiObject.ContainerCreated
+			pod.Status.Phase = apiObject.PodSucceeded
+		case runtimeapi.ContainerState_CONTAINER_RUNNING:
+			container.ContainerStatus = apiObject.ContainerRunning
+		case runtimeapi.ContainerState_CONTAINER_EXITED:
+			container.ContainerStatus = apiObject.ContainerExited
+		default:
+			container.ContainerStatus = apiObject.ContainerUnknown
+			pod.Status.Phase = apiObject.PodFailed
+			return errors.New("container " + container.ContainerID + " status is unknown")
+		}
+
+		if container.ContainerStatus != apiObject.ContainerRunning {
+			continue
+		}
+
+		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
+			log.InfoLog(fmt.Sprintf("Cpu usage : %lu , all usage: %lu", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
+			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value) / float64(uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt))
+		} else {
+			log.WarnLog("CPU usage is 0")
+			cpuUsage += 0
+		}
+
+		if memoryAll != 0 {
+			log.InfoLog(fmt.Sprintf("Memory usage : %d , all usage: %d", response1.Stats.Memory.UsageBytes.Value, memoryAll))
+			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value) / (float64(memoryAll))
+		} else {
+			log.WarnLog("Memory usage is 0")
+			memoryUsage += 0
+		}
 	}
+
+	log.InfoLog(fmt.Sprintf("CPU usage %E: ", cpuUsage))
+	log.InfoLog(fmt.Sprintf("Memory usage %E: ", memoryUsage))
+	pod.Status.CpuUsage = cpuUsage
+	pod.Status.MemUsage = memoryUsage
 
 	return nil
 }

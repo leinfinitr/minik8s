@@ -86,7 +86,7 @@ func (i *imageManagerImpl) PullImage(container *apiObject.Container, sandboxConf
 	spec := &runtimeapi.ImageSpec{
 		Image:          image,
 		Annotations:    annotations,
-		RuntimeHandler: "", // TODO: 这里的RuntimeHandler是否会用的到？？
+		RuntimeHandler: "",
 	}
 
 	// 先查找该镜像是否已经被在本地了

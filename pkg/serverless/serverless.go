@@ -53,7 +53,7 @@ func (a *ServerlessServer) Register() {
 	a.Router.GET(config.ServerlessRunURI, handler.RunServerlessFunction)
 
 	// 运行Serverless Workflow
-	a.Router.GET(config.ServerlessWorkflowURI, handler.RunServerlessWorkflow)
+	a.Router.POST(config.ServerlessWorkflowURI, handler.RunServerlessWorkflow)
 }
 
 // 函数-------------------------------------------------------------

@@ -2,6 +2,8 @@ package conversion
 
 import (
 	"minik8s/pkg/apiObject"
+
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // ServerlessToPod 将一个 Serverless 对象转换为 Pod 对象
@@ -19,17 +21,35 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 			Volumes: []apiObject.Volume{
 				{
 					Name: serverless.Volume,
+					VolumeSource: apiObject.VolumeSource{
+						HostPath: apiObject.HostPathVolumeSource{
+							Path: serverless.HostPath,
+							Type: apiObject.HostPathDirectory,
+						},
+					},
 				},
 			},
 			Containers: []apiObject.Container{
 				{
-					Name:            serverless.Name,
-					Image:           serverless.Image,
-					ImagePullPolicy: "IfNotPresent",
+					Name:  serverless.Name,
+					Image: serverless.Image,
+					Command: []string{
+						"/bin/sh",
+						"-c",
+						"pip install -r /mnt/requirements.txt && sleep 600",
+					},
+					WorkingDir: "/mnt",
 					VolumeMounts: []apiObject.VolumeMount{
 						{
 							Name:      serverless.Volume,
 							MountPath: "/mnt",
+						},
+					},
+					Mounts: []*apiObject.Mount{
+						{
+							HostPath:      serverless.HostPath,
+							ContainerPath: "/mnt",
+							ReadOnly:      false,
 						},
 					},
 				},
@@ -49,4 +69,18 @@ func PodToServerless(pod apiObject.Pod) apiObject.Serverless {
 		serverless.Volume = container.VolumeMounts[0].Name
 	}
 	return serverless
+}
+
+// MountsToMounts 将一个 Mount 对象数组转换为 ContainerConfig.Mounts 对象数组
+func MountsToMounts(mounts []*apiObject.Mount) []*runtimeapi.Mount {
+	configMounts := make([]*runtimeapi.Mount, 0)
+	for _, mount := range mounts {
+		configMount := &runtimeapi.Mount{
+			HostPath:      mount.HostPath,
+			ContainerPath: mount.ContainerPath,
+			Readonly:      mount.ReadOnly,
+		}
+		configMounts = append(configMounts, configMount)
+	}
+	return configMounts
 }

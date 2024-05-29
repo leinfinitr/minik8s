@@ -64,7 +64,7 @@ func (s *ScaleManagerImpl) Run() {
 				continue
 			}
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(60 * time.Second)
 	}
 }
 
@@ -99,10 +99,24 @@ func (s *ScaleManagerImpl) IncreaseInstanceNum(name string) {
 	log.InfoLog("Create a new pod for " + name + " with name " + pod.Metadata.Name)
 }
 
-// DecreaseInstanceNum 减少一个Serverless Function的实例
+// DecreaseInstanceNum 删除一个Serverless Function的实例
 func (s *ScaleManagerImpl) DecreaseInstanceNum(name string) {
+	// 从 Instance 中取出最后一个 Pod
+	pod := s.Instance[name][s.InstanceNum[name]-1]
+	// 转发给 apiServer 删除一个 Pod
+	url := config.APIServerURL() + config.PodURI
+	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+	_, err := httprequest.DelMsg(url, nil)
+	if err != nil {
+		log.ErrorLog("Could not delete the object message." + err.Error())
+		os.Exit(1)
+	}
+	// 从 Instance 中删除
+	s.Instance[name] = s.Instance[name][:s.InstanceNum[name]]
 	s.InstanceNum[name]--
-	// TODO: 删除一个Serverless Function实例
+
+	log.InfoLog("Delete a pod for " + name + " with name " + pod.Metadata.Name)
 }
 
 // RunFunction 运行Serverless Function
@@ -111,6 +125,7 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	for s.InstanceNum[name] == 0 {
 		time.Sleep(1 * time.Second)
 	}
+	log.DebugLog("Run function " + name + " with param " + param)
 	// 从 Instance 中取出最后一个 Pod
 	pod := s.Instance[name][s.InstanceNum[name]-1]
 	serverless := s.Serverless[name]
@@ -128,10 +143,14 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	// 返回结果
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.ErrorLog("Could not read the response body." + err.Error())
+		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	return string(body)
+	result := string(body)
+	// 去掉result中首尾的引号
+	result = result[1 : len(result)-1]
+	log.InfoLog("Run function " + name + " with param " + param + " result: " + result)
+	return result
 }
 
 // AddPod 添加一个Pod

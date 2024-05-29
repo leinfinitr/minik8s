@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	"minik8s/pkg/kubectl/translator"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/pkg/kubectl/translator"
+	"minik8s/tools/log"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 var serverlessCmd = &cobra.Command{
@@ -22,9 +24,10 @@ var serverlessCmd = &cobra.Command{
 	Run:   serverlessHandler,
 }
 
+// serverlessHandler serverless 指令的处理函数
 func serverlessHandler(cmd *cobra.Command, args []string) {
+	// 如果没有参数，输出 serverless 指令的帮助信息
 	if len(args) == 0 {
-		// 如果没有参数，输出 serverless 指令的帮助信息
 		printHelp()
 		return
 	}
@@ -62,7 +65,7 @@ func serverlessHandler(cmd *cobra.Command, args []string) {
 		}
 		runFunction(args[1], args[2])
 	case "workflow":
-		if len(args) != 2 {
+		if len(args) != 3 {
 			log.ErrorLog("The number of parameters is incorrect: workflow [file.txt] [param]")
 			return
 		}
@@ -160,7 +163,7 @@ func deleteServerless(serverlessName string) {
 	// 转发给 serverless 服务端口处理
 	url := config.ServerlessURL() + config.ServerlessFunctionURI
 	url = strings.Replace(url, config.NameReplace, serverlessName, -1)
-	res, err := httprequest.DelMsg(url)
+	res, err := httprequest.DelMsg(url, nil)
 	if err != nil {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
@@ -222,7 +225,9 @@ func runFunction(serverlessName string, param string) {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	fmt.Println("Result: " + string(body))
+	result := string(body)
+	result = result[1 : len(result)-1]
+	fmt.Println("Result: " + result)
 }
 
 // workflow 执行 serverless 工作流
@@ -247,7 +252,7 @@ func workflow(fileName string, param string) {
 	// 转发给 serverless 服务端口处理
 	url := config.ServerlessURL() + config.ServerlessWorkflowURI
 	url = strings.Replace(url, config.ParamReplace, param, -1)
-	response, err := httprequest.PostObjMsg(url, content)
+	response, err := httprequest.PostObjMsg(url, string(content))
 	if err != nil {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
@@ -258,5 +263,7 @@ func workflow(fileName string, param string) {
 		log.ErrorLog(err.Error())
 		os.Exit(1)
 	}
-	fmt.Println("Result: " + string(body))
+	result := string(body)
+	result = result[1 : len(result)-1]
+	fmt.Println("Result: " + result)
 }
