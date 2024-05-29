@@ -11,6 +11,7 @@ import (
 	netRequest "minik8s/tools/netRequest"
 	stringops "minik8s/tools/stringops"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -148,6 +149,7 @@ func (rc *ReplicaSetControllerImpl) IncreaseReplicas(replicaMeta *apiObject.Obje
 		}
 
 		if code != http.StatusCreated {
+			log.ErrorLog("codeNum"+ strconv.Itoa(code))
 			log.ErrorLog("replicaController: " + "AddPodsNums code is not 201")
 			errStr += "code is not 200"
 		}

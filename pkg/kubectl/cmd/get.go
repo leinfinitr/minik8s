@@ -51,6 +51,10 @@ func getHandler(cmd *cobra.Command, args []string) {
 			}
 			defer res.Body.Close()
 			err = json.NewDecoder(res.Body).Decode(&nodes)
+			if err != nil {
+				log.ErrorLog("GetNodes: " + err.Error())
+				os.Exit(1)
+			}
 			printNodesResult(nodes)
 		}
 		namespace, _ := cmd.Flags().GetString("namespace")
@@ -61,6 +65,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 		case apiObject.PodType:
 			getPodHandler(namespace)
 		case apiObject.ServiceType:
+			getServiceHandler(namespace)
 		case apiObject.ReplicaSetType:
 			getReplicaSetHandler(namespace)
 		}
@@ -130,6 +135,24 @@ func getPodHandler(namespace string) {
 	printPodsResult(pods)
 }
 
+func getServiceHandler(namespace string){
+	url := config.APIServerURL() + config.ServicesURI
+	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+	var services []apiObject.Service
+	resp, err := http.Get(url)
+	if err != nil {
+		log.ErrorLog("GetService: " + err.Error())
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&services)
+	if err != nil {
+		log.ErrorLog("GetService: " + err.Error())
+		os.Exit(1)
+	}
+	printServicesResult(services)
+
+}
 func getReplicaSetHandler(namespace string) {
 	url := config.APIServerURL() + config.ReplicaSetsURI
 	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
@@ -146,6 +169,29 @@ func getReplicaSetHandler(namespace string) {
 		os.Exit(1)
 	}
 	printReplicasetsResult(replicaSets)
+}
+
+func printServicesResult(services []apiObject.Service) {
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Kind", "Name", "ClusterIP", "Ports"})
+	for _, service := range services {
+		printServiceResult(service, writer)
+	}
+	writer.Render()
+}
+
+func printServiceResult(service apiObject.Service, writer table.Writer) {
+	ports := ""
+	for _, port := range service.Spec.Ports {
+		ports += fmt.Sprintf("%d/%s ", port.Port, port.Protocol)
+	}
+	writer.AppendRow(table.Row{
+		"Service",
+		service.Metadata.Name,
+		service.Spec.ClusterIP,
+		ports,
+	})
 }
 
 func printPodsResult(pods []apiObject.Pod) {
