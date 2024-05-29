@@ -2,14 +2,16 @@ package handler
 
 import (
 	"encoding/json"
+
+	"github.com/gin-gonic/gin"
+
 	"minik8s/pkg/apiObject"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
-	"minik8s/pkg/serverless/scale"
+	"minik8s/pkg/serverless/manager"
 	"minik8s/tools/conversion"
 	"minik8s/tools/log"
 
-	"github.com/gin-gonic/gin"
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
 )
 
 // CreateServerless 创建Serverless环境
@@ -49,8 +51,8 @@ func CreateServerless(c *gin.Context) {
 	}
 
 	// 将 Pod 对象和 Serverless 对象存入 ScaleManager 中
-	scale.ScaleManager.AddPod(pod)
-	scale.ScaleManager.AddServerless(serverless)
+	manager.ScaleManager.AddPod(pod)
+	manager.ScaleManager.AddServerless(serverless)
 
 	log.InfoLog("CreateServerless: " + serverless.Name)
 	c.JSON(200, "Create serverless "+serverless.Name+" success")
@@ -152,13 +154,13 @@ func RunServerlessFunction(c *gin.Context) {
 // RunFunction 运行Serverless Function
 func RunFunction(name string, param string) string {
 	// 运行请求数加一
-	scale.ScaleManager.IncreaseRequestNum(name)
+	manager.ScaleManager.IncreaseRequestNum(name)
 
-	// 交由 scale 进行处理
-	result := scale.ScaleManager.RunFunction(name, param)
+	// 交由 manager 进行处理
+	result := manager.ScaleManager.RunFunction(name, param)
 
 	// 运行请求数减一
-	scale.ScaleManager.DecreaseRequestNum(name)
+	manager.ScaleManager.DecreaseRequestNum(name)
 
 	return result
 }

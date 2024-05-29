@@ -2,16 +2,17 @@ package kubelet
 
 import (
 	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/pkg/kubelet/pod"
 	"minik8s/tools/host"
 	"minik8s/tools/log"
 	"minik8s/tools/netRequest"
-	"strconv"
-	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Kubelet struct {
@@ -29,14 +30,6 @@ type Kubelet struct {
 
 	// 用来存储node的信息
 	node *apiObject.Node
-
-	//plegManager   *lifecycle.PlegManager
-
-	// 用来接受syncLoop发送信号的通道，handler从该通道获取时间信号并响应处理
-	//syncLoopChan chan *event.SyncLoopEventType
-
-	// 用来更新pod信息的通道
-	//podUpdateChan chan *entity.PodUpdateCmd
 }
 
 func (k *Kubelet) Run() {
@@ -57,20 +50,15 @@ func (k *Kubelet) Run() {
 }
 
 // RegisterNode 在kubelet刚开始创建时，需要到apiServer的work node去注册
-//
-//	通过发送POST请求的方式去注册，默认API："/api/v1/nodes"
 func (k *Kubelet) registerNode() bool {
-
 	if k.node == nil {
 		k.buildNode()
 	}
 
+	// 一直尝试注册直到成功为止
 	for {
-		// 一致尝试注册直到成功为止
 		url := k.ApiServerConfig.APIServerURL() + config.NodesURI
-
 		statusCode, _, _ := netRequest.PostRequestByTarget(url, *k.node)
-
 		if statusCode != config.HttpSuccessCode {
 			log.ErrorLog("register node failed")
 		} else {
@@ -82,6 +70,7 @@ func (k *Kubelet) registerNode() bool {
 
 }
 
+// buildNode 构建node的信息
 func (k *Kubelet) buildNode() {
 	// 注册所需的参数
 	HostName, _ := host.GetHostname()
@@ -106,14 +95,14 @@ func (k *Kubelet) buildNode() {
 		},
 		Metadata: apiObject.ObjectMeta{
 			Name:        HostName,
-			Namespace:   "", // 该字段为空
+			Namespace:   "",
 			Labels:      make(map[string]string),
 			Annotations: make(map[string]string),
-			UUID:        "", //	由API Server生成
+			UUID:        "",
 		},
 		Spec: apiObject.NodeSpec{
-			PodCIDR:       "", // 未使用
-			ProviderID:    "", // 未使用
+			PodCIDR:       "",
+			ProviderID:    "",
 			Unschedulable: true,
 		},
 		Status: apiObject.NodeStatus{
@@ -122,7 +111,7 @@ func (k *Kubelet) buildNode() {
 			Phase:       "running",
 			Conditions: []apiObject.NodeCondition{
 				{
-					Type:   "Ready", // Ready: kubelet准备好接受Pod
+					Type:   "Ready",
 					Status: "True",
 				},
 			},
@@ -137,6 +126,7 @@ func (k *Kubelet) buildNode() {
 
 }
 
+// UpdateNodeStatusInternal 更新node的状态
 func (k *Kubelet) UpdateNodeStatusInternal() {
 	log.InfoLog("UpdateNodeStatus")
 
@@ -179,26 +169,17 @@ func (k *Kubelet) UpdateNodeStatusInternal() {
 
 // registerKubeletAPI 注册kubelet的API
 func (k *Kubelet) registerKubeletAPI() {
+	// 该部分接口实现与 apiServer 中保持一致
 	log.DebugLog("register kubelet API")
-	// 该部分实现与 apiServer 中保持一致，每个方法的作用也参考 pkg/apiServer/apiServer.go 中的注释
-	// k.KubeletAPIRouter.DELETE(config.NodeURI, handlers.DeleteNode)
 
-	// 获取指定节点的状态
-	// k.KubeletAPIRouter.GET(config.NodeStatusURI, handlers.GetNodeStatus)
-	// 更新指定节点的状态
-	// k.KubeletAPIRouter.PUT(config.NodeStatusURI, handlers.UpdateNodeStatus)
 	// 部分更新指定节点的状态
 	k.KubeletAPIRouter.GET(config.NodeStatusURI, k.UpdateNodeStatus)
 
-	// 获取指定Pod
-	// k.KubeletAPIRouter.GET(config.PodURI, handlers.GetPod)
 	// 更新Pod
 	k.KubeletAPIRouter.PUT(config.PodURI, pod.UpdatePod)
-	// 部分更新Pod
-	// k.KubeletAPIRouter.PATCH(config.PodURI, handlers.UpdatePod)
 	// 删除指定Pod
 	k.KubeletAPIRouter.DELETE(config.PodURI, pod.DeletePod)
-	// kubelet挂掉了，apiServer用来同步Pod的信息
+	// kubelet挂掉之后，apiServer用来同步Pod的信息
 	k.KubeletAPIRouter.POST(config.PodsSyncURI, pod.SyncPods)
 
 	// 获取指定Pod的状态
@@ -211,8 +192,6 @@ func (k *Kubelet) registerKubeletAPI() {
 	k.KubeletAPIRouter.GET(config.PodsURI, pod.GetPods)
 	// 创建Pod
 	k.KubeletAPIRouter.POST(config.PodsURI, pod.CreatePod)
-	// 删除所有Pod
-	// k.KubeletAPIRouter.DELETE(config.PodsURI, handlers.DeletePods)
 }
 
 // NewKubelet 创建一个新的Kubelet
@@ -225,6 +204,7 @@ func NewKubelet() *Kubelet {
 	}
 }
 
+// UpdateNodeStatus 更新node的状态
 func (k *Kubelet) UpdateNodeStatus(c *gin.Context) {
 	log.InfoLog("UpdateNodeStatus")
 	if k.node == nil {

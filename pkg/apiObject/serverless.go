@@ -1,5 +1,10 @@
 package apiObject
 
+const (
+	ServerlessEventTypeTime ServerlessEventType = "time"
+	ServerlessEventTypeFile ServerlessEventType = "file"
+)
+
 type Serverless struct {
 	// 所需的python镜像
 	Image string `json:"image" yaml:"image"`
@@ -16,3 +21,16 @@ type Serverless struct {
 	// 执行函数的命令
 	Command string `json:"command" yaml:"command"`
 }
+
+type ServerlessEvent struct {
+	// 事件类型
+	Type ServerlessEventType `json:"type" yaml:"type"`
+	// 事件绑定参数
+	Params string `json:"params" yaml:"params"`
+	// 事件触发的 Serverless Function 名称
+	Name string `json:"name" yaml:"name"`
+	// 事件触发的 Serverless Function 参数
+	Args string `json:"args" yaml:"args"`
+}
+
+type ServerlessEventType string

@@ -3,10 +3,12 @@
 package host
 
 import (
-	"github.com/stretchr/testify/assert"
-	"minik8s/tools/log"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"minik8s/tools/log"
 )
 
 func TestGetHostname(t *testing.T) {

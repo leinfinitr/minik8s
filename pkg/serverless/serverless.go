@@ -2,12 +2,13 @@ package serverless
 
 import (
 	"fmt"
-	"minik8s/pkg/config"
-	"minik8s/pkg/serverless/handler"
-	"minik8s/pkg/serverless/scale"
-	"minik8s/tools/log"
 
 	"github.com/gin-gonic/gin"
+
+	"minik8s/pkg/config"
+	"minik8s/pkg/serverless/handler"
+	"minik8s/pkg/serverless/manager"
+	"minik8s/tools/log"
 )
 
 type ServerlessServer struct {
@@ -18,10 +19,8 @@ type ServerlessServer struct {
 	// 转发请求
 	Router *gin.Engine
 	// 自动扩容控制
-	Scale scale.ScaleManagerImpl
+	Scale manager.ScaleManagerImpl
 }
-
-// 方法-------------------------------------------------------------
 
 // Run 启动ServerlessServer
 func (s *ServerlessServer) Run() {
@@ -38,25 +37,26 @@ func (s *ServerlessServer) Run() {
 }
 
 // Register 注册路由
-func (a *ServerlessServer) Register() {
+func (s *ServerlessServer) Register() {
 	// 创建Serverless Function环境
-	a.Router.POST(config.ServerlessURI, handler.CreateServerless)
+	s.Router.POST(config.ServerlessURI, handler.CreateServerless)
 	// 获取所有的Serverless Function
-	a.Router.GET(config.ServerlessURI, handler.GetServerless)
+	s.Router.GET(config.ServerlessURI, handler.GetServerless)
 
 	// 删除Serverless Function
-	a.Router.DELETE(config.ServerlessFunctionURI, handler.DeleteServerless)
+	s.Router.DELETE(config.ServerlessFunctionURI, handler.DeleteServerless)
 	// 更新Serverless Function
-	a.Router.PUT(config.ServerlessFunctionURI, handler.UpdateServerlessFunction)
+	s.Router.PUT(config.ServerlessFunctionURI, handler.UpdateServerlessFunction)
 
 	// 运行Serverless Function
-	a.Router.GET(config.ServerlessRunURI, handler.RunServerlessFunction)
+	s.Router.GET(config.ServerlessRunURI, handler.RunServerlessFunction)
 
 	// 运行Serverless Workflow
-	a.Router.POST(config.ServerlessWorkflowURI, handler.RunServerlessWorkflow)
-}
+	s.Router.POST(config.ServerlessWorkflowURI, handler.RunServerlessWorkflow)
 
-// 函数-------------------------------------------------------------
+	// 绑定事件
+	s.Router.POST(config.ServerlessEventURI, handler.BindEvent)
+}
 
 // NewServerlessServer 创建一个新的ServerlessServer
 func NewServerlessServer() *ServerlessServer {
@@ -64,6 +64,6 @@ func NewServerlessServer() *ServerlessServer {
 		Address: config.ServerlessAddress,
 		Port:    config.ServerlessPort,
 		Router:  gin.Default(),
-		Scale:   *scale.NewScaleManager(),
+		Scale:   *manager.NewScaleManager(),
 	}
 }

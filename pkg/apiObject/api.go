@@ -24,11 +24,11 @@ type ObjectMeta struct {
 }
 
 const (
-	PodType         = "Pod"
-	ServiceType     = "Service"
-	ReplicaSetType  = "ReplicaSet"
-	NodeType        = "Node"
-	HpaType		 	= "Hpa"
+	PodType        = "Pod"
+	ServiceType    = "Service"
+	ReplicaSetType = "ReplicaSet"
+	NodeType       = "Node"
+	HpaType        = "Hpa"
 	ContainerType  = "Container"
 )
 
