@@ -236,6 +236,7 @@ func UpdatePodStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
+	log.InfoLog("UpdatePodStatus: " + namespace + "/" + name)
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
