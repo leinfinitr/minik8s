@@ -58,7 +58,7 @@ func getHandler(cmd *cobra.Command, args []string) {
 			printNodesResult(nodes)
 		}else if resourceType == apiObject.ContainerType{
 			var pods []apiObject.Pod
-			url := config.APIServerURL() + config.PodsURI
+			url := config.APIServerURL() + config.PodsGlobalURI
 			res, err := http.Get(url)
 			if err != nil {
 				fmt.Println("Error: ", err)
