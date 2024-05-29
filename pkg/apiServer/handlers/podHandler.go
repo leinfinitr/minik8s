@@ -351,7 +351,6 @@ func CreatePod(c *gin.Context) {
 	log.DebugLog("CreatePod: " + string(tep))
 	address := addresses[0].Address
 
-	log.WarnLog("pod command string: " + pod.Spec.Containers[0].Command[0])
 	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
