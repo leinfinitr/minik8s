@@ -154,9 +154,9 @@ func (hc *HpaControllerImpl) AddOnePod(hpa apiObject.HPA,pod apiObject.Pod) erro
 }
 
 func (hc *HpaControllerImpl)DeleteOnePod(pod apiObject.Pod) error {
-	url := config.APIServerURL() + config.PodsURI
+	url := config.APIServerURL() + config.PodURI
 	url = strings.Replace(url,config.NameSpaceReplace,pod.Metadata.Namespace,-1)
-	url = url + "/" + pod.Metadata.Name
+	url = strings.Replace(url,config.NameReplace,pod.Metadata.Name,-1)
 	code,err := netRequest.DelRequest(url)
 	if err != nil {
 		log.ErrorLog("DeleteOnePod: "+pod.Metadata.Namespace+"/"+pod.Metadata.Name+" delete one pod failed")
