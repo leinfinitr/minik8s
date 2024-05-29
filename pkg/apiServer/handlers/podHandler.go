@@ -149,7 +149,7 @@ func DeletePod(c *gin.Context) {
 	delUri := url + config.PodURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
-	_, err = httprequest.DelMsg(delUri, nil)
+	_, err = httprequest.DelMsg(delUri, *pod)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -349,6 +349,8 @@ func CreatePod(c *gin.Context) {
 	tep, _ := json.Marshal(addresses)
 	log.DebugLog("CreatePod: " + string(tep))
 	address := addresses[0].Address
+
+	log.WarnLog("pod command string: " + pod.Spec.Containers[0].Command[0])
 	url := "http://" + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)

@@ -211,6 +211,16 @@ func (r *RuntimeManager) DeletePod(pod *apiObject.Pod) error {
 			return err
 		}
 	}
+
+	_, err := r.runtimeClient.RemovePodSandbox(context.Background(), &runtimeapi.RemovePodSandboxRequest{
+		PodSandboxId: pod.PodSandboxId,
+	})
+	if err != nil {
+		errorMsg := fmt.Sprintf("[RPC] Remove pod sandbox failed, podSandboxId: %s", pod.PodSandboxId)
+		log.ErrorLog(errorMsg)
+		return err
+	}
+
 	return nil
 }
 
