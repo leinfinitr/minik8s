@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: network-pod
+  name: network-pod-2
   namespace: default
   labels:
     app: my-app
@@ -12,9 +12,9 @@ spec:
     - name: webserver
       image: python:3.7-alpine
       imagePullPolicy: IfNotPresent
-      Command: ["/bin/sh", "-c", "sleep 600"]
+      command: ["/bin/sh", "-c", "sleep 600"]
       ports:
-        - containerPort: 8080
-        - hostPort: 8080
+        - containerPort: 7080
+        - hostPort: 7080
   restartPolicy: Always
 

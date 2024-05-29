@@ -161,10 +161,10 @@ func DeletePod(c *gin.Context) {
 	address := addresses[0].Address
 	// 发送删除请求到kubelet
 	url := config.HttpSchema + address + ":" + fmt.Sprint(config.KubeletAPIPort)
-	delUri := url + config.PodsURI
+	delUri := url + config.PodURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
-	_, err = httprequest.DelMsg(delUri, nil)
+	_, err = httprequest.DelMsg(delUri, *pod)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -228,6 +228,7 @@ func UpdatePodStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
+	log.InfoLog("UpdatePodStatus: " + namespace + "/" + name)
 
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
@@ -389,7 +390,7 @@ func CreatePod(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, gin.H{"data": resp})
+	c.JSON(201, reaJson)
 }
 
 // DeletePods 删除所有Pod

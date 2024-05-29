@@ -52,11 +52,14 @@ func deleteHandler(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 		var ActualType reflect.Type
+		var urlKind string
 		switch kind {
 		case "Pod":
 			ActualType = reflect.TypeOf(apiObject.Pod{})
+			urlKind = "pods"
 		case "Service":
 			ActualType = reflect.TypeOf(apiObject.Service{})
+			urlKind = "services"
 		case "ReplicaSet":
 			ActualType = reflect.TypeOf(apiObject.ReplicaSet{})
 		default:
@@ -78,7 +81,7 @@ func deleteHandler(cmd *cobra.Command, args []string) {
 			fmt.Println("Error: Could not get the name of the resource.")
 			os.Exit(1)
 		}
-		url := config.APIServerURL() + "/api/v1/namespaces/" + namespace + "/" + kind + "/" + name
+		url := config.APIServerURL() + "/api/v1/namespaces/" + namespace + "/" + urlKind + "/" + name
 		resp, err := httprequest.DelMsg(url, obj)
 		if err != nil {
 			fmt.Println("Error: Could not delete the object.")

@@ -7,6 +7,7 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/host"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"strings"
 	"time"
@@ -211,6 +212,16 @@ func (r *RuntimeManager) DeletePod(pod *apiObject.Pod) error {
 			return err
 		}
 	}
+
+	_, err := r.runtimeClient.RemovePodSandbox(context.Background(), &runtimeapi.RemovePodSandboxRequest{
+		PodSandboxId: pod.PodSandboxId,
+	})
+	if err != nil {
+		errorMsg := fmt.Sprintf("[RPC] Remove pod sandbox failed, podSandboxId: %s", pod.PodSandboxId)
+		log.ErrorLog(errorMsg)
+		return err
+	}
+
 	return nil
 }
 
@@ -292,6 +303,8 @@ func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (string, error
 
 func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 
+	log.InfoLog("[RPC] Start UpdatePodStatus")
+
 	// 记录所有容器的资源占用情况
 	var cpuUsage, memoryUsage float64
 
@@ -305,11 +318,6 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		response1, err := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
 			ContainerId: container.ContainerID,
 		})
-
-		if response1 != nil {
-			log.InfoLog("CPU usage" + fmt.Sprint(response1.Stats.Cpu.UsageCoreNanoSeconds.Value))
-			log.InfoLog("Memory usage" + fmt.Sprint(response1.Stats.Memory.UsageBytes.Value))
-		}
 
 		// if err != nil {
 		// 	log.ErrorLog("Container status from CRI failed" + err.Error())
@@ -345,22 +353,34 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 
 		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
-			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value / (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)))
+			log.InfoLog(fmt.Sprintf("Cpu usage : %lu , all usage: %lu", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
+			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value) / float64(uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt))
 		} else {
+			log.WarnLog("CPU usage is 0")
 			cpuUsage += 0
 		}
 
 		if memoryAll != 0 {
-			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value / memoryAll)
+			log.InfoLog(fmt.Sprintf("Memory usage : %d , all usage: %d", response1.Stats.Memory.UsageBytes.Value, memoryAll))
+			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value) / (float64(memoryAll))
 		} else {
+			log.WarnLog("Memory usage is 0")
 			memoryUsage += 0
 		}
 	}
 
-	log.InfoLog("CPU usage" + fmt.Sprint(cpuUsage))
-	log.InfoLog("Memory usage" + fmt.Sprint(memoryUsage))
+	log.InfoLog(fmt.Sprintf("CPU usage %E: ", cpuUsage))
+	log.InfoLog(fmt.Sprintf("Memory usage %E: ", memoryUsage))
 	pod.Status.CpuUsage = cpuUsage
 	pod.Status.MemUsage = memoryUsage
 
+	url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodStatusURI
+	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+	res, err := httprequest.PutObjMsg(url, pod.Status)
+	if err != nil || res.StatusCode != 200 {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		return err
+	}
 	return nil
 }
