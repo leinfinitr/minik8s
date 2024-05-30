@@ -7,6 +7,7 @@ import (
 	"minik8s/pkg/entity"
 	"minik8s/tools/host"
 	"minik8s/tools/log"
+	"time"
 
 	"github.com/coreos/go-iptables/iptables"
 )
@@ -365,10 +366,12 @@ func (i *iptableManager) DeleteService(deleteEvent *entity.ServiceEvent) error {
 
 // 随机生成10个数字字母混合的字符串
 func randomString() string {
+	// 初始化随机数种子
+
 	str := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	bytes := []byte(str)
 	result := []byte{}
-	r := rand.New(rand.NewSource(99))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < 10; i++ {
 		result = append(result, bytes[r.Intn(len(bytes))])
 	}
