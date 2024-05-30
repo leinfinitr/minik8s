@@ -353,7 +353,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 
 		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
-			log.InfoLog(fmt.Sprintf("Cpu usage : %lu , all usage: %lu", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
+			log.InfoLog(fmt.Sprintf("Cpu usage : %d , all usage: %d", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
 			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value) / float64(uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt))
 		} else {
 			log.WarnLog("CPU usage is 0")
