@@ -43,7 +43,8 @@ const (
 	PersistentVolumeClaimURI  = "/api/v1/pvc"
 	PersistentVolumeClaimsURI = "/api/v1/pvc/:name"
 
-	MonitorURL = "/api/v1/monitor"
+	MonitorNodeURL = "/api/v1/monitor/node"
+	MonitorPodURL  = "/api/v1/monitor/pod"
 )
 
 const (

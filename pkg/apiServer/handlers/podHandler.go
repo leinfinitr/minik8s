@@ -136,13 +136,7 @@ func DeletePod(c *gin.Context) {
 		return
 	}
 	nodeName := pod.Spec.NodeName
-	// 删除etcd中的Pod
-	err = etcdclient.EtcdStore.Delete(key)
-	if err != nil {
-		log.ErrorLog("DeletePods: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
+
 	// 获取pod所在node的IP
 	res, err = etcdclient.EtcdStore.Get(config.EtcdNodePrefix + "/" + nodeName)
 	if err != nil {
@@ -159,12 +153,49 @@ func DeletePod(c *gin.Context) {
 	}
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
+
+	// 如果是一个自定义Metrics的pod，则需要对该pod的监控配置进行删除
+	needMonitor := false
+	var monitorPod apiObject.MonitorPod
+	for _, container := range pod.Spec.Containers {
+		for _, port := range container.Ports {
+			if port.Metrics != "" {
+				needMonitor = true
+				url := address + ":" + fmt.Sprint(port.HostPort) + "/" + port.Metrics
+				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
+			}
+		}
+	}
+	if needMonitor {
+		// 删除监控
+		monitorUri := config.MonitorPodURL
+		resp, err := httprequest.DelMsg(monitorUri, monitorPod)
+		if err != nil {
+			log.ErrorLog("DeletePods: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.ErrorLog("DeletePods: " + resp.Status)
+			c.JSON(500, gin.H{"error": resp.Status})
+			return
+		}
+	}
+
 	// 发送删除请求到kubelet
 	url := config.HttpSchema + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	delUri := url + config.PodURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
 	_, err = httprequest.DelMsg(delUri, *pod)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 删除etcd中的Pod
+	err = etcdclient.EtcdStore.Delete(key)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -358,6 +389,34 @@ func CreatePod(c *gin.Context) {
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
 	log.DebugLog("createUri: " + createUri)
+
+	// 如果是一个自定义Metrics的pod，则需要对该pod进行监控
+	needMonitor := false
+	var monitorPod apiObject.MonitorPod
+	for _, container := range pod.Spec.Containers {
+		for _, port := range container.Ports {
+			if port.Metrics != "" {
+				needMonitor = true
+				url := address + ":" + fmt.Sprint(port.HostPort) + "/" + port.Metrics
+				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
+			}
+		}
+	}
+	if needMonitor {
+		// 注册监控
+		resp, err := httprequest.PutObjMsg(config.MonitorPodURL, monitorPod)
+		if err != nil {
+			log.ErrorLog("CreatePod: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.ErrorLog("CreatePod: " + resp.Status)
+			c.JSON(500, gin.H{"error": resp.Status})
+			return
+		}
+	}
+
 	// 发送创建请求并解析返回的pod信息
 	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil {

@@ -130,9 +130,13 @@ func (a *ApiServer) Register() {
 
 	// 增加monitor的处理函数
 	// 首次注册节点
-	a.Router.PUT(config.MonitorURL, handlers.RegisterMonitor)
+	a.Router.PUT(config.MonitorNodeURL, handlers.RegisterNodeMonitor)
 	// 节点失联后，删除相关配置
-	a.Router.DELETE(config.MonitorURL, handlers.DeleteMonitor)
+	a.Router.DELETE(config.MonitorNodeURL, handlers.DeleteNodeMonitor)
+	// 注册暴露自定义指标的pod
+	a.Router.PUT(config.MonitorPodURL, handlers.RegisterPodMonitor)
+	// 删除暴露自定义指标的pod
+	a.Router.DELETE(config.MonitorPodURL, handlers.DeletePodMonitor)
 
 }
 

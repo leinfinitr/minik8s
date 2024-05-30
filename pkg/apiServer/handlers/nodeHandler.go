@@ -89,7 +89,7 @@ func CreateNode(c *gin.Context) {
 	}
 
 	// 注册monitor
-	url := config.APIServerURL() + config.MonitorURL
+	url := config.APIServerURL() + config.MonitorNodeURL
 	if resp, err := httprequest.PutObjMsg(url, node); err != nil || resp.StatusCode != config.HttpSuccessCode {
 		log.WarnLog("CreateNode: " + err.Error())
 		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
@@ -249,7 +249,7 @@ func PingNodeStatus(c *gin.Context) {
 		log.WarnLog("Ping Node failed : " + node.Status.Addresses[0].Address + " is not available")
 		// 无法联通，说明节点不可用
 		// 删除monitor配置
-		url := config.APIServerURL() + config.MonitorURL
+		url := config.APIServerURL() + config.MonitorNodeURL
 		resp, err := httprequest.DelMsg(url, node)
 		if err != nil || resp.StatusCode != config.HttpSuccessCode {
 			log.ErrorLog("PingNodeStatus failed")

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: monitor_pod
+  namespace: default
+  labels:
+    app: my-app
+  annotations:
+    description: "An example pod of fileserver and downloader"
+spec:
+  volumes:
+    - name: monitor-volume
+      hostPath:
+        path: /root/minik8s/examples/
+  containers:
+    - name: webserver
+      image: python:3.8-alpine
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: monitor-volume
+          mountPath: "/mnt"
+          ReadOnly: false
+      command: ["/bin/sh", "-c", "pip install prometheus_client && python /root/minik8s/examples/monitor.py"]
+      ports:
+        - containerPort: 9290
+        - hostPort: 9290
+        - metrics: "metrics"
+  restartPolicy: Always
+
