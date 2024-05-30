@@ -109,23 +109,43 @@ func (a *ApiServer) Register() {
 	// 删除制定Service
 	a.Router.DELETE(config.ServiceURI, handlers.DeleteService)
 
+	// 获取所有ReplicaSets
 	a.Router.GET(config.ReplicaSetsURI, handlers.GetReplicaSets)
+	// 获取全局所有ReplicaSets
 	a.Router.GET(config.GlobalReplicaSetsURI, handlers.GetGlobalReplicaSets)
+	// 获取指定ReplicaSet
 	a.Router.GET(config.ReplicaSetURI, handlers.GetReplicaSet)
+	//获取指定ReplicaSet的状态
 	a.Router.GET(config.ReplicaSetStatusURI, handlers.GetReplicaSetStatus)
+	//更新指定ReplicaSet的状态
 	a.Router.POST(config.ReplicaSetStatusURI, handlers.UpdateReplicaSetStatus)
+	//创建ReplicaSet
 	a.Router.POST(config.ReplicaSetsURI, handlers.AddReplicaSet)
+	//更新指定ReplicaSet
 	a.Router.PUT(config.ReplicaSetURI, handlers.UpdateReplicaSet)
+	//删除指定ReplicaSet
 	a.Router.DELETE(config.ReplicaSetURI, handlers.DeleteReplicaSet)
 
+	// 获取全局所有HPAs
 	a.Router.GET(config.GlobalHpaURI, handlers.GetGlobalHPAs)
+	// 获取所有HPAs
 	a.Router.GET(config.HpasURI, handlers.GetHPAs)
+	// 获取指定HPA
 	a.Router.GET(config.HpaURI, handlers.GetHPA)
+	// 创建指定HPA
 	a.Router.POST(config.HpasURI, handlers.AddHPA)
+	// 删除指定HPA
 	a.Router.DELETE(config.HpaURI, handlers.DeleteHPA)
+	// 更新指定HPA状态
 	a.Router.PUT(config.HpaStatusURI, handlers.UpdateHPAStatus)
+	
+	a.Router.GET(config.DNSsURI, handlers.GetDNSs)
+	a.Router.GET(config.DNSURI, handlers.GetDNS)
+	a.Router.POST(config.DNSsURI, handlers.AddDNS)
+	a.Router.DELETE(config.DNSURI, handlers.DeleteDNS)
+	// 创建指定PV
 	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
-
+	// 创建指定PVC
 	a.Router.POST(config.PersistentVolumeClaimURI, handlers.CreatePVC)
 
 	// 增加monitor的处理函数

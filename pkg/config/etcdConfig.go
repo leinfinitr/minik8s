@@ -16,6 +16,7 @@ const (
 	EtcdServicePrefix    = "/registry/services"
 	EtcdPvPrefix         = "/registry/pv"
 	EtcdPvcPrefix        = "/registry/pvc"
+	EtcdDnsPrefix        = "/registry/dns"
 )
 
 func NewEtcdConfig() *EtcdConfig {

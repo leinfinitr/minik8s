@@ -31,6 +31,9 @@ const (
 	HpaURI       = "/api/v1/namespaces/:namespace/hpa/:name"
 	GlobalHpaURI = "/api/v1/hpa"
 
+	DNSsURI = "/api/v1/namesapces/:namespace/dns"
+	DNSURI  = "/api/v1/namesapces/:namespace/dns/:name"
+
 	ServerlessURI         = "/api/v1/serverless"
 	ServerlessFunctionURI = "/api/v1/serverless/function/:name"
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"
