@@ -153,10 +153,16 @@ func RunServerlessFunction(c *gin.Context) {
 
 // RunFunction 运行Serverless Function
 func RunFunction(name string, param string) string {
+	// 检查该 Serverless 是否存在
+	if _, ok := manager.ScaleManager.Serverless[name]; !ok {
+		log.ErrorLog("RunFunction: " + name + " does not exist")
+		return "Serverless " + name + " does not exist"
+	}
+
 	// 运行请求数加一
 	manager.ScaleManager.IncreaseRequestNum(name)
 
-	// 交由 manager 进行处理
+	// 交由 ScaleManager 进行处理
 	result := manager.ScaleManager.RunFunction(name, param)
 
 	// 运行请求数减一

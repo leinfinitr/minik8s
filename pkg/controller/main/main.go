@@ -1,9 +1,9 @@
 package main
 
-import "minik8s/pkg/controller/ctlrMgr"
+import "minik8s/pkg/controller"
 
 func main() {
-	ctrlManager := ctlrmgr.NewControllerManager()
+	ctrlManager := controller.NewControllerManager()
 
 	ctrlManager.Run(make(chan struct{}))
 }

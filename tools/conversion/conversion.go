@@ -1,6 +1,8 @@
 package conversion
 
 import (
+	"strings"
+
 	"minik8s/pkg/apiObject"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -25,7 +27,7 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 					Command: []string{
 						"/bin/sh",
 						"-c",
-						"sleep 600",
+						"while true; do sleep 1000 done",
 					},
 					WorkingDir: "/mnt",
 					Mounts: []*apiObject.Mount{
@@ -49,7 +51,8 @@ func PodToServerless(pod apiObject.Pod) apiObject.Serverless {
 	}
 	for _, container := range pod.Spec.Containers {
 		serverless.Image = container.Image
-		serverless.Volume = container.VolumeMounts[0].Name
+		serverless.HostPath = container.Mounts[0].HostPath
+		serverless.Command = strings.Join(container.Command, " ")
 	}
 	return serverless
 }

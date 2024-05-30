@@ -1,6 +1,5 @@
 image: python:3.7-alpine
 name: subtract
-volume: serverless-volume
 hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
 functionFile: subtract.py
