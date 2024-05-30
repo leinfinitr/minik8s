@@ -13,6 +13,17 @@ const (
 	ContainerUnknown   ContainerStatus = 3
 )
 
+const (
+	// CPU, 单位 cores. (500m = .5 cores)
+	ResourceCPU ResourceName = "cpu"
+	// Memory, 单位 bytes. (500Gi = 500GiB = 500 * 1024 * 1024 * 1024)
+	ResourceMemory ResourceName = "memory"
+	// storage, 单位 bytes (e,g. 5Gi = 5GiB = 5 * 1024 * 1024 * 1024)
+	ResourceStorage ResourceName = "storage"
+	// 本地临时存储, 单位 bytes. (500Gi = 500GiB = 500 * 1024 * 1024 * 1024)
+	ResourceEphemeralStorage ResourceName = "ephemeral-storage"
+)
+
 type Container struct {
 	// 容器的ID
 	ContainerID string
@@ -51,7 +62,6 @@ type Container struct {
 	TTY bool `json:"tty" yaml:"tty"`
 }
 
-// ContainerPort -------------------------------------------
 type ContainerPort struct {
 	// 端口的名称
 	Name string `json:"name" yaml:"name"`
@@ -83,13 +93,10 @@ type ResourceRequirements struct {
 }
 
 // 资源列表
-type ResourceList map[ResourceName]Quantity
+type ResourceList map[ResourceName]string
 
 // 资源名称，包括CPU、内存
 type ResourceName string
-
-// 源数量
-type Quantity string
 
 type VolumeMount struct {
 	// 存储卷的名称

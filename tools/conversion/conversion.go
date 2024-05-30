@@ -36,7 +36,7 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 					Command: []string{
 						"/bin/sh",
 						"-c",
-						"pip install -r /mnt/requirements.txt && sleep 600",
+						"sleep 600",
 					},
 					WorkingDir: "/mnt",
 					VolumeMounts: []apiObject.VolumeMount{

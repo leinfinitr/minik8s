@@ -12,7 +12,7 @@ spec:
   selector:
       app: my-app11
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 20
   adjustInterval: 30s
   metrics:
     cpuPercent: 0.5

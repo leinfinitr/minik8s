@@ -4,16 +4,16 @@ package pod
 
 import (
 	"fmt"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"strings"
-
-	// "minik8s/tools/netRequest"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 // UpdatePod 删除原有 pod 之后根据 pod 信息创建新的 pod
@@ -23,6 +23,7 @@ func UpdatePod(c *gin.Context) {
 	if err != nil {
 		log.ErrorLog("UpdatePod error: " + err.Error())
 	}
+
 	err = podManager.DeletePod(&pod)
 	if err != nil {
 		log.ErrorLog("UpdatePod error: " + err.Error())
@@ -38,6 +39,7 @@ func UpdatePod(c *gin.Context) {
 	}
 }
 
+// CreatePod 创建 pod
 func CreatePod(c *gin.Context) {
 	var pod apiObject.Pod
 	err := c.ShouldBindJSON(&pod)
@@ -56,6 +58,7 @@ func CreatePod(c *gin.Context) {
 	}
 }
 
+// DeletePod 删除 pod
 func DeletePod(c *gin.Context) {
 	var pod apiObject.Pod
 	err := c.ShouldBindJSON(&pod)
@@ -70,6 +73,7 @@ func DeletePod(c *gin.Context) {
 	}
 }
 
+// GetPodStatus 获取 pod 的状态
 func GetPodStatus(c *gin.Context) {
 	var pod apiObject.Pod
 	err := c.ShouldBindJSON(&pod)
@@ -94,6 +98,7 @@ func GetPodStatus(c *gin.Context) {
 	c.JSON(config.HttpErrorCode, "Pod not found")
 }
 
+// SyncPods 用于同步 pod
 func SyncPods(c *gin.Context) {
 	var pods []apiObject.Pod
 	err := c.ShouldBindJSON(&pods)
@@ -115,14 +120,12 @@ func ScanPodStatus() {
 	log.DebugLog("start scan pod status")
 	// 每间隔 15s 扫描一次
 	for {
-
 		ScanPodStatusRoutine()
-
-		// 间隔15s
 		time.Sleep(15 * time.Second)
 	}
 }
 
+// ScanPodStatusRoutine 用于扫描 pod 的状态，根据 pod 的状态进行相应的操作
 func ScanPodStatusRoutine() {
 	// 更新 pod 的状态
 	err := podManager.UpdatePodStatus()
@@ -147,14 +150,14 @@ func ScanPodStatusRoutine() {
 					UpdatePodStatus(pod)
 				}
 			}()
-			// 其余情况暂不处理
 		default:
+			// 其余情况暂不处理
 			log.DebugLog("Pod" + pod.Metadata.Name + " is in phase: " + string(phase))
 		}
 	}
 }
 
-// ExecPodContainer 用于执行 pod 中的容器
+// ExecPodContainer 用于在 pod 中的容器执行命令
 func ExecPodContainer(c *gin.Context) {
 	containerId := c.Param("container")
 	param := c.Param("param")
@@ -187,14 +190,18 @@ func GetPods(c *gin.Context) {
 	c.JSON(200, pods)
 }
 
+// UpdatePodStatus 向 apiServer 更新 pod 的状态
 func UpdatePodStatus(pod *apiObject.Pod) {
+	// 不断重试，直到更新成功
 	for {
-		url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodStatusURI
+		url := config.HttpSchema + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodStatusURI
 		url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
 		url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
 		res, err := httprequest.PutObjMsg(url, pod.Status)
-		if err != nil || res.StatusCode != 200 {
+		if err != nil {
 			log.ErrorLog("UpdatePodStatus: " + err.Error())
+		} else if res.StatusCode != 200 {
+			log.ErrorLog("UpdatePodStatus error: " + res.Status)
 		} else {
 			break
 		}

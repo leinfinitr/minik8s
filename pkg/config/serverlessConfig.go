@@ -1,5 +1,3 @@
-// 描述：serverless 配置
-
 package config
 
 import "strconv"
@@ -12,5 +10,5 @@ const (
 )
 
 func ServerlessURL() string {
-	return "http://" + ServerlessAddress + ":" + strconv.Itoa(ServerlessPort)
+	return HttpSchema + ServerlessAddress + ":" + strconv.Itoa(ServerlessPort)
 }

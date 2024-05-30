@@ -7,14 +7,12 @@ const (
 	NodeURI       = "/api/v1/nodes/:name"
 	NodeStatusURI = "/api/v1/nodes/:name/status"
 
-	PodURI                    = "/api/v1/namespaces/:namespace/pods/:name"
-	PodEphemeralContainersURI = "/api/v1/namespaces/:namespace/pods/:name/ephemeralContainers"
-	PodLogURI                 = "/api/v1/namespaces/:namespace/pods/:name/log"
-	PodStatusURI              = "/api/v1/namespaces/:namespace/pods/:name/status"
-	PodExecURI                = "/api/v1/namespaces/:namespace/pods/:name/exec/:container/:param"
-	PodsURI                   = "/api/v1/namespaces/:namespace/pods"
-	PodsGlobalURI             = "/api/v1/pods"
-	PodsSyncURI               = "/api/v1/pods/sync"
+	PodURI        = "/api/v1/namespaces/:namespace/pods/:name"
+	PodStatusURI  = "/api/v1/namespaces/:namespace/pods/:name/status"
+	PodExecURI    = "/api/v1/namespaces/:namespace/pods/:name/exec/:container/:param"
+	PodsURI       = "/api/v1/namespaces/:namespace/pods"
+	PodsGlobalURI = "/api/v1/pods"
+	PodsSyncURI   = "/api/v1/pods/sync"
 
 	ProxyStatusURI   = "/api/v1/proxy"
 	ProxiesStatusURI = "/api/v1/proxy/:name"
@@ -37,6 +35,7 @@ const (
 	ServerlessFunctionURI = "/api/v1/serverless/function/:name"
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"
 	ServerlessWorkflowURI = "/api/v1/serverless/workflow/:param"
+	ServerlessEventURI    = "/api/v1/serverless/event"
 
 	JobsURI      = "/api/v1/namespaces/:namespace/jobs"
 	JobURI       = "/api/v1/namespaces/:namespace/jobs/:name"

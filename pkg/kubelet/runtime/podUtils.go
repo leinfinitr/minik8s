@@ -7,6 +7,7 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/host"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
 	"strings"
 	"time"
@@ -211,6 +212,16 @@ func (r *RuntimeManager) DeletePod(pod *apiObject.Pod) error {
 			return err
 		}
 	}
+
+	_, err := r.runtimeClient.RemovePodSandbox(context.Background(), &runtimeapi.RemovePodSandboxRequest{
+		PodSandboxId: pod.PodSandboxId,
+	})
+	if err != nil {
+		errorMsg := fmt.Sprintf("[RPC] Remove pod sandbox failed, podSandboxId: %s", pod.PodSandboxId)
+		log.ErrorLog(errorMsg)
+		return err
+	}
+
 	return nil
 }
 
@@ -363,5 +374,13 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 	pod.Status.CpuUsage = cpuUsage
 	pod.Status.MemUsage = memoryUsage
 
+	url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodStatusURI
+	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+	res, err := httprequest.PutObjMsg(url, pod.Status)
+	if err != nil || res.StatusCode != 200 {
+		log.ErrorLog("UpdatePodStatus: " + err.Error())
+		return err
+	}
 	return nil
 }

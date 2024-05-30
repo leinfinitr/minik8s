@@ -12,7 +12,7 @@ spec:
     - name: webserver
       image: python:3.7-alpine
       imagePullPolicy: IfNotPresent
-      Command: ["/bin/sh", "-c", "sleep 600"]
+      command: ["/bin/sh", "-c", "python -m http.server 7080"]
       ports:
         - containerPort: 7080
         - hostPort: 7080

@@ -1,9 +1,6 @@
 package config
 
 const (
-	// KubeletLocalURLPrefix kubelet server 的地址前缀
-	KubeletLocalURLPrefix = "http://192.168.1.6"
-
 	// KubeletAPIPort kubelet server 与 apiServer 通信的端口
 	KubeletAPIPort = 10250
 	// KubeletHealthPort 通过访问该端口可以判断 kubelet 是否正常工作
@@ -14,12 +11,9 @@ const (
 	ReadOnlyPort = 10255
 )
 
-// grpc request
 const (
 	ContainerRuntimeEndpoint = "unix:///run/containerd/containerd.sock"
 	ImageRuntimeEndpoint     = "unix:///run/containerd/containerd.sock"
 
 	MaxMsgSize = 1024 * 1024 * 16
 )
-
-// defaultUnixEndpoint = "unix:///tmp/kubelet_remote_%v.sock"

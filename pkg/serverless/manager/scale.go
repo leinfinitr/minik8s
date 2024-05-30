@@ -1,15 +1,17 @@
-package scale
+package manager
 
 import (
 	"fmt"
 	"io"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"os"
 	"strings"
 	"time"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 type ScaleManagerImpl struct {
@@ -48,24 +50,34 @@ func NewScaleManager() *ScaleManagerImpl {
 // Run 启动自动扩容控制
 func (s *ScaleManagerImpl) Run() {
 	// 定时循环检查每个Serverless Function的请求数量和实例数量，根据阈值自动扩容或缩容
-	for {
-		for name, requestNum := range s.RequestNum {
-			// 扩容
-			if requestNum > s.Threshold*s.InstanceNum[name] {
-				s.IncreaseInstanceNum(name)
-				continue
+	go func() {
+		for {
+			for name, requestNum := range s.RequestNum {
+				// 扩容
+				if requestNum > s.Threshold*s.InstanceNum[name] {
+					s.IncreaseInstanceNum(name)
+					continue
+				}
 			}
-			if s.InstanceNum[name] == 0 {
-				continue
-			}
-			// 缩容
-			if requestNum <= s.Threshold*(s.InstanceNum[name]-1) {
-				s.DecreaseInstanceNum(name)
-				continue
-			}
+			time.Sleep(1 * time.Second)
 		}
-		time.Sleep(60 * time.Second)
-	}
+	}()
+
+	go func() {
+		for {
+			for name, requestNum := range s.RequestNum {
+				if s.InstanceNum[name] == 0 {
+					continue
+				}
+				// 缩容
+				if requestNum <= s.Threshold*(s.InstanceNum[name]-1) {
+					s.DecreaseInstanceNum(name)
+					continue
+				}
+			}
+			time.Sleep(60 * time.Second)
+		}
+	}()
 }
 
 // IncreaseRequestNum 增加一个Serverless Function的请求数量

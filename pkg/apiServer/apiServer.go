@@ -83,16 +83,6 @@ func (a *ApiServer) Register() {
 	// 删除指定Pod
 	a.Router.DELETE(config.PodURI, handlers.DeletePod)
 
-	// 获取指定Pod的EphemeralContainers
-	a.Router.GET(config.PodEphemeralContainersURI, handlers.GetPodEphemeralContainers)
-	// 更新Pod的EphemeralContainers
-	a.Router.PUT(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
-	// 部分更新Pod的EphemeralContainers
-	a.Router.PATCH(config.PodEphemeralContainersURI, handlers.UpdatePodEphemeralContainers)
-
-	// 获取指定Pod的日志
-	a.Router.GET(config.PodLogURI, handlers.GetPodLog)
-
 	// 获取指定Pod的状态
 	a.Router.GET(config.PodStatusURI, handlers.GetPodStatus)
 	// 更新Pod的状态

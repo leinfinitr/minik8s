@@ -3,6 +3,7 @@ package runtime
 import (
 	"minik8s/pkg/apiObject"
 	"minik8s/tools/conversion"
+	"minik8s/tools/log"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
@@ -74,6 +75,7 @@ func (r *RuntimeManager) getContainerConfig(container *apiObject.Container, sand
 		WorkingDir: container.WorkingDir,
 		Mounts:     conversion.MountsToMounts(container.Mounts),
 	}
+	log.DebugLog("ContainerConfig: " + config.String())
 
 	return config, nil
 
