@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -17,12 +18,17 @@ import (
 type ScaleManagerImpl struct {
 	// 扩容阈值，当同时处理的请求超过这个值时，自动扩容
 	Threshold int
-	// 当前每个Serverless Function的实例数量
-	InstanceNum map[string]int
-	// 当前每个Serverless Function的请求数量
-	RequestNum map[string]int
-	// 每个Serverless Function的所有运行实例
-	Instance map[string][]apiObject.Pod
+
+	// 每个Serverless Function的实例数量
+	FunctionInstanceNum map[string]int
+	// 每个Serverless Function的请求数量
+	FunctionRequestNum map[string]int
+
+	// 所有运行实例
+	Instance map[string]apiObject.Pod
+	// 每个实例当前处理的请求数量
+	InstanceRequestNum map[string]int
+
 	// 每个Serverless Function对应的Pod
 	Pod map[string]apiObject.Pod
 	// 每个Serverless Function对应的Serverless
@@ -35,12 +41,13 @@ var ScaleManager *ScaleManagerImpl = nil
 func NewScaleManager() *ScaleManagerImpl {
 	if ScaleManager == nil {
 		ScaleManager = &ScaleManagerImpl{
-			Threshold:   10,
-			InstanceNum: make(map[string]int),
-			RequestNum:  make(map[string]int),
-			Instance:    make(map[string][]apiObject.Pod),
-			Pod:         make(map[string]apiObject.Pod),
-			Serverless:  make(map[string]apiObject.Serverless),
+			Threshold:           10,
+			FunctionInstanceNum: make(map[string]int),
+			FunctionRequestNum:  make(map[string]int),
+			Instance:            make(map[string]apiObject.Pod),
+			InstanceRequestNum:  make(map[string]int),
+			Pod:                 make(map[string]apiObject.Pod),
+			Serverless:          make(map[string]apiObject.Serverless),
 		}
 
 	}
@@ -52,10 +59,10 @@ func (s *ScaleManagerImpl) Run() {
 	// 定时循环检查每个Serverless Function的请求数量和实例数量，根据阈值自动扩容或缩容
 	go func() {
 		for {
-			for name, requestNum := range s.RequestNum {
+			for name, requestNum := range s.FunctionRequestNum {
 				// 扩容
-				if requestNum > s.Threshold*s.InstanceNum[name] {
-					s.IncreaseInstanceNum(name)
+				if requestNum > s.Threshold*s.FunctionInstanceNum[name] {
+					s.IncreaseInstance(name)
 					continue
 				}
 			}
@@ -65,13 +72,10 @@ func (s *ScaleManagerImpl) Run() {
 
 	go func() {
 		for {
-			for name, requestNum := range s.RequestNum {
-				if s.InstanceNum[name] == 0 {
-					continue
-				}
+			for name, requestNum := range s.InstanceRequestNum {
 				// 缩容
-				if requestNum <= s.Threshold*(s.InstanceNum[name]-1) {
-					s.DecreaseInstanceNum(name)
+				if requestNum == 0 {
+					s.DecreaseInstance(name)
 					continue
 				}
 			}
@@ -82,20 +86,23 @@ func (s *ScaleManagerImpl) Run() {
 
 // IncreaseRequestNum 增加一个Serverless Function的请求数量
 func (s *ScaleManagerImpl) IncreaseRequestNum(name string) {
-	s.RequestNum[name]++
+	s.FunctionRequestNum[name]++
 }
 
 // DecreaseRequestNum 减少一个Serverless Function的请求数量
 func (s *ScaleManagerImpl) DecreaseRequestNum(name string) {
-	s.RequestNum[name]--
+	s.FunctionRequestNum[name]--
 }
 
-// IncreaseInstanceNum 增加一个Serverless Function的实例
-func (s *ScaleManagerImpl) IncreaseInstanceNum(name string) {
+// IncreaseInstance 增加一个Serverless Function的实例
+//
+//	name: Serverless Function的名字
+func (s *ScaleManagerImpl) IncreaseInstance(name string) {
 	// 修改 pod 的 name 和 container name 为 name-InstanceNum
 	pod := s.Pod[name]
-	pod.Metadata.Name = name + "-" + fmt.Sprint(s.InstanceNum[name])
-	pod.Spec.Containers[0].Name = name + "-" + fmt.Sprint(s.InstanceNum[name])
+	instanceName := name + "-" + fmt.Sprint(s.FunctionInstanceNum[name])
+	pod.Metadata.Name = instanceName
+	pod.Spec.Containers[0].Name = instanceName
 	// 转发给 apiServer 创建一个 Pod
 	url := config.APIServerURL() + config.PodsURI
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
@@ -105,16 +112,18 @@ func (s *ScaleManagerImpl) IncreaseInstanceNum(name string) {
 		os.Exit(1)
 	}
 	// 添加到 Instance 中
-	s.Instance[name] = append(s.Instance[name], pod)
-	s.InstanceNum[name]++
+	s.FunctionInstanceNum[name]++
+	s.Instance[instanceName] = pod
+	s.InstanceRequestNum[instanceName] = 0
 
 	log.InfoLog("Create a new pod for " + name + " with name " + pod.Metadata.Name)
 }
 
-// DecreaseInstanceNum 删除一个Serverless Function的实例
-func (s *ScaleManagerImpl) DecreaseInstanceNum(name string) {
-	// 从 Instance 中取出最后一个 Pod
-	pod := s.Instance[name][s.InstanceNum[name]-1]
+// DecreaseInstance 删除一个Serverless Function的实例
+//
+//	instanceName: 运行实例的名字
+func (s *ScaleManagerImpl) DecreaseInstance(instanceName string) {
+	pod := s.Instance[instanceName]
 	// 转发给 apiServer 删除一个 Pod
 	url := config.APIServerURL() + config.PodURI
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
@@ -125,22 +134,41 @@ func (s *ScaleManagerImpl) DecreaseInstanceNum(name string) {
 		os.Exit(1)
 	}
 	// 从 Instance 中删除
-	s.Instance[name] = s.Instance[name][:s.InstanceNum[name]]
-	s.InstanceNum[name]--
+	s.FunctionInstanceNum[pod.Metadata.Name]--
+	delete(s.Instance, instanceName)
+	delete(s.InstanceRequestNum, instanceName)
 
-	log.InfoLog("Delete a pod for " + name + " with name " + pod.Metadata.Name)
+	log.InfoLog("Delete pod " + pod.Metadata.Name)
 }
 
 // RunFunction 运行Serverless Function
+//
+//	name: Serverless Function的名字
 func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	// 如果当前没有实例，则循环等待
-	for s.InstanceNum[name] == 0 {
+	for s.FunctionInstanceNum[name] == 0 {
 		time.Sleep(1 * time.Second)
 	}
 	log.DebugLog("Run function " + name + " with param " + param)
-	// 从 Instance 中取出最后一个 Pod
-	pod := s.Instance[name][s.InstanceNum[name]-1]
+	// 遍历所有实例，找到一个属于当前Function且请求最少的实例
+	minRequestNum := math.MaxInt
+	minRequestInstanceName := ""
+	for instanceName, requestNum := range s.InstanceRequestNum {
+		if strings.HasPrefix(instanceName, name) && requestNum < minRequestNum {
+			minRequestNum = s.InstanceRequestNum[instanceName]
+			minRequestInstanceName = instanceName
+		}
+	}
+	// 如果没有找到合适的实例，则直接报错
+	if minRequestInstanceName == "" {
+		log.ErrorLog("Could not find a suitable instance for " + name)
+		os.Exit(1)
+	}
+	// 取出该实例
+	pod := s.Instance[minRequestInstanceName]
 	serverless := s.Serverless[name]
+	// 增加该实例处理的请求数量
+	s.InstanceRequestNum[minRequestInstanceName]++
 	// 转发给 apiServer 运行 Pod 中的容器
 	url := config.APIServerURL() + config.PodExecURI
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
@@ -152,6 +180,8 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 		log.ErrorLog("Could not post the message." + err.Error())
 		os.Exit(1)
 	}
+	// 减少该实例处理的请求数量
+	s.InstanceRequestNum[minRequestInstanceName]--
 	// 返回结果
 	body, err := io.ReadAll(response.Body)
 	if err != nil {

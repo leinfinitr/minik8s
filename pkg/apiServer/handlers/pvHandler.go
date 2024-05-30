@@ -6,9 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"minik8s/pkg/apiObject"
+	"minik8s/pkg/controller"
 	"minik8s/tools/log"
-
-	specctlrs "minik8s/pkg/controller/specCtlrs"
 )
 
 // CreatePV 创建PersistentVolume
@@ -31,7 +30,7 @@ func CreatePV(c *gin.Context) {
 
 	// 创建pv
 	log.DebugLog("CreatePv: " + pvNamespace + "/" + pvName)
-	err = specctlrs.PvControllerInstance.AddPv(&pv)
+	err = controller.ControllerManagerInstance.AddPv(&pv)
 	if err != nil {
 		log.ErrorLog("Create PersistentVolume: " + err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

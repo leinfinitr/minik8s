@@ -17,13 +17,15 @@ type PvController interface {
 	Run()
 	AddPv(pv *apiObject.PersistentVolume) error
 	AddPvc(pvc *apiObject.PersistentVolumeClaim) error
-	GetBind(pvcName string) string
+	BindPodToPvc(pvc *apiObject.PersistentVolumeClaim, podName string) error
+	UnbindPodToPvc(pvc *apiObject.PersistentVolumeClaim) error
+	GetPvcBind(pvcName string) string
 }
 
 type PvControllerImpl struct {
-	// 用于存储PersistentVolume
+	// 用于存储PersistentVolume，名称为namespace/name
 	PvMap map[string]*apiObject.PersistentVolume
-	// 用于存储PersistentVolumeClaim和PersistentVolume的映射关系
+	// 用于存储PersistentVolumeClaim和PersistentVolume的映射关系，名称均为为namespace/name
 	PvcPvMap map[string]string
 }
 
@@ -32,13 +34,11 @@ var (
 	PvControllerTimeGap = []time.Duration{10 * time.Second}
 )
 
-var PvControllerInstance *PvControllerImpl = nil
-
 func NewPvController() (PvController, error) {
-	if PvControllerInstance == nil {
-		PvControllerInstance = &PvControllerImpl{}
-	}
-	return PvControllerInstance, nil
+	return &PvControllerImpl{
+		PvMap:    make(map[string]*apiObject.PersistentVolume),
+		PvcPvMap: make(map[string]string),
+	}, nil
 }
 
 func (pc *PvControllerImpl) Run() {
@@ -48,27 +48,26 @@ func (pc *PvControllerImpl) Run() {
 
 // syncPv 同步PersistentVolume
 func (pc *PvControllerImpl) syncPv() {
-	for {
-		// 从etcd中获取所有PersistentVolumeClaim
-		response, err := etcdclient.EtcdStore.Get(config.EtcdPvcPrefix)
+	log.DebugLog("Sync PersistentVolume")
+	// 从etcd中获取所有PersistentVolumeClaim
+	response, err := etcdclient.EtcdStore.PrefixGet(config.EtcdPvcPrefix)
+	if err != nil {
+		log.ErrorLog("Sync PersistentVolume: " + err.Error())
+		return
+	}
+	// 绑定PersistentVolumeClaim
+	for _, v := range response {
+		pvc := apiObject.PersistentVolumeClaim{}
+		err = json.Unmarshal([]byte(v), &pvc)
 		if err != nil {
 			log.ErrorLog("Sync PersistentVolume: " + err.Error())
 			continue
 		}
-		// 绑定PersistentVolumeClaim
-		var pvcList []apiObject.PersistentVolumeClaim
-		err = json.Unmarshal([]byte(response), &pvcList)
-		if err != nil {
-			log.ErrorLog("Sync PersistentVolume: " + err.Error())
-			continue
-		}
-		for _, pvc := range pvcList {
-			if pvc.Status.Phase == apiObject.ClaimPending {
-				err = pc.bindPvc(&pvc)
-				if err != nil {
-					log.ErrorLog("Sync PersistentVolume: " + err.Error())
-					continue
-				}
+		if pvc.Status.Phase == apiObject.ClaimPending {
+			err = pc.bindPvcToPv(&pvc)
+			if err != nil {
+				log.ErrorLog("Sync PersistentVolume: " + err.Error())
+				continue
 			}
 		}
 	}
@@ -151,7 +150,7 @@ func (pc *PvControllerImpl) AddPvc(pvc *apiObject.PersistentVolumeClaim) error {
 		return err
 	}
 	// 主动绑定pvc
-	err = pc.bindPvc(pvc)
+	err = pc.bindPvcToPv(pvc)
 	if err != nil {
 		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
 		return err
@@ -161,12 +160,44 @@ func (pc *PvControllerImpl) AddPvc(pvc *apiObject.PersistentVolumeClaim) error {
 }
 
 // GetBind 获取PersistentVolumeClaim绑定的PersistentVolume
-func (pc *PvControllerImpl) GetBind(pvcName string) string {
+func (pc *PvControllerImpl) GetPvcBind(pvcName string) string {
 	return pc.PvcPvMap[pvcName]
 }
 
-// bindPvc 绑定PersistentVolumeClaim
-func (pc *PvControllerImpl) bindPvc(pvc *apiObject.PersistentVolumeClaim) error {
+// BindPodToPvc 绑定Pod到PersistentVolumeClaim
+func (pc *PvControllerImpl) BindPodToPvc(pvc *apiObject.PersistentVolumeClaim, podName string) error {
+	// 修改pvc的状态
+	pvc.Status.IsBound = true
+	pvc.Status.BoundPodName = podName
+	// 更新pvc的状态
+	err := pc.updatePvc(pvc)
+	if err != nil {
+		log.ErrorLog("Bind Pod to PersistentVolumeClaim: " + err.Error())
+		return err
+	}
+
+	log.InfoLog("Bind Pod to PersistentVolumeClaim: " + pvc.Metadata.Namespace + "/" + pvc.Metadata.Name + " bound to " + podName)
+	return nil
+}
+
+// UnbindPodToPvc 解绑Pod和PersistentVolumeClaim
+func (pc *PvControllerImpl) UnbindPodToPvc(pvc *apiObject.PersistentVolumeClaim) error {
+	// 修改pvc的状态
+	pvc.Status.IsBound = false
+	pvc.Status.BoundPodName = ""
+	// 更新pvc的状态
+	err := pc.updatePvc(pvc)
+	if err != nil {
+		log.ErrorLog("Unbind Pod to PersistentVolumeClaim: " + err.Error())
+		return err
+	}
+
+	log.InfoLog("Unbind Pod to PersistentVolumeClaim: " + pvc.Metadata.Namespace + "/" + pvc.Metadata.Name)
+	return nil
+}
+
+// bindPvcToPv 绑定PersistentVolumeClaim
+func (pc *PvControllerImpl) bindPvcToPv(pvc *apiObject.PersistentVolumeClaim) error {
 	pvcKey := pvc.Metadata.Namespace + "/" + pvc.Metadata.Name
 	var pv *apiObject.PersistentVolume
 	// 从PvMap中找到一个未绑定的pv，并绑定
@@ -198,7 +229,7 @@ func (pc *PvControllerImpl) bindPvc(pvc *apiObject.PersistentVolumeClaim) error 
 	}
 	// 更新pvc的状态
 	pvc.Status.Phase = apiObject.ClaimBound
-	err = pc.UpdatePvc(pvc)
+	err = pc.updatePvc(pvc)
 	if err != nil {
 		log.ErrorLog("Bind PersistentVolumeClaim: " + err.Error())
 		return err
@@ -226,8 +257,8 @@ func (pc *PvControllerImpl) updatePv(pv *apiObject.PersistentVolume) error {
 	return nil
 }
 
-// UpdatePvc 在etcd中更新PersistentVolumeClaim
-func (pc *PvControllerImpl) UpdatePvc(pvc *apiObject.PersistentVolumeClaim) error {
+// updatePvc 在etcd中更新PersistentVolumeClaim
+func (pc *PvControllerImpl) updatePvc(pvc *apiObject.PersistentVolumeClaim) error {
 	pvcName := pvc.Metadata.Name
 	pvcNamespace := pvc.Metadata.Namespace
 	key := config.EtcdPvcPrefix + "/" + pvcNamespace + "/" + pvcName
@@ -244,7 +275,7 @@ func (pc *PvControllerImpl) UpdatePvc(pvc *apiObject.PersistentVolumeClaim) erro
 	return nil
 }
 
-// newPV 通过Pvc请求创建一个PersistentVolume
+// newPV 通过Pvc请求自动创建一个PersistentVolume
 func (pc *PvControllerImpl) newPV(pvc *apiObject.PersistentVolumeClaim) *apiObject.PersistentVolume {
 	// 创建一个PersistentVolume
 	pv := &apiObject.PersistentVolume{

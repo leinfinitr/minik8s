@@ -10,8 +10,6 @@ type Serverless struct {
 	Image string `json:"image" yaml:"image"`
 	// 名称
 	Name string `json:"name" yaml:"name"`
-	// 存放函数文件的 volume
-	Volume string `json:"volume" yaml:"volume"`
 	// 函数文件所在主机目录
 	HostPath string `json:"hostPath" yaml:"hostPath"`
 	// 函数文件名称

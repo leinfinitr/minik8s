@@ -159,7 +159,7 @@ func getAllServerless() {
 	}
 	// 输出结果
 	for _, serverless := range result {
-		fmt.Println("Name: " + serverless.Name + " Image: " + serverless.Image + " Volume: " + serverless.Volume)
+		fmt.Println("Name: " + serverless.Name + " Image: " + serverless.Image + " HostPath: " + serverless.HostPath + " Command: " + serverless.Command)
 	}
 }
 
