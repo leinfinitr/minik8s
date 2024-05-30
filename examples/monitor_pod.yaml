@@ -10,17 +10,23 @@ metadata:
 spec:
   volumes:
     - name: monitor-volume
-      hostPath:
-        path: /root/minik8s/examples/
+      volumeSource:
+        path: "/root/minik8s/examples/"
+        type: "Directory"
   containers:
-    - name: webserver
+    - name: monitor-server
       image: python:3.8-alpine
       imagePullPolicy: IfNotPresent
+      command: ["/bin/bash", "-c", "python /mnt/monitor.py"]
+      workingDir: "/mnt"
       volumeMounts:
         - name: monitor-volume
           mountPath: "/mnt"
-          ReadOnly: false
-      command: ["/bin/sh", "-c", "pip install prometheus_client && python /root/minik8s/examples/monitor.py"]
+      mounts:
+        - name: monitor-volume
+          hostPath: "/root/minik8s/examples/"
+          containerPath: "/mnt"
+          readOnly: false
       ports:
         - containerPort: 9290
         - hostPort: 9290

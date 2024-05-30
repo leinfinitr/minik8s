@@ -28,7 +28,7 @@ def process_request():
 if __name__ == '__main__':
     # 启动一个 HTTP 服务器，监听 9290 端口
     start_http_server(9290)
-    print("Prometheus metrics server started on port 8000")
+    print("Prometheus metrics server started on port 9290")
 
     # 不断处理请求，更新指标
     while True:

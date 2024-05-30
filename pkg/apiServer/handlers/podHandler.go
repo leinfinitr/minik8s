@@ -393,6 +393,7 @@ func CreatePod(c *gin.Context) {
 	// 如果是一个自定义Metrics的pod，则需要对该pod进行监控
 	needMonitor := false
 	var monitorPod apiObject.MonitorPod
+	monitorPod.PodName = newPodName
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
 			if port.Metrics != "" {
@@ -404,7 +405,8 @@ func CreatePod(c *gin.Context) {
 	}
 	if needMonitor {
 		// 注册监控
-		resp, err := httprequest.PutObjMsg(config.MonitorPodURL, monitorPod)
+		url := config.HttpSchema + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.MonitorPodURL
+		resp, err := httprequest.PutObjMsg(url, monitorPod)
 		if err != nil {
 			log.ErrorLog("CreatePod: " + err.Error())
 			c.JSON(500, gin.H{"error": err.Error()})

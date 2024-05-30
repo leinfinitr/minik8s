@@ -187,21 +187,33 @@ func RegisterPodMonitor(c *gin.Context) {
 	}
 
 	// 2. 在制定的job后面追加新的staticConfig，默认“pods”job是用来监控所有pod的
+	var podScrapeConfig *apiObject.ScrapeConfig
 	for _, scrapeConfig := range config.ScrapeConfigs {
 		if scrapeConfig.JobName == "pods" {
-			newStaticConfig := apiObject.StaticConfig{
-				Targets: []string{},
-				Labels:  map[string]string{"instance": monitorPod.PodName},
-			}
-
-			for _, uri := range monitorPod.MonitorUris {
-				newStaticConfig.Targets = append(newStaticConfig.Targets, uri)
-			}
-			scrapeConfig.StaticConfigs = append(scrapeConfig.StaticConfigs, newStaticConfig)
-
+			podScrapeConfig = &scrapeConfig
+			break
 		}
-
 	}
+
+	if podScrapeConfig == nil {
+		// 不存在则创建新的job
+		podScrapeConfig = &apiObject.ScrapeConfig{
+			JobName:       "pods",
+			StaticConfigs: []apiObject.StaticConfig{},
+		}
+	}
+
+	newStaticConfig := apiObject.StaticConfig{
+		Targets: []string{},
+		Labels:  map[string]string{"instance": monitorPod.PodName},
+	}
+
+	for _, uri := range monitorPod.MonitorUris {
+		newStaticConfig.Targets = append(newStaticConfig.Targets, uri)
+	}
+	podScrapeConfig.StaticConfigs = append(podScrapeConfig.StaticConfigs, newStaticConfig)
+
+	config.ScrapeConfigs = append(config.ScrapeConfigs, *podScrapeConfig)
 
 	// 3. 保存并写入配置文件
 	err := PutPrometheusConfig(config)
@@ -214,6 +226,7 @@ func RegisterPodMonitor(c *gin.Context) {
 	// curl -X POST http://192.168.1.7:9090/-/reload
 	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
 
+	log.InfoLog("Pod monitor registered successfully")
 	c.JSON(200, gin.H{"message": "pod monitor registered successfully"})
 
 }
@@ -254,5 +267,6 @@ func DeletePodMonitor(c *gin.Context) {
 	// curl -X POST http://192.168.1.7:9090/-/reload
 	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
 
+	log.InfoLog("Pod monitor delete successfully")
 	c.JSON(200, gin.H{"message": "pod monitor delete successfully"})
 }
