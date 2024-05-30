@@ -1,8 +1,8 @@
 package server
 type TaskServerConfig struct{
-	userName string
-	passWord string
-	serverUri string
+	UserName string
+	PassWord string
+	ServerUri string
 	BaseDir string
 	RemoteBaseDir string
 	TaskName string

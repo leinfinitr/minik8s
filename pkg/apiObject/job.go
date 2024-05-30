@@ -29,8 +29,9 @@ type JobSpec struct {
 	NumTasksPerNode int `json:"numTasksPerNode" yaml:"numTasksPerNode"`
 	Partition string `json:"partition" yaml:"partition"`
 	SubmitDir string `json:"submitDir" yaml:"submitDir"`
-	CompileCmd string `json:"compileCmd" yaml:"compileCmd"`
-	RunCmd string `json:"runCmd" yaml:"runCmd"`
+	UserName string `json:"userName" yaml:"userName"`
+	PassWord string `json:"password" yaml:"password"`
+	RunCmd []string `json:"runCmd" yaml:"runCmd"`
 	OutputFile string `json:"output" yaml:"output"`
 	ErrorFile string `json:"error" yaml:"error"`
 	GPUNum int `json:"gpuNum" yaml:"gpuNum"`

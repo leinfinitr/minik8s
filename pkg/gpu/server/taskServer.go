@@ -30,7 +30,7 @@ type JobParsedStatus struct {
 }
 
 func NewTaskServer(config *TaskServerConfig) (*TaskServer, error) {
-	client, err := sshclient.NewSSHClient(config.userName, config.passWord)
+	client, err := sshclient.NewSSHClient(config.UserName, config.PassWord)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (ts *TaskServer) CheckAndUpdateStatus(taskId string) int {
 			State:     status.State,
 			ExitCode:  status.ExitCode,
 		}
-		url := ts.config.serverUri + config.JobStatusURI
+		url := ts.config.ServerUri + config.JobStatusURI
 		url = strings.Replace(url, config.NameSpaceReplace, ts.config.TaskNameSpace, -1)
 		url = strings.Replace(url, config.NameReplace, ts.config.TaskName, -1)
 		code, _, err := netRequest.PutRequestByTarget(url, jStatus)
@@ -190,7 +190,7 @@ func (ts *TaskServer)ProcessResult() error{
 	var jobCode apiObject.JobCode
 	jobCode.OutputContent = outputContent
 	jobCode.ErrorContent = errorContent
-	url := ts.config.serverUri + config.JobCodeURI
+	url := ts.config.ServerUri + config.JobCodeURI
 	url = strings.Replace(url, config.NameSpaceReplace, ts.config.TaskNameSpace, -1)
 	url = strings.Replace(url, config.NameReplace, ts.config.TaskName, -1)
 	code, _, err := netRequest.PutRequestByTarget(url, jobCode)
