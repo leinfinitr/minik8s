@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	specctlrs "minik8s/pkg/controller/specCtlrs"
 	"net/http"
 	"strings"
 
@@ -16,6 +15,7 @@ import (
 	"minik8s/tools/log"
 
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	specctlrs "minik8s/pkg/controller/specCtlrs"
 	httprequest "minik8s/tools/httpRequest"
 )
 
@@ -328,37 +328,77 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
 	}
-	// 若pod使用了pvc，则检查pvc是否存在
+	// 若pod使用了pvc，则对其进行处理
 	if pod.Spec.Volumes != nil {
 		for _, volume := range pod.Spec.Volumes {
 			if volume.PersistentVolumeClaim != nil {
 				pvcKey := config.EtcdPvcPrefix + "/" + pod.Metadata.Namespace + "/" + volume.PersistentVolumeClaim.ClaimName
 				pvcResponse, _ := etcdclient.EtcdStore.Get(pvcKey)
-				// 若pvc不存在，则返回错误
-				if pvcResponse == "" {
-					log.ErrorLog("CreatePod: PVC not found")
-					c.JSON(400, gin.H{"error": "PVC not found"})
+				// 若pvc存在，则返回错误
+				if pvcResponse != "" {
+					log.ErrorLog("CreatePod: PVC already exists" + pvcResponse)
+					c.JSON(400, gin.H{"error": "PVC already exists"})
 					return
 				}
-				// 若pvc存在，则检查pvc的状态是否为Pending
-				pvc := &apiObject.PersistentVolumeClaim{}
-				err = json.Unmarshal([]byte(pvcResponse), pvc)
+				// 若pvc不存在，则创建pvc
+				pvc := &apiObject.PersistentVolumeClaim{
+					TypeMeta: apiObject.TypeMeta{
+						Kind:       "PersistentVolumeClaim",
+						APIVersion: "v1",
+					},
+					Metadata: apiObject.ObjectMeta{
+						Name:      volume.PersistentVolumeClaim.ClaimName,
+						Namespace: pod.Metadata.Namespace,
+					},
+					Spec: apiObject.PersistentVolumeClaimSpec{
+						AccessModes: []apiObject.PersistentVolumeAccessMode{apiObject.ReadWriteOnce},
+						Resources:   "5GB",
+					},
+				}
+				log.DebugLog("CreatePvc: " + pvc.Metadata.Namespace + "/" + pvc.Metadata.Name)
+				err = specctlrs.PvControllerInstance.AddPvc(pvc)
 				if err != nil {
-					log.ErrorLog("CreatePod: " + err.Error())
+					log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
 					c.JSON(500, gin.H{"error": err.Error()})
 					return
 				}
-				if pvc.Status.Phase != apiObject.ClaimPending {
-					log.ErrorLog("CreatePod: PVC is not pending")
-					c.JSON(400, gin.H{"error": "PVC is not pending"})
-					return
-				}
-				// 将PVC绑定到PV
-				err = specctlrs.PvControllerInstance.BindPvc(pvc)
-				if err != nil {
-					log.ErrorLog("CreatePod: " + err.Error())
-					c.JSON(500, gin.H{"error": err.Error()})
-					return
+				// 为pod中所有使用该持久化卷挂载的容器添加Mount
+				for _, container := range pod.Spec.Containers {
+					for _, volumeMount := range container.VolumeMounts {
+						if volumeMount.Name == volume.Name {
+							pvName := specctlrs.PvControllerInstance.GetBind(volume.PersistentVolumeClaim.ClaimName)
+							if pvName == "" {
+								log.ErrorLog("CreatePod: " + "PersistentVolumeClaim not bind")
+								c.JSON(400, gin.H{"error": "PersistentVolumeClaim not bind"})
+								return
+							}
+							pvKey := config.EtcdPvPrefix + "/" + pod.Metadata.Namespace + "/" + pvName
+							pvResponse, _ := etcdclient.EtcdStore.Get(pvKey)
+							if pvResponse == "" {
+								log.ErrorLog("CreatePod: " + "PersistentVolume not found")
+								c.JSON(400, gin.H{"error": "PersistentVolume not found"})
+								return
+							}
+							pv := &apiObject.PersistentVolume{}
+							err = json.Unmarshal([]byte(pvResponse), pv)
+							if err != nil {
+								log.ErrorLog("CreatePod: " + err.Error())
+								c.JSON(500, gin.H{"error": err.Error()})
+								return
+							}
+							if pv.Status.Phase != apiObject.VolumeBound {
+								log.ErrorLog("CreatePod: " + "PersistentVolume not bound")
+								c.JSON(400, gin.H{"error": "PersistentVolume not bound"})
+								return
+							}
+							// 为容器添加Mount
+							container.Mounts = append(container.Mounts, &apiObject.Mount{
+								HostPath:      config.PVClientPath + "/" + pv.Metadata.Namespace + "/" + pv.Metadata.Name,
+								ContainerPath: volumeMount.MountPath,
+								ReadOnly:      volume.PersistentVolumeClaim.ReadOnly,
+							})
+						}
+					}
 				}
 			}
 		}

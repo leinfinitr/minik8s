@@ -47,8 +47,8 @@ type PersistentVolume struct {
 }
 
 type PersistentVolumeSpec struct {
-	// 持久化卷的容量，单位是字节
-	Capacity int64 `json:"capacity" yaml:"capacity"`
+	// 持久化卷的容量
+	Capacity string `json:"capacity" yaml:"capacity"`
 	// 访问模式
 	AccessModes []PersistentVolumeAccessMode `json:"accessModes" yaml:"accessModes"`
 	// 回收策略
@@ -63,9 +63,9 @@ type PersistentVolumeReclaimPolicy string
 
 type NetworkFileSystem struct {
 	// NFS服务器的IP地址
-	ServerIP string `json:"serverIP" yaml:"serverIP"`
+	Server string `json:"server" yaml:"server"`
 	// 在NFS服务器上的共享目录路径
-	RemotePath string `json:"path" yaml:"path"`
+	Path string `json:"path" yaml:"path"`
 }
 
 type PersistentVolumeStatus struct {

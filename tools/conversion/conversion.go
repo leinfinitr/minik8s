@@ -18,17 +18,6 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 			Namespace: "serverless",
 		},
 		Spec: apiObject.PodSpec{
-			Volumes: []apiObject.Volume{
-				{
-					Name: serverless.Volume,
-					VolumeSource: apiObject.VolumeSource{
-						HostPath: apiObject.HostPathVolumeSource{
-							Path: serverless.HostPath,
-							Type: apiObject.HostPathDirectory,
-						},
-					},
-				},
-			},
 			Containers: []apiObject.Container{
 				{
 					Name:  serverless.Name,
@@ -39,12 +28,6 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 						"sleep 600",
 					},
 					WorkingDir: "/mnt",
-					VolumeMounts: []apiObject.VolumeMount{
-						{
-							Name:      serverless.Volume,
-							MountPath: "/mnt",
-						},
-					},
 					Mounts: []*apiObject.Mount{
 						{
 							HostPath:      serverless.HostPath,

@@ -21,19 +21,15 @@ type PersistentVolumeClaim struct {
 }
 
 type PersistentVolumeClaimSpec struct {
-	// 申请的持久化卷的大小，单位是字节
-	Resources int64 `json:"resources" yaml:"resources"`
+	// 申请的持久化卷的大小
+	Resources string `json:"resources" yaml:"resources"`
 	// 访问模式
-	AccessModes []string `json:"accessModes" yaml:"accessModes"`
+	AccessModes []PersistentVolumeAccessMode `json:"accessModes" yaml:"accessModes"`
 }
 
 type PersistentVolumeClaimStatus struct {
 	// 申请的持久化卷的状态
 	Phase PersistentVolumeClaimPhase `json:"phase" yaml:"phase"`
-	// 申请的持久化卷的容量，单位是字节
-	Capacity int64 `json:"capacity" yaml:"capacity"`
-	// 申请的持久化卷的访问模式
-	AccessModes []PersistentVolumeAccessMode `json:"accessModes" yaml:"accessModes"`
 }
 
 type PersistentVolumeClaimPhase string

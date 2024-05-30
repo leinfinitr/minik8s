@@ -1,16 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
 
 	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
 	"minik8s/tools/log"
 
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	specctlrs "minik8s/pkg/controller/specCtlrs"
 )
 
@@ -32,33 +27,12 @@ func CreatePVC(c *gin.Context) {
 		return
 	}
 
-	key := config.EtcdPvcPrefix + "/" + pvcNamespace + "/" + pvcName
-	response, _ := etcdclient.EtcdStore.Get(key)
-	if response != "" {
-		log.ErrorLog("Create PersistentVolumeClaim: pvc already exists" + response)
-		c.JSON(400, gin.H{"error": "pvc already exists"})
-		return
-	}
-	log.DebugLog("CreatePvc: " + pvcName)
-
+	// 创建pvc
+	log.DebugLog("CreatePvc: " + pvcNamespace + "/" + pvcName)
 	err = specctlrs.PvControllerInstance.AddPvc(pvc)
 	if err != nil {
 		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	pvcJson, err := json.Marshal(pvc)
-	if err != nil {
-		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-
-	}
-	err = etcdclient.EtcdStore.Put(key, string(pvcJson))
-	if err != nil {
-		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
