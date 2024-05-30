@@ -16,7 +16,6 @@ import (
 var (
 	jobDir = "/job"
 	remoteJobDir = "job"
-	resDir = jobDir + "/res"
 )
 func main() {
 	var jobName string
@@ -70,7 +69,7 @@ func main() {
 		return
 	}
 	defer res.Body.Close()
-	err = json.NewDecoder(res.Body).Decode(jobCode)
+	err = json.NewDecoder(res.Body).Decode(&jobCode)
 	if err != nil {
 		log.ErrorLog("GetJobCode: " + err.Error())
 		return
