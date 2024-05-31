@@ -17,5 +17,4 @@ spec:
       volumeMounts:
         - name: persistent-volume
           mountPath: /mnt
-          readOnly: false
 

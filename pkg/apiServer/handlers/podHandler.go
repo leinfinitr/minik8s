@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"minik8s/tools/conversion"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -167,11 +170,12 @@ func DeletePod(c *gin.Context) {
 				res, err := httprequest.DelMsg(url, nil)
 				if err != nil {
 					log.ErrorLog("Could not post the object message." + err.Error())
-					c.JSON(res.StatusCode, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
 				}
 				if res.StatusCode != http.StatusOK {
-					log.ErrorLog("DeletePods: " + err.Error())
-					c.JSON(500, gin.H{"error": err.Error()})
+					log.ErrorLog("DeletePods: " + res.Status)
+					c.JSON(res.StatusCode, res.Status)
 					return
 				}
 			}
@@ -361,9 +365,10 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
 	}
-	// 若pod使用了pvc，则对其进行处理
+	// 若pod使用了volume，则对其进行处理
 	if pod.Spec.Volumes != nil {
 		for _, volume := range pod.Spec.Volumes {
+			// 处理使用了pvc的volume
 			if volume.PersistentVolumeClaim != nil {
 				pvcKey := config.EtcdPvcPrefix + "/" + pod.Metadata.Namespace + "/" + volume.PersistentVolumeClaim.ClaimName
 				pvcResponse, _ := etcdclient.EtcdStore.Get(pvcKey)
@@ -393,60 +398,76 @@ func CreatePod(c *gin.Context) {
 				res, err := httprequest.PostObjMsg(url, pvc)
 				if err != nil {
 					log.ErrorLog("Could not post the object message." + err.Error())
-					c.JSON(res.StatusCode, gin.H{"error": err.Error()})
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				if res == nil {
+					log.ErrorLog("CreatePod: res is nil")
+					c.JSON(500, gin.H{"error": "res is nil"})
+					return
 				}
 				if res.StatusCode != http.StatusOK {
 					log.ErrorLog("CreatePod: " + res.Status)
 					c.JSON(res.StatusCode, gin.H{"error": res.Status})
 					return
 				}
-				// 为pod中所有使用该持久化卷挂载的容器添加Mount
-				for i, container := range pod.Spec.Containers {
-					for _, volumeMount := range container.VolumeMounts {
-						if volumeMount.Name == volume.Name {
-							// 获取pv名称
-							url := config.PVServerURL() + config.PersistentVolumeClaimURI
-							url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
-							url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
-							res, err := httprequest.GetMsg(url)
-							if err != nil {
-								log.ErrorLog("Could not post the object message." + err.Error())
-								c.JSON(res.StatusCode, gin.H{"error": err.Error()})
-							}
-							if res.StatusCode != http.StatusOK {
-								log.ErrorLog("CreatePod: " + res.Status)
-								c.JSON(res.StatusCode, gin.H{"error": res.Status})
-								return
-							}
-							// 解析pv名称
-							var pvName string
-							err = json.NewDecoder(res.Body).Decode(&pvName)
-							if err != nil {
-								log.ErrorLog("CreatePod: " + err.Error())
-								c.JSON(500, gin.H{"error": err.Error()})
-								return
-							}
-							if pvName == "" {
-								log.ErrorLog("CreatePod: pvName is empty")
-								c.JSON(400, gin.H{"error": "pvName is empty"})
-								return
-							}
-							log.DebugLog("Parse pv name: " + pvName)
-							// 为容器添加Mount
-							if container.Mounts == nil {
-								container.Mounts = make([]*apiObject.Mount, 0)
-							}
-							mount := &apiObject.Mount{
-								HostPath:      config.PVClientPath + "/" + pvName,
-								ContainerPath: volumeMount.MountPath,
-								ReadOnly:      volume.PersistentVolumeClaim.ReadOnly,
-							}
-							container.Mounts = append(container.Mounts, mount)
-						}
-					}
-					// 替换pod中的容器
-					pod.Spec.Containers[i] = container
+				// 获取pvKey
+				url = config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
+				res, err = httprequest.GetMsg(url)
+				if err != nil {
+					log.ErrorLog("Could not post the object message." + err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				}
+				if res == nil {
+					log.ErrorLog("CreatePod: res is nil")
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "res is nil"})
+					return
+				}
+				if res.StatusCode != http.StatusOK {
+					log.ErrorLog("CreatePod: " + res.Status)
+					c.JSON(res.StatusCode, gin.H{"error": res.Status})
+					return
+				}
+				// 解析pvKey
+				var pvKey string
+				err = json.NewDecoder(res.Body).Decode(&pvKey)
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				if pvKey == "" {
+					log.ErrorLog("CreatePod: pvName is empty")
+					c.JSON(400, gin.H{"error": "pvName is empty"})
+					return
+				}
+				log.DebugLog("Parse pv name: " + pvKey)
+				// 为pod中所有使用该持久化卷挂载的容器添加Mount
+				conversion.AddMountsToContainer(pod, volume, config.PVClientPath+"/"+pvKey)
+			}
+			// 处理使用了emptyDir的volume
+			if volume.EmptyDir.SizeLimit != "" {
+				// 创建emptyDir
+				mkdirCmd := "mkdir -p " + config.DefaultVolumePath + "/" + pod.Metadata.Name + "/" + volume.Name
+				cmd := exec.Command("sh", "-c", mkdirCmd)
+				err = cmd.Run()
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				conversion.AddMountsToContainer(pod, volume, config.DefaultVolumePath+"/"+pod.Metadata.Name+"/"+volume.Name)
+			}
+			// 处理使用了hostPath的volume
+			if volume.HostPath.Path != "" {
+				// 如果hostPath不存在，则返回错误
+				if _, err := os.Stat(volume.HostPath.Path); os.IsNotExist(err) {
+					log.ErrorLog("CreatePod: hostPath not found")
+					c.JSON(400, gin.H{"error": "hostPath not found"})
+					return
+				}
+				conversion.AddMountsToContainer(pod, volume, volume.HostPath.Path)
 			}
 		}
 	}

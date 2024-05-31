@@ -70,3 +70,25 @@ func MountsToMounts(mounts []*apiObject.Mount) []*runtimeapi.Mount {
 	}
 	return configMounts
 }
+
+// AddMountsToContainer 将一个 Mount 对象添加到 Container.Mounts
+func AddMountsToContainer(pod *apiObject.Pod, volume apiObject.Volume, hostPath string) {
+	for i, container := range pod.Spec.Containers {
+		for _, volumeMount := range container.VolumeMounts {
+			if volumeMount.Name == volume.Name {
+				// 为容器添加Mount
+				if container.Mounts == nil {
+					container.Mounts = make([]*apiObject.Mount, 0)
+				}
+				mount := &apiObject.Mount{
+					HostPath:      hostPath,
+					ContainerPath: volumeMount.MountPath,
+					ReadOnly:      false,
+				}
+				container.Mounts = append(container.Mounts, mount)
+			}
+		}
+		// 替换pod中的容器
+		pod.Spec.Containers[i] = container
+	}
+}

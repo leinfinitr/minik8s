@@ -15,6 +15,9 @@ const (
 	PVServerAddress = "127.0.0.1"
 	// PVServerPort 本地服务器端口
 	PVServerPort = 7002
+
+	// DefaultVolumePath 默认卷路径
+	DefaultVolumePath = "/storage"
 )
 
 func PVServerURL() string {

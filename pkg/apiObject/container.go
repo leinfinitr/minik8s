@@ -103,8 +103,6 @@ type VolumeMount struct {
 	Name string `json:"name" yaml:"name"`
 	// 挂载路径
 	MountPath string `json:"mountPath" yaml:"mountPath"`
-	// 是否只读
-	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
 }
 
 type Mount struct {
