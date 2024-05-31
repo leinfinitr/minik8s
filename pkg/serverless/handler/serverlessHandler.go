@@ -108,6 +108,10 @@ func DeleteServerless(c *gin.Context) {
 		return
 	}
 
+	// 从 ScaleManager 中删除 serverless 对象
+	manager.ScaleManager.DeleteServerless(serverlessName)
+	manager.ScaleManager.DeletePod(serverlessName)
+
 	log.InfoLog("DeleteServerless: " + serverlessName)
 	c.JSON(200, "Delete serverless "+serverlessName+" success")
 }
@@ -137,7 +141,6 @@ func UpdateServerlessFunction(c *gin.Context) {
 
 // RunServerlessFunction 运行Serverless Function
 func RunServerlessFunction(c *gin.Context) {
-	log.DebugLog("RunServerlessFunction")
 	serverlessName := c.Param("name")
 	param := c.Param("param")
 	if serverlessName == "" {

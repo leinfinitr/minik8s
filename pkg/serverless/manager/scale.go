@@ -106,9 +106,13 @@ func (s *ScaleManagerImpl) IncreaseInstance(name string) {
 	// 转发给 apiServer 创建一个 Pod
 	url := config.APIServerURL() + config.PodsURI
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
-	_, err := httprequest.PostObjMsg(url, pod)
+	res, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
+	if res.StatusCode != 201 {
+		log.ErrorLog("Could not create " + name)
 		os.Exit(1)
 	}
 	// 添加到 Instance 中
@@ -116,40 +120,40 @@ func (s *ScaleManagerImpl) IncreaseInstance(name string) {
 	s.Instance[instanceName] = pod
 	s.InstanceRequestNum[instanceName] = 0
 
-	log.InfoLog("Create a new pod for " + name + " with name " + pod.Metadata.Name)
+	log.InfoLog("Create a new pod for " + name + " with name " + instanceName)
 }
 
 // DecreaseInstance 删除一个Serverless Function的实例
 //
 //	instanceName: 运行实例的名字
 func (s *ScaleManagerImpl) DecreaseInstance(instanceName string) {
-	pod := s.Instance[instanceName]
+	podInstance := s.Instance[instanceName]
+	podName := strings.Split(instanceName, "-")[0]
 	// 转发给 apiServer 删除一个 Pod
 	url := config.APIServerURL() + config.PodURI
-	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
-	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+	url = strings.Replace(url, config.NameSpaceReplace, podInstance.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, podInstance.Metadata.Name, -1)
 	_, err := httprequest.DelMsg(url, nil)
 	if err != nil {
 		log.ErrorLog("Could not delete the object message." + err.Error())
 		os.Exit(1)
 	}
 	// 从 Instance 中删除
-	s.FunctionInstanceNum[pod.Metadata.Name]--
+	s.FunctionInstanceNum[podName]--
 	delete(s.Instance, instanceName)
 	delete(s.InstanceRequestNum, instanceName)
 
-	log.InfoLog("Delete pod " + pod.Metadata.Name)
+	log.InfoLog("Delete pod " + instanceName + " for " + podName)
 }
 
 // RunFunction 运行Serverless Function
 //
 //	name: Serverless Function的名字
 func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
-	// 如果当前没有实例，则循环等待
-	for s.FunctionInstanceNum[name] == 0 {
+	// 如果当前实例数量不大于0，则循环等待
+	for !(s.FunctionInstanceNum[name] > 0) {
 		time.Sleep(1 * time.Second)
 	}
-	log.DebugLog("Run function " + name + " with param " + param)
 	// 遍历所有实例，找到一个属于当前Function且请求最少的实例
 	minRequestNum := math.MaxInt
 	minRequestInstanceName := ""
@@ -159,6 +163,7 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 			minRequestInstanceName = instanceName
 		}
 	}
+	log.DebugLog("Run function " + name + " with param " + param + " on " + minRequestInstanceName)
 	// 如果没有找到合适的实例，则直接报错
 	if minRequestInstanceName == "" {
 		log.ErrorLog("Could not find a suitable instance for " + name)
@@ -197,10 +202,26 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 
 // AddPod 添加一个Pod
 func (s *ScaleManagerImpl) AddPod(pod apiObject.Pod) {
+	log.DebugLog("Add pod " + pod.Metadata.Name)
 	s.Pod[pod.Metadata.Name] = pod
+	s.FunctionInstanceNum[pod.Metadata.Name] = 0
+	s.FunctionRequestNum[pod.Metadata.Name] = 0
+}
+
+// DeletePod 删除一个Pod
+func (s *ScaleManagerImpl) DeletePod(name string) {
+	log.DebugLog("Delete pod " + name)
+	delete(s.Pod, name)
+	delete(s.FunctionInstanceNum, name)
+	delete(s.FunctionRequestNum, name)
 }
 
 // AddServerless 添加一个Serverless
 func (s *ScaleManagerImpl) AddServerless(serverless apiObject.Serverless) {
 	s.Serverless[serverless.Name] = serverless
+}
+
+// DeleteServerless 删除一个Serverless
+func (s *ScaleManagerImpl) DeleteServerless(name string) {
+	delete(s.Serverless, name)
 }

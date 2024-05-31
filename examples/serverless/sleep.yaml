@@ -1,0 +1,6 @@
+image: python:3.7-alpine
+name: sleep
+hostPath: /root/minik8s/examples/serverless
+requirements: requirements.txt
+functionFile: sleep.py
+command: python sleep.py
