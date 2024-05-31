@@ -25,6 +25,7 @@ var getCmd = &cobra.Command{
 
 func init() {
 	getCmd.PersistentFlags().StringP("namespace", "n", "", "Namespace")
+	getCmd.PersistentFlags().StringP("name", "N", "", "Name")
 }
 
 func getHandler(cmd *cobra.Command, args []string) {
@@ -87,6 +88,22 @@ func getHandler(cmd *cobra.Command, args []string) {
 			getServiceHandler(namespace)
 		case apiObject.ReplicaSetType:
 			getReplicaSetHandler(namespace)
+		case apiObject.JobType:
+			getJobHandler(namespace)
+		}
+	}else if len(args) == 2 {
+		name, _ := cmd.Flags().GetString("name")
+		if name == "" {
+			fmt.Println("Error: You must specify the name of the resource to get.")
+			os.Exit(1)
+		}
+		namespace, _ := cmd.Flags().GetString("namespace")
+		if namespace == "" {
+			namespace = "default"
+		}
+		switch resourceType {
+		case apiObject.JobType:
+			getSpecJobHandler(namespace,name)
 		}
 	}
 }
@@ -231,6 +248,104 @@ func getReplicaSetHandler(namespace string) {
 		os.Exit(1)
 	}
 	printReplicasetsResult(replicaSets)
+}
+
+func getJobHandler(namespace string){
+	url := config.APIServerURL() + config.JobsURI
+	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+	var jobs []apiObject.Job
+	resp, err := http.Get(url)
+	if err != nil {
+		log.ErrorLog("GetJob: " + err.Error())
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&jobs)
+	if err != nil {
+		log.ErrorLog("GetJob: " + err.Error())
+		os.Exit(1)
+	}
+	printJobsResult(jobs)
+
+}
+
+func getSpecJobHandler(namespace string, name string){
+	url := config.APIServerURL() + config.JobURI
+	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+	url = strings.Replace(url, config.NameReplace, name, -1)
+	var job apiObject.Job
+	resp, err := http.Get(url)
+	if err != nil {
+		log.ErrorLog("GetJob: " + err.Error())
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&job)
+	if err != nil {
+		log.ErrorLog("GetJob: " + err.Error())
+		os.Exit(1)
+	}
+	printJobsResult([]apiObject.Job{job})
+	if job.Status.State == "COMPLETED"{
+		url = config.APIServerURL() + config.JobCodeURI
+		url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+		url = strings.Replace(url, config.NameReplace, name, -1)
+		var code apiObject.JobCode
+		resp, err = http.Get(url)
+		if err != nil {
+			log.ErrorLog("GetJobCode: " + err.Error())
+			os.Exit(1)
+		}
+		defer resp.Body.Close()
+		err = json.NewDecoder(resp.Body).Decode(&code)
+		if err != nil {
+			log.ErrorLog("GetJobCode: " + err.Error())
+			os.Exit(1)
+		}
+		printJobOutputResult(code)
+	}
+}
+func printJobOutputResult(code apiObject.JobCode){
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Output", "Error"})
+	writer.AppendRow(table.Row{string(code.OutputContent), string(code.ErrorContent)})
+	writer.Render()
+}
+
+func printJobsResult(jobs []apiObject.Job){
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Kind", "Name", "Status", "Partition"})
+	for _, job := range jobs {
+		printJobResult(job, writer)
+	}
+	writer.Render()
+}
+
+func printJobResult(job apiObject.Job, writer table.Writer){
+	// 根据状态为Status单元格选择颜色
+	var statusColor text.Colors
+	switch job.Status.State {
+	case "Running":
+		statusColor = text.Colors{text.FgGreen}
+	case "Pending":
+		statusColor = text.Colors{text.FgYellow}
+	case "Failed":
+		statusColor = text.Colors{text.FgRed}
+	default:
+		statusColor = text.Colors{text.FgWhite}
+	}
+
+	// 应用颜色到Status
+	coloredStatus := statusColor.Sprint(job.Status.State)
+
+	writer.AppendRow(table.Row{
+		"Job",
+		job.Metadata.Name,
+		coloredStatus, // 使用包装了颜色的status
+		job.Status.Partition,
+	})
 }
 
 func printServicesResult(services []apiObject.Service) {
