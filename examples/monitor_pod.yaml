@@ -8,28 +8,19 @@ metadata:
   annotations:
     description: "An example pod of fileserver and downloader"
 spec:
-  volumes:
-    - name: monitor-volume
-      volumeSource:
-        path: "/root/minik8s/examples/"
-        type: "Directory"
   containers:
     - name: monitor-server
-      image: python:3.8-alpine
+      image: python:3.9-slim
       imagePullPolicy: IfNotPresent
-      command: ["/bin/bash", "-c", "python /mnt/monitor.py"]
+      command: ["/bin/sh", "-c", " echo 'nameserver 223.5.5.5' >  /etc/resolv.conf && python -m pip install --upgrade pip && pip install prometheus_client && python /mnt/monitor.py"]
       workingDir: "/mnt"
-      volumeMounts:
-        - name: monitor-volume
-          mountPath: "/mnt"
       mounts:
-        - name: monitor-volume
-          hostPath: "/root/minik8s/examples/"
+        - hostPath: "/root/minik8s/examples"
           containerPath: "/mnt"
           readOnly: false
       ports:
         - containerPort: 9290
-        - hostPort: 9290
-        - metrics: "metrics"
+          hostPort: 9290
+          metrics: "metrics"
   restartPolicy: Always
 

@@ -195,14 +195,6 @@ func RegisterPodMonitor(c *gin.Context) {
 		}
 	}
 
-	if podScrapeConfig == nil {
-		// 不存在则创建新的job
-		podScrapeConfig = &apiObject.ScrapeConfig{
-			JobName:       "pods",
-			StaticConfigs: []apiObject.StaticConfig{},
-		}
-	}
-
 	newStaticConfig := apiObject.StaticConfig{
 		Targets: []string{},
 		Labels:  map[string]string{"instance": monitorPod.PodName},
@@ -211,9 +203,19 @@ func RegisterPodMonitor(c *gin.Context) {
 	for _, uri := range monitorPod.MonitorUris {
 		newStaticConfig.Targets = append(newStaticConfig.Targets, uri)
 	}
-	podScrapeConfig.StaticConfigs = append(podScrapeConfig.StaticConfigs, newStaticConfig)
 
-	config.ScrapeConfigs = append(config.ScrapeConfigs, *podScrapeConfig)
+	if podScrapeConfig == nil {
+		// 不存在则创建新的job
+		podScrapeConfig = &apiObject.ScrapeConfig{
+			JobName:       "pods",
+			StaticConfigs: []apiObject.StaticConfig{},
+		}
+
+		podScrapeConfig.StaticConfigs = append(podScrapeConfig.StaticConfigs, newStaticConfig)
+		config.ScrapeConfigs = append(config.ScrapeConfigs, *podScrapeConfig)
+	} else {
+		podScrapeConfig.StaticConfigs = append(podScrapeConfig.StaticConfigs, newStaticConfig)
+	}
 
 	// 3. 保存并写入配置文件
 	err := PutPrometheusConfig(config)
@@ -248,9 +250,10 @@ func DeletePodMonitor(c *gin.Context) {
 	// 2. 在制定的job后面把同属于的pod的全部删除，默认“pods”job是用来监控所有pod的
 	for _, scrapeConfig := range config.ScrapeConfigs {
 		if scrapeConfig.JobName == "pods" {
-			for _, uri := range scrapeConfig.StaticConfigs {
+			for i, uri := range scrapeConfig.StaticConfigs {
 				if uri.Labels["instance"] == monitorPod.PodName {
-					scrapeConfig.StaticConfigs = append(scrapeConfig.StaticConfigs[:0], scrapeConfig.StaticConfigs[1:]...)
+					scrapeConfig.StaticConfigs = append(scrapeConfig.StaticConfigs[:i], scrapeConfig.StaticConfigs[i+1:]...)
+					break
 				}
 			}
 		}

@@ -353,7 +353,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 
 		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
-			log.InfoLog(fmt.Sprintf("Cpu usage : %d , all usage: %d", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
+			// log.InfoLog(fmt.Sprintf("Cpu usage : %d , all usage: %d", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
 			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value) / float64(uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt))
 		} else {
 			log.WarnLog("CPU usage is 0")
@@ -361,7 +361,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 
 		if memoryAll != 0 {
-			log.InfoLog(fmt.Sprintf("Memory usage : %d , all usage: %d", response1.Stats.Memory.UsageBytes.Value, memoryAll))
+			// log.InfoLog(fmt.Sprintf("Memory usage : %d , all usage: %d", response1.Stats.Memory.UsageBytes.Value, memoryAll))
 			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value) / (float64(memoryAll))
 		} else {
 			log.WarnLog("Memory usage is 0")
@@ -369,8 +369,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 	}
 
-	log.InfoLog(fmt.Sprintf("CPU usage %E: ", cpuUsage))
-	log.InfoLog(fmt.Sprintf("Memory usage %E: ", memoryUsage))
+	log.InfoLog(fmt.Sprintf("pod IP: %s CPU usage: %E , Memory usage :%E ", pod.Status.PodIP, cpuUsage, memoryUsage))
 	pod.Status.CpuUsage = cpuUsage
 	pod.Status.MemUsage = memoryUsage
 
