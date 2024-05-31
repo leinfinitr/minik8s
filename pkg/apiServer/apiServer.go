@@ -143,6 +143,9 @@ func (a *ApiServer) Register() {
 	a.Router.GET(config.DNSURI, handlers.GetDNS)
 	a.Router.POST(config.DNSsURI, handlers.AddDNS)
 	a.Router.DELETE(config.DNSURI, handlers.DeleteDNS)
+
+	a.Router.GET(config.GlobalDnsRequestURI, handlers.GetGlobalDnsRequests)
+	a.Router.DELETE(config.DnsRequestURI, handlers.DeleteDnsRequest)
 	// 创建指定PV
 	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
 	// 创建指定PVC
