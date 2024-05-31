@@ -104,7 +104,24 @@ func AddDNS(c *gin.Context){
 		dns.Metadata.Namespace = "default"
 	}
 
-	//TODO
+	//Update dnsRequest
+	var dnsRequest apiObject.DnsRequest
+	dnsRequest.Action = "Create"
+	dnsRequest.DnsMeta = dns.Metadata
+	dnsRequestJson,err := json.Marshal(dnsRequest)
+	if err != nil{
+		log.ErrorLog("AddDNS: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	key = config.EtcdDnsRequestPrefix + "/" + dns.Metadata.Namespace + "/" + dns.Metadata.Name
+	err = etcdclient.EtcdStore.Put(key, string(dnsRequestJson))
+	if err != nil{
+		log.ErrorLog("AddDNS: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(201, gin.H{"data": dns})
 }
 
 func DeleteDNS(c *gin.Context){
@@ -132,12 +149,34 @@ func DeleteDNS(c *gin.Context){
 		c.JSON(404, gin.H{"error": "not found"})
 		return
 	}
+	//Update dnsRequest
+	var dns apiObject.Dns
+	err = json.Unmarshal([]byte(oldRes), &dns)
+	if err != nil{
+		log.ErrorLog("DeleteDNS: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 	err = etcdclient.EtcdStore.Delete(key)
 	if err != nil{
 		log.ErrorLog("DeleteDNS: "+err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	//TODO dnsUpdate sync
-	c.JSON(200, gin.H{"data": "success"})
+	var dnsRequest apiObject.DnsRequest
+	dnsRequest.Action = "Delete"
+	dnsRequest.DnsMeta = dns.Metadata
+	dnsRequestJson,err := json.Marshal(dnsRequest)
+	if err != nil{
+		log.ErrorLog("DeleteDNS: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	key = config.EtcdDnsRequestPrefix + "/" + namespace + "/" + name
+	err = etcdclient.EtcdStore.Put(key, string(dnsRequestJson))
+	if err != nil{
+		log.ErrorLog("DeleteDNS: "+err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 }

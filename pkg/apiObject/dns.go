@@ -16,3 +16,8 @@ type Path struct {
 type DnsStatus struct {
 	Phase string `json:"phase" yaml:"phase"`
 }
+
+type DnsRequest struct {
+	Action string `json:"action" yaml:"action"`
+	DnsMeta ObjectMeta `json:"dnsMeta" yaml:"dnsMeta"`
+}
