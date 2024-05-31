@@ -6,7 +6,7 @@ import (
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
-
+	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
 )
 
@@ -104,6 +104,35 @@ func AddDNS(c *gin.Context){
 		dns.Metadata.Namespace = "default"
 	}
 
+	for it,path := range dns.Spec.Paths{
+		log.InfoLog("AddDNS: "+dns.Metadata.Namespace+"/"+dns.Metadata.Name+" path "+string(it))
+		if path.SvcName == ""{
+			log.ErrorLog("AddDNS: svcName is empty")
+			c.JSON(400, gin.H{"error": "svcName is empty"})
+			return
+		}
+		svcKey := config.EtcdServicePrefix + "/" + dns.Metadata.Namespace + "/" + path.SvcName
+		svcRes, err := etcdclient.EtcdStore.Get(svcKey)
+		if err != nil{
+			log.ErrorLog("AddDNS: "+err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if len(svcRes) == 0{
+			log.ErrorLog("AddDNS: svc not found")
+			c.JSON(404, gin.H{"error": "svc not found"})
+			return
+		}
+		service := apiObject.Service{}
+		err = json.Unmarshal([]byte(svcRes), &service)
+		if err != nil{
+			log.ErrorLog("AddDNS: "+err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		dns.Spec.Paths[it].SvcIp = service.Spec.ClusterIP
+	}
+	dns.Metadata.UUID = uuid.New().String()
 	//Update dnsRequest
 	var dnsRequest apiObject.DnsRequest
 	dnsRequest.Action = "Create"

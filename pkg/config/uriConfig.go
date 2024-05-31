@@ -31,8 +31,8 @@ const (
 	HpaURI       = "/api/v1/namespaces/:namespace/hpa/:name"
 	GlobalHpaURI = "/api/v1/hpa"
 
-	DNSsURI = "/api/v1/namesapces/:namespace/dns"
-	DNSURI  = "/api/v1/namesapces/:namespace/dns/:name"
+	DNSsURI = "/api/v1/namespaces/:namespace/dns"
+	DNSURI  = "/api/v1/namespaces/:namespace/dns/:name"
 
 	GlobalDnsRequestURI = "/api/v1/dnsrequest"
 	DnsRequestURI       = "/api/v1/namespaces/:namespace/dnsrequest/:name"
