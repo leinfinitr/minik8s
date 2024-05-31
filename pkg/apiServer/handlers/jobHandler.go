@@ -190,11 +190,6 @@ func GetJobStatus(c *gin.Context) {
 		return
 	}
 	status := jb.Status
-	if err != nil {
-		log.ErrorLog("GetJobStatus: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
 	c.JSON(200, status)
 }
 

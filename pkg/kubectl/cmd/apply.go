@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-
+	"github.com/mholt/archiver"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +31,8 @@ const (
 	PersistentVolume      ApplyObject = "PersistentVolume"
 	PersistentVolumeClaim ApplyObject = "PersistentVolumeClaim"
 	Hpa                   ApplyObject = "Hpa"
+	Job                   ApplyObject = "Job"
+	JobCode 			 ApplyObject = "JobCode"
 )
 
 func applyHandler(cmd *cobra.Command, args []string) {
@@ -78,6 +80,8 @@ func applyHandler(cmd *cobra.Command, args []string) {
 			HpaHandler(content)
 		case "ReplicaSet":
 			ReplicaSetHandler(content)
+		case "Job":
+			JobHandler(content)
 		default:
 			log.ErrorLog("The kind specified is not supported.")
 			os.Exit(1)
@@ -222,6 +226,77 @@ func ReplicaSetHandler(content []byte) {
 	}
 	ApplyResultDisplay(ReplicaSet, resp)
 }
+
+func JobHandler(content []byte) {
+	var job apiObject.Job
+	err := translator.ParseApiObjFromYaml(content, &job)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	if job.Metadata.Namespace == "" {
+		job.Metadata.Namespace = "default"
+	}
+	if job.Metadata.Name == "" {
+		log.ErrorLog("The name of the job is required.")
+		os.Exit(1)
+	}
+	if job.Spec.SubmitDir == "" {
+		log.ErrorLog("The submitDir of the job is required.")
+		os.Exit(1)
+	}
+	info,err := os.Stat(job.Spec.SubmitDir)
+	if err != nil || !info.IsDir(){
+		log.ErrorLog("The submitDir of the job does not exist.")
+		os.Exit(1)
+	}
+	url := config.APIServerURL() + config.JobsURI
+	url = strings.Replace(url, config.NameSpaceReplace, job.Metadata.Namespace, -1)
+	log.DebugLog("PUT " + url)
+	resp, err := httprequest.PostObjMsg(url, job)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
+	ApplyResultDisplay(Job, resp)
+	err = archiver.Zip.Make(job.Spec.SubmitDir+".zip",[]string{job.Spec.SubmitDir})
+	if err != nil {
+		log.ErrorLog("Could not zip the submitDir.")
+		os.Exit(1)
+	}
+	fileBytes,err := os.ReadFile(job.Spec.SubmitDir+".zip")
+	if err != nil {
+		log.ErrorLog("Could not read the zip file.")
+		os.Exit(1)
+	} 
+	jobCode := apiObject.JobCode{
+		TypeMeta: apiObject.TypeMeta{
+			Kind: "JobCode",
+			APIVersion: "v1",
+		},
+		Metadata: apiObject.ObjectMeta{
+			Name: job.Metadata.Name,
+			Namespace: job.Metadata.Namespace,
+		},
+		UploadContent: fileBytes,
+	}
+	url = config.APIServerURL() + config.JobCodeURI
+	url = strings.Replace(url, config.NameSpaceReplace, job.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, job.Metadata.Name, -1)
+	log.DebugLog("PUT " + url)
+	resp, err = httprequest.PostObjMsg(url, jobCode)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
+	err = os.Remove(job.Spec.SubmitDir+".zip")
+	if err != nil {
+		log.ErrorLog("Could not remove the zip file.")
+		os.Exit(1)
+	}
+	ApplyResultDisplay(JobCode, resp)
+}
+
 func ApplyResultDisplay(kind ApplyObject, resp *http.Response) {
 	if resp.StatusCode == http.StatusCreated {
 		fmt.Printf("%s created\n", kind)
