@@ -1,4 +1,6 @@
-subtract
-add
+read_text
+split_words
+count_words
+get_max
 IF EQUALS 10 THEN add ELSE subtract
 FOR 3 TIMES DO add

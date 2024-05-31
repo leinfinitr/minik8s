@@ -117,7 +117,7 @@ func SyncPods(c *gin.Context) {
 
 // ScanPodStatus 用于扫描 pod 的状态，根据 pod 的状态进行相应的操作
 func ScanPodStatus() {
-	log.DebugLog("start scan pod status")
+	log.InfoLog("start scan pod status")
 	// 每间隔 15s 扫描一次
 	for {
 		ScanPodStatusRoutine()

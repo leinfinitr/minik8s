@@ -266,7 +266,7 @@ func UpdatePodStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
-	log.InfoLog("UpdatePodStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
 
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
@@ -305,7 +305,7 @@ func UpdatePodStatus(c *gin.Context) {
 		return
 	}
 
-	log.InfoLog("UpdatePodStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
 	c.JSON(200, gin.H{"data": resJson})
 }
 
@@ -493,7 +493,7 @@ func CreatePod(c *gin.Context) {
 	// 得到node的IP
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
-	log.DebugLog("CreatePod: " + address)
+	log.InfoLog("CreatePod: " + address)
 	// 打印创建的pod信息
 	podBytes, _ := json.Marshal(pod)
 	log.DebugLog("CreatePod: " + string(podBytes))

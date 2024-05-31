@@ -46,7 +46,7 @@ func NewPvController() (PvController, error) {
 	return &PvControllerImpl{
 		Address:  config.PVServerAddress,
 		Port:     config.PVServerPort,
-		Router:   gin.Default(),
+		Router:   gin.New(),
 		PvMap:    make(map[string]*apiObject.PersistentVolume),
 		PvcPvMap: make(map[string]string),
 	}, nil

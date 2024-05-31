@@ -63,7 +63,7 @@ func (s *Scheduler) getNodesList() []apiObject.Node {
 		log.ErrorLog("io.ReadAll err:" + err.Error())
 		return nil
 	}
-	log.InfoLog("getNodesList body:" + string(bodyBytes))
+	log.DebugLog("getNodesList body:" + string(bodyBytes))
 	bodyString := string(bodyBytes)
 	err = json.Unmarshal([]byte(bodyString), &NodeList)
 	if err != nil {
@@ -95,8 +95,9 @@ func (s *Scheduler) roundRobin(nodeList []apiObject.Node) apiObject.Node {
 }
 
 func Run() {
+	gin.SetMode(gin.ReleaseMode)
 	scheduler := NewScheduler()
-	r := gin.Default()
+	r := gin.New()
 
 	r.GET(config.SchedulerPath(), func(c *gin.Context) {
 		data := scheduler.scheduleRequest()

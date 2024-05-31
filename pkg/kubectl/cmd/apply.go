@@ -102,7 +102,6 @@ func PodHandler(content []byte) {
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
 	log.DebugLog("Post " + url)
 
-	log.WarnLog("pod command: " + pod.Spec.Containers[0].Command[0])
 	resp, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())

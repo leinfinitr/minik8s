@@ -1,4 +1,4 @@
 type: file
-params: ./examples/serverless/fileEvent
-name: add
-args: 10
+params: ./examples/serverless/fileEvent.txt
+name: word_count
+args: fileEvent.txt

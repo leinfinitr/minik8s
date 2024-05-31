@@ -18,6 +18,7 @@ spec:
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 8080
+        - hostPort: 8080
       volumeMounts:
         - name: files-volume
           mountPath: "/usr/share/files"
@@ -27,6 +28,7 @@ spec:
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 3000
+        - hostPort: 3000
       volumeMounts:
         - name: files-volume
           mountPath: "/data"

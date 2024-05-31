@@ -207,7 +207,7 @@ func PingNodeStatus(c *gin.Context) {
 		return
 	}
 
-	log.InfoLog("start ping NodeIP: " + node.Status.Addresses[0].Address)
+	log.DebugLog("start ping NodeIP: " + node.Status.Addresses[0].Address)
 
 	// 尝试三次，失败则认为节点不可用
 	times := 0
@@ -243,7 +243,7 @@ func PingNodeStatus(c *gin.Context) {
 	}
 
 	if success {
-		log.InfoLog("Ping Node success, NodeIp : " + node.Status.Addresses[0].Address)
+		log.DebugLog("Ping Node success, NodeIp : " + node.Status.Addresses[0].Address)
 		c.JSON(config.HttpSuccessCode, "")
 	} else {
 		log.WarnLog("Ping Node failed : " + node.Status.Addresses[0].Address + " is not available")

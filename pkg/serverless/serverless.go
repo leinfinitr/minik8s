@@ -63,7 +63,7 @@ func NewServerlessServer() *ServerlessServer {
 	return &ServerlessServer{
 		Address: config.ServerlessAddress,
 		Port:    config.ServerlessPort,
-		Router:  gin.Default(),
+		Router:  gin.New(),
 		Scale:   *manager.NewScaleManager(),
 	}
 }

@@ -99,7 +99,7 @@ func RegisterMonitor(c *gin.Context) {
 
 		config.ScrapeConfigs = append(config.ScrapeConfigs, newScrapeConfig)
 	} else {
-		log.WarnLog("Node already registered")
+		log.DebugLog("Node already registered")
 		c.JSON(200, gin.H{"message": "Node already registered"})
 		return
 	}

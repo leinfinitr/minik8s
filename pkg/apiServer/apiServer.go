@@ -169,6 +169,6 @@ func NewApiServer() *ApiServer {
 	return &ApiServer{
 		Address: config.APIServerLocalAddress,
 		Port:    config.APIServerLocalPort,
-		Router:  gin.Default(),
+		Router:  gin.New(),
 	}
 }
