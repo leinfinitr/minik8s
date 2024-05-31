@@ -12,6 +12,7 @@ import (
 	"minik8s/pkg/config"
 	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -108,6 +109,8 @@ func (a *ApiServer) Register() {
 	a.Router.PUT(config.ServiceURI, handlers.PutService)
 	// 删除制定Service
 	a.Router.DELETE(config.ServiceURI, handlers.DeleteService)
+	// 获取所有的services
+	a.Router.GET(config.ServicesURI, handlers.GetServices)
 
 	a.Router.GET(config.ReplicaSetsURI, handlers.GetReplicaSets)
 	a.Router.GET(config.GlobalReplicaSetsURI, handlers.GetGlobalReplicaSets)
@@ -154,7 +157,8 @@ func ScanNodeStatus() {
 			if err != nil {
 				log.WarnLog("ScanNodeStatus: " + err.Error())
 			}
-			url := config.APIServerURL() + config.NodesURI + "/" + node.Metadata.Name + "/status"
+			url := config.APIServerURL() + config.NodeStatusURI
+			url = strings.Replace(url, config.NameReplace, node.Metadata.Name, 1)
 			httprequest.PutObjMsg(url, node)
 		}
 

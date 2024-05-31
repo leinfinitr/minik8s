@@ -111,9 +111,14 @@ func RegisterNodeMonitor(c *gin.Context) {
 		return
 	}
 
-	// 5. 重启prometheus
+	// 5. 热加载prometheus
 	// curl -X POST http://192.168.1.7:9090/-/reload
-	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
 
 	c.JSON(200, gin.H{"message": "monitor registered successfully"})
 }
@@ -164,9 +169,14 @@ func DeleteNodeMonitor(c *gin.Context) {
 		return
 	}
 
-	// 5. 重启prometheus
+	// 5. 热加载prometheus
 	// curl -X POST http://192.168.1.7:9090/-/reload
-	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
 
 	c.JSON(200, gin.H{"message": "Node unregistered successfully"})
 
@@ -224,9 +234,14 @@ func RegisterPodMonitor(c *gin.Context) {
 		return
 	}
 
-	// 4. 重启prometheus
+	// 4. 热加载prometheus
 	// curl -X POST http://192.168.1.7:9090/-/reload
-	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
 
 	log.InfoLog("Pod monitor registered successfully")
 	c.JSON(200, gin.H{"message": "pod monitor registered successfully"})
@@ -266,9 +281,14 @@ func DeletePodMonitor(c *gin.Context) {
 		return
 	}
 
-	// 4. 重启prometheus
+	// 4. 热加载prometheus
 	// curl -X POST http://192.168.1.7:9090/-/reload
-	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
 
 	log.InfoLog("Pod monitor delete successfully")
 	c.JSON(200, gin.H{"message": "pod monitor delete successfully"})

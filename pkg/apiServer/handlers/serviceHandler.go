@@ -86,9 +86,28 @@ func RegisterProxy(c *gin.Context) {
 
 // GetServices 获取所有Service
 func GetServices(c *gin.Context) {
-	namespace := c.Param("namespace")
 
-	println("GetServices: " + namespace)
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdServicePrefix)
+	if err != nil {
+		log.ErrorLog("GetServices: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
+
+	var services []apiObject.Service
+	for _, v := range res {
+		var service apiObject.Service
+		err = json.Unmarshal([]byte(v), &service)
+		if err != nil {
+			log.ErrorLog("RegisterProxy: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		services = append(services, service)
+	}
+
+	c.JSON(config.HttpSuccessCode, services)
+
 }
 
 // GetService 获取指定Service
