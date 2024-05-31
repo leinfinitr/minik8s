@@ -152,7 +152,7 @@ func ScanPodStatusRoutine() {
 			}()
 		default:
 			// 其余情况暂不处理
-			log.DebugLog("Pod" + pod.Metadata.Name + " is in phase: " + string(phase))
+			log.DebugLog("Pod " + pod.Metadata.Name + " is in phase: " + string(phase))
 		}
 	}
 }

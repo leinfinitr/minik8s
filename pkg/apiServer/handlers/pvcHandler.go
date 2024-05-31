@@ -1,11 +1,15 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	"minik8s/pkg/apiObject"
-	"minik8s/pkg/controller"
+	"minik8s/pkg/config"
 	"minik8s/tools/log"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 // CreatePVC 创建PersistentVolumeClaim
@@ -26,12 +30,18 @@ func CreatePVC(c *gin.Context) {
 		return
 	}
 
-	// 创建pvc
+	// 转发给pvController
 	log.DebugLog("CreatePvc: " + pvcNamespace + "/" + pvcName)
-	err = controller.ControllerManagerInstance.AddPvc(pvc)
+	url := config.PVServerURL() + config.PersistentVolumeClaimsURI
+	res, err := httprequest.PostObjMsg(url, pvc)
 	if err != nil {
-		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
+		log.ErrorLog("Could not post the object message." + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	if res.StatusCode != http.StatusCreated {
+		log.ErrorLog("Create PersistentVolumeClaim: " + res.Status)
+		c.JSON(500, gin.H{"error": res.Status})
 		return
 	}
 

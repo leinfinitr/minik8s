@@ -12,10 +12,10 @@ spec:
   containers:
     - name: pv-container
       image: python:3.7-alpine
-      command: ["/bin/sh", "-c", "echo \"Hello World!\" > example.txt"]
+      command: ["/bin/sh", "-c", "mkdir test && echo \"Hello World!\" > example.txt && sleep 3600"]
       workingDir: /mnt
       volumeMounts:
         - name: persistent-volume
-          mountPath: "/mnt"
+          mountPath: /mnt
           readOnly: false
 

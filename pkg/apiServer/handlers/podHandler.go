@@ -12,7 +12,6 @@ import (
 
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
-	"minik8s/pkg/controller"
 	"minik8s/tools/log"
 
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
@@ -162,8 +161,15 @@ func DeletePod(c *gin.Context) {
 					c.JSON(500, gin.H{"error": err.Error()})
 					return
 				}
-				err = controller.ControllerManagerInstance.UnbindPodToPvc(pvc)
+				url := config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
+				res, err := httprequest.DelMsg(url, nil)
 				if err != nil {
+					log.ErrorLog("Could not post the object message." + err.Error())
+					c.JSON(res.StatusCode, gin.H{"error": err.Error()})
+				}
+				if res.StatusCode != http.StatusOK {
 					log.ErrorLog("DeletePods: " + err.Error())
 					c.JSON(500, gin.H{"error": err.Error()})
 					return
@@ -380,32 +386,66 @@ func CreatePod(c *gin.Context) {
 					c.JSON(400, gin.H{"error": "PVC can't be used"})
 					return
 				}
-				// 将pod绑定到pvcs
-				err = controller.ControllerManagerInstance.BindPodToPvc(pvc, pod.Metadata.Namespace+"/"+pod.Metadata.Name)
+				// 将pod绑定到pvc
+				url := config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+				res, err := httprequest.PostObjMsg(url, pvc)
 				if err != nil {
-					log.ErrorLog("CreatePod: " + err.Error())
-					c.JSON(500, gin.H{"error": err.Error()})
+					log.ErrorLog("Could not post the object message." + err.Error())
+					c.JSON(res.StatusCode, gin.H{"error": err.Error()})
+				}
+				if res.StatusCode != http.StatusOK {
+					log.ErrorLog("CreatePod: " + res.Status)
+					c.JSON(res.StatusCode, gin.H{"error": res.Status})
 					return
 				}
 				// 为pod中所有使用该持久化卷挂载的容器添加Mount
-				for _, container := range pod.Spec.Containers {
+				for i, container := range pod.Spec.Containers {
 					for _, volumeMount := range container.VolumeMounts {
 						if volumeMount.Name == volume.Name {
 							// 获取pv名称
-							pvName := controller.ControllerManagerInstance.GetPvcBind(volume.PersistentVolumeClaim.ClaimName)
-							if pvName == "" {
-								log.ErrorLog("CreatePod: " + "PersistentVolumeClaim not bind")
-								c.JSON(400, gin.H{"error": "PersistentVolumeClaim not bind"})
+							url := config.PVServerURL() + config.PersistentVolumeClaimURI
+							url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
+							url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
+							res, err := httprequest.GetMsg(url)
+							if err != nil {
+								log.ErrorLog("Could not post the object message." + err.Error())
+								c.JSON(res.StatusCode, gin.H{"error": err.Error()})
+							}
+							if res.StatusCode != http.StatusOK {
+								log.ErrorLog("CreatePod: " + res.Status)
+								c.JSON(res.StatusCode, gin.H{"error": res.Status})
 								return
 							}
+							// 解析pv名称
+							var pvName string
+							err = json.NewDecoder(res.Body).Decode(&pvName)
+							if err != nil {
+								log.ErrorLog("CreatePod: " + err.Error())
+								c.JSON(500, gin.H{"error": err.Error()})
+								return
+							}
+							if pvName == "" {
+								log.ErrorLog("CreatePod: pvName is empty")
+								c.JSON(400, gin.H{"error": "pvName is empty"})
+								return
+							}
+							log.DebugLog("Parse pv name: " + pvName)
 							// 为容器添加Mount
-							container.Mounts = append(container.Mounts, &apiObject.Mount{
+							if container.Mounts == nil {
+								container.Mounts = make([]*apiObject.Mount, 0)
+							}
+							mount := &apiObject.Mount{
 								HostPath:      config.PVClientPath + "/" + pvName,
 								ContainerPath: volumeMount.MountPath,
 								ReadOnly:      volume.PersistentVolumeClaim.ReadOnly,
-							})
+							}
+							container.Mounts = append(container.Mounts, mount)
 						}
 					}
+					// 替换pod中的容器
+					pod.Spec.Containers[i] = container
 				}
 			}
 		}
@@ -433,6 +473,9 @@ func CreatePod(c *gin.Context) {
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
 	log.DebugLog("CreatePod: " + address)
+	// 打印创建的pod信息
+	podBytes, _ := json.Marshal(pod)
+	log.DebugLog("CreatePod: " + string(podBytes))
 	// 发送创建请求到kubelet
 	url := config.HttpSchema + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI

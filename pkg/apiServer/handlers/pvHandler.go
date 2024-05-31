@@ -6,8 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"minik8s/pkg/apiObject"
-	"minik8s/pkg/controller"
+	"minik8s/pkg/config"
 	"minik8s/tools/log"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 // CreatePV 创建PersistentVolume
@@ -30,10 +32,16 @@ func CreatePV(c *gin.Context) {
 
 	// 创建pv
 	log.DebugLog("CreatePv: " + pvNamespace + "/" + pvName)
-	err = controller.ControllerManagerInstance.AddPv(&pv)
+	url := config.PVServerURL() + config.PersistentVolumesURI
+	res, err := httprequest.PostObjMsg(url, pv)
 	if err != nil {
-		log.ErrorLog("Create PersistentVolume: " + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.ErrorLog("Could not post the object message." + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	if res.StatusCode != http.StatusCreated {
+		log.ErrorLog("Create PersistentVolume: " + res.Status)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": res.Status})
 		return
 	}
 

@@ -41,6 +41,11 @@ func RegisterProxy(c *gin.Context) {
 	// 如果kubeproxy所在的node没有注册，则返回错误
 	var node apiObject.Node
 	res, err = etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+	if err != nil {
+		log.ErrorLog("RegisterProxy: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
 	for _, v := range res {
 		err = json.Unmarshal([]byte(v), &node)
 		if err != nil {

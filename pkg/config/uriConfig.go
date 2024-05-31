@@ -37,11 +37,11 @@ const (
 	ServerlessWorkflowURI = "/api/v1/serverless/workflow/:param"
 	ServerlessEventURI    = "/api/v1/serverless/event"
 
-	PersistentVolumeURI  = "/api/v1/pv"
-	PersistentVolumesURI = "/api/v1/pv/:name"
+	PersistentVolumesURI = "/api/v1/pv"
+	PersistentVolumeURI  = "/api/v1/pv/:namespace/:name"
 
-	PersistentVolumeClaimURI  = "/api/v1/pvc"
-	PersistentVolumeClaimsURI = "/api/v1/pvc/:name"
+	PersistentVolumeClaimsURI = "/api/v1/pvc"
+	PersistentVolumeClaimURI  = "/api/v1/pvc/:namespace/:name"
 
 	MonitorURL = "/api/v1/monitor"
 )

@@ -16,6 +16,7 @@ import (
 // Debug: 蓝色
 
 var ifDebug = true
+var ifFile = false
 var ifPrint = true
 var logPath = "./k8s.log"
 var File *os.File = nil
@@ -40,9 +41,11 @@ func WriteLogToFile(msg string) string {
 	// 3. 组装成字符串
 	logStr := fmt.Sprintf("[%s] [%s %d] [%s]: %s\n", currentTimeStr, file, line, runtime.FuncForPC(funcName).Name(), msg)
 	// 4. 将字符串写入到文件中
-	_, err := File.WriteString(logStr)
-	if err != nil {
-		return ""
+	if ifFile {
+		_, err := File.WriteString(logStr)
+		if err != nil {
+			return ""
+		}
 	}
 	return logStr
 }

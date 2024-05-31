@@ -2,8 +2,12 @@ package specctlrs
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"os/exec"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
@@ -15,14 +19,15 @@ import (
 
 type PvController interface {
 	Run()
-	AddPv(pv *apiObject.PersistentVolume) error
-	AddPvc(pvc *apiObject.PersistentVolumeClaim) error
-	BindPodToPvc(pvc *apiObject.PersistentVolumeClaim, podName string) error
-	UnbindPodToPvc(pvc *apiObject.PersistentVolumeClaim) error
-	GetPvcBind(pvcName string) string
 }
 
 type PvControllerImpl struct {
+	// 服务器地址
+	Address string
+	// 服务器端口
+	Port int
+	// 转发请求
+	Router *gin.Engine
 	// 用于存储PersistentVolume，名称为namespace/name
 	PvMap map[string]*apiObject.PersistentVolume
 	// 用于存储PersistentVolumeClaim和PersistentVolume的映射关系，名称均为为namespace/name
@@ -35,20 +40,152 @@ var (
 )
 
 func NewPvController() (PvController, error) {
+	// 设置gin的运行模式
+	gin.SetMode(gin.ReleaseMode)
+
 	return &PvControllerImpl{
+		Address:  config.PVServerAddress,
+		Port:     config.PVServerPort,
+		Router:   gin.Default(),
 		PvMap:    make(map[string]*apiObject.PersistentVolume),
 		PvcPvMap: make(map[string]string),
 	}, nil
 }
 
 func (pc *PvControllerImpl) Run() {
-	// 定期执行
-	executor.ExecuteInPeriod(PvControllerDelay, PvControllerTimeGap, pc.syncPv)
+	// 注册路由
+	pc.Register()
+
+	// 开启一个协程定期执行同步函数
+	go executor.ExecuteInPeriod(PvControllerDelay, PvControllerTimeGap, pc.syncPv)
+
+	// 开启线程用于处理请求
+	err := pc.Router.Run(pc.Address + ":" + fmt.Sprint(pc.Port))
+	if err != nil {
+		log.ErrorLog("ServerlessServer Run: " + err.Error())
+	}
+
+}
+
+// Register 注册路由
+func (pc *PvControllerImpl) Register() {
+	// 创建PersistentVolume
+	pc.Router.POST(config.PersistentVolumesURI, pc.CreatePv)
+
+	// 创建PersistentVolumeClaim
+	pc.Router.POST(config.PersistentVolumeClaimsURI, pc.CreatePvc)
+
+	// 绑定pod到PersistentVolumeClaim
+	pc.Router.POST(config.PersistentVolumeClaimURI, pc.BindPodToPvc)
+	// 解绑pod和PersistentVolumeClaim
+	pc.Router.DELETE(config.PersistentVolumeClaimURI, pc.UnbindPodToPvc)
+	// 获取PersistentVolumeClaim绑定的PersistentVolume
+	pc.Router.GET(config.PersistentVolumeClaimURI, pc.GetPvcBind)
+}
+
+// CreatePv 创建PersistentVolume
+func (pc *PvControllerImpl) CreatePv(c *gin.Context) {
+	pv := &apiObject.PersistentVolume{}
+	err := c.ShouldBindJSON(pv)
+	if err != nil {
+		log.ErrorLog("Create PersistentVolume: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = pc.addPv(pv)
+	if err != nil {
+		log.ErrorLog("Create PersistentVolume: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": "Create PersistentVolume " + pv.Metadata.Name})
+}
+
+// CreatePvc 创建PersistentVolumeClaim
+func (pc *PvControllerImpl) CreatePvc(c *gin.Context) {
+	pvc := &apiObject.PersistentVolumeClaim{}
+	err := c.ShouldBindJSON(pvc)
+	if err != nil {
+		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = pc.addPvc(pvc)
+	if err != nil {
+		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": "Create PersistentVolumeClaim " + pvc.Metadata.Name})
+}
+
+// BindPodToPvc 绑定PersistentVolumeClaim
+func (pc *PvControllerImpl) BindPodToPvc(c *gin.Context) {
+	podNamespace := c.Param("namespace")
+	podName := c.Param("name")
+	log.DebugLog("Bind PersistentVolumeClaim: " + podNamespace + "/" + podName)
+
+	pvc := &apiObject.PersistentVolumeClaim{}
+	err := c.ShouldBindJSON(pvc)
+	if err != nil {
+		log.ErrorLog("Bind PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = pc.bindPodToPvc(pvc, podNamespace+"/"+podName)
+	if err != nil {
+		log.ErrorLog("Bind PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": "Bind PersistentVolumeClaim " + pvc.Metadata.Name})
+}
+
+// UnbindPodToPvc 解绑PersistentVolumeClaim
+func (pc *PvControllerImpl) UnbindPodToPvc(c *gin.Context) {
+	pvcNamespace := c.Param("namespace")
+	pvcName := c.Param("name")
+	key := config.EtcdPvcPrefix + "/" + pvcNamespace + "/" + pvcName
+	pvc := &apiObject.PersistentVolumeClaim{}
+	response, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.ErrorLog("Unbind PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+	err = json.Unmarshal([]byte(response), pvc)
+	if err != nil {
+		log.ErrorLog("Unbind PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = pc.unbindPodToPvc(pvc)
+	if err != nil {
+		log.ErrorLog("Unbind PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": "Unbind PersistentVolumeClaim " + pvc.Metadata.Name})
+}
+
+// GetPvcBind 获取PersistentVolumeClaim绑定的PersistentVolume
+func (pc *PvControllerImpl) GetPvcBind(c *gin.Context) {
+	pvcNamespace := c.Param("namespace")
+	pvcName := c.Param("name")
+	pvName := pc.getPvcBind(pvcNamespace + "/" + pvcName)
+	c.JSON(http.StatusOK, pvName)
 }
 
 // syncPv 同步PersistentVolume
 func (pc *PvControllerImpl) syncPv() {
-	log.DebugLog("Sync PersistentVolume")
 	// 从etcd中获取所有PersistentVolumeClaim
 	response, err := etcdclient.EtcdStore.PrefixGet(config.EtcdPvcPrefix)
 	if err != nil {
@@ -73,8 +210,8 @@ func (pc *PvControllerImpl) syncPv() {
 	}
 }
 
-// AddPv 创建PersistentVolume
-func (pc *PvControllerImpl) AddPv(pv *apiObject.PersistentVolume) error {
+// addPv 创建PersistentVolume
+func (pc *PvControllerImpl) addPv(pv *apiObject.PersistentVolume) error {
 	// 检查pv是否已经存在
 	pvName := pv.Metadata.Name
 	pvNamespace := pv.Metadata.Namespace
@@ -87,21 +224,21 @@ func (pc *PvControllerImpl) AddPv(pv *apiObject.PersistentVolume) error {
 	// 将本地目录 /pvclient 挂载到服务器目录 /pvserver
 	mountCmd := "mount " + config.NFSServer + ":" + config.PVServerPath + " " + config.PVClientPath
 	cmd := exec.Command("sh", "-c", mountCmd)
-	output, err := cmd.CombinedOutput()
+	err = cmd.Run()
 	if err != nil {
 		log.ErrorLog("Create PersistentVolume: " + err.Error())
 		return err
 	}
-	log.DebugLog("Bind to NFS server: " + string(output))
+	log.DebugLog("Bind to NFS server: " + config.NFSServer + ":" + config.PVServerPath)
 	// 在目录 /pvclient 创建目录 /:namespace/:name 作为PersistentVolume
 	mkdirCmd := "mkdir -p " + config.PVClientPath + "/" + pv.Metadata.Namespace + "/" + pv.Metadata.Name
 	cmd = exec.Command("sh", "-c", mkdirCmd)
-	output, err = cmd.CombinedOutput()
+	err = cmd.Run()
 	if err != nil {
 		log.ErrorLog("Create PersistentVolume: " + err.Error())
 		return err
 	}
-	log.DebugLog("Create PersistentVolume: " + string(output))
+	log.DebugLog("Create PersistentVolume: " + pvNamespace + "/" + pvName)
 	// 修改pv的状态
 	pv.Status.Phase = apiObject.VolumeAvailable
 	// 将pv存入map
@@ -121,8 +258,8 @@ func (pc *PvControllerImpl) AddPv(pv *apiObject.PersistentVolume) error {
 	return nil
 }
 
-// AddPvc 创建PersistentVolumeClaim
-func (pc *PvControllerImpl) AddPvc(pvc *apiObject.PersistentVolumeClaim) error {
+// addPvc 创建PersistentVolumeClaim
+func (pc *PvControllerImpl) addPvc(pvc *apiObject.PersistentVolumeClaim) error {
 	// 检查pvc是否已经存在
 	pvcName := pvc.Metadata.Name
 	pvcNamespace := pvc.Metadata.Namespace
@@ -159,13 +296,13 @@ func (pc *PvControllerImpl) AddPvc(pvc *apiObject.PersistentVolumeClaim) error {
 	return nil
 }
 
-// GetBind 获取PersistentVolumeClaim绑定的PersistentVolume
-func (pc *PvControllerImpl) GetPvcBind(pvcName string) string {
+// getPvcBind 获取PersistentVolumeClaim绑定的PersistentVolume
+func (pc *PvControllerImpl) getPvcBind(pvcName string) string {
 	return pc.PvcPvMap[pvcName]
 }
 
-// BindPodToPvc 绑定Pod到PersistentVolumeClaim
-func (pc *PvControllerImpl) BindPodToPvc(pvc *apiObject.PersistentVolumeClaim, podName string) error {
+// bindPodToPvc 绑定Pod到PersistentVolumeClaim
+func (pc *PvControllerImpl) bindPodToPvc(pvc *apiObject.PersistentVolumeClaim, podName string) error {
 	// 修改pvc的状态
 	pvc.Status.IsBound = true
 	pvc.Status.BoundPodName = podName
@@ -180,8 +317,8 @@ func (pc *PvControllerImpl) BindPodToPvc(pvc *apiObject.PersistentVolumeClaim, p
 	return nil
 }
 
-// UnbindPodToPvc 解绑Pod和PersistentVolumeClaim
-func (pc *PvControllerImpl) UnbindPodToPvc(pvc *apiObject.PersistentVolumeClaim) error {
+// unbindPodToPvc 解绑Pod和PersistentVolumeClaim
+func (pc *PvControllerImpl) unbindPodToPvc(pvc *apiObject.PersistentVolumeClaim) error {
 	// 修改pvc的状态
 	pvc.Status.IsBound = false
 	pvc.Status.BoundPodName = ""
@@ -301,7 +438,7 @@ func (pc *PvControllerImpl) newPV(pvc *apiObject.PersistentVolumeClaim) *apiObje
 		},
 	}
 	// 创建PersistentVolume
-	err := pc.AddPv(pv)
+	err := pc.addPv(pv)
 	if err != nil {
 		log.ErrorLog("New PersistentVolume: " + err.Error())
 		return nil
