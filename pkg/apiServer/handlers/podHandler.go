@@ -161,7 +161,7 @@ func DeletePod(c *gin.Context) {
 		for _, port := range container.Ports {
 			if port.Metrics != "" {
 				needMonitor = true
-				url := address + ":" + fmt.Sprint(port.HostPort) + "/" + port.Metrics
+				url := address + ":" + fmt.Sprint(port.HostPort)
 				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
 			}
 		}
@@ -398,7 +398,7 @@ func CreatePod(c *gin.Context) {
 		for _, port := range container.Ports {
 			if port.Metrics != "" {
 				needMonitor = true
-				url := address + ":" + fmt.Sprint(port.HostPort) + "/" + port.Metrics
+				url := address + ":" + fmt.Sprint(port.HostPort)
 				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
 			}
 		}
