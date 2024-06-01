@@ -62,6 +62,8 @@ func deleteHandler(cmd *cobra.Command, args []string) {
 			urlKind = "services"
 		case "ReplicaSet":
 			ActualType = reflect.TypeOf(apiObject.ReplicaSet{})
+		case "Dns":
+			ActualType = reflect.TypeOf(apiObject.Dns{})
 		default:
 			ActualType = nil
 		}

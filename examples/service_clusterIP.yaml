@@ -10,8 +10,8 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 8000
-      targetPort: 8000
+    - port: 7080
+      targetPort: 7080
       protocol: TCP
       name: file-service
   selector:
