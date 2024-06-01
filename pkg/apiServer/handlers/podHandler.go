@@ -390,35 +390,6 @@ func CreatePod(c *gin.Context) {
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
 	log.DebugLog("createUri: " + createUri)
 
-	// 如果是一个自定义Metrics的pod，则需要对该pod进行监控
-	needMonitor := false
-	var monitorPod apiObject.MonitorPod
-	monitorPod.PodName = newPodName
-	for _, container := range pod.Spec.Containers {
-		for _, port := range container.Ports {
-			if port.Metrics != "" {
-				needMonitor = true
-				url := address + ":" + fmt.Sprint(port.HostPort)
-				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
-			}
-		}
-	}
-	if needMonitor {
-		// 注册监控
-		url := config.HttpSchema + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.MonitorPodURL
-		resp, err := httprequest.PutObjMsg(url, monitorPod)
-		if err != nil {
-			log.ErrorLog("CreatePod: " + err.Error())
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		if resp.StatusCode != http.StatusOK {
-			log.ErrorLog("CreatePod: " + resp.Status)
-			c.JSON(500, gin.H{"error": resp.Status})
-			return
-		}
-	}
-
 	// 发送创建请求并解析返回的pod信息
 	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil {
@@ -449,6 +420,35 @@ func CreatePod(c *gin.Context) {
 		log.ErrorLog("CreatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+
+	// 如果是一个自定义Metrics的pod，则需要对该pod进行监控
+	needMonitor := false
+	var monitorPod apiObject.MonitorPod
+	monitorPod.PodName = newPodName
+	for _, container := range pod.Spec.Containers {
+		for _, port := range container.Ports {
+			if port.Metrics != "" {
+				needMonitor = true
+				url := pod.Status.PodIP + ":" + fmt.Sprint(port.HostPort)
+				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
+			}
+		}
+	}
+	if needMonitor {
+		// 注册监控
+		url := config.HttpSchema + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.MonitorPodURL
+		resp, err := httprequest.PutObjMsg(url, monitorPod)
+		if err != nil {
+			log.ErrorLog("CreatePod: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.ErrorLog("CreatePod: " + resp.Status)
+			c.JSON(500, gin.H{"error": resp.Status})
+			return
+		}
 	}
 
 	c.JSON(201, reaJson)
