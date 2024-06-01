@@ -10,6 +10,8 @@ import (
 
 func (r *RuntimeManager) getPodSandBoxConfig(pod *apiObject.Pod) (*runtimeapi.PodSandboxConfig, error) {
 	// put basic infos from pod into config
+	logDirectory := "/var/log/pods" + pod.Metadata.Name
+
 	podSandboxConfig := &runtimeapi.PodSandboxConfig{
 		Metadata: &runtimeapi.PodSandboxMetadata{
 			Name:      pod.Metadata.Name,
@@ -17,8 +19,9 @@ func (r *RuntimeManager) getPodSandBoxConfig(pod *apiObject.Pod) (*runtimeapi.Po
 			Uid:       pod.Metadata.UUID,
 			Attempt:   1,
 		},
-		Labels:      pod.Metadata.Labels,
-		Annotations: pod.Metadata.Annotations,
+		Labels:       pod.Metadata.Labels,
+		Annotations:  pod.Metadata.Annotations,
+		LogDirectory: logDirectory, //`/var/log/pods/<NAMESPACE>_<NAME>_<UID>/`
 	}
 
 	// TODO: 需要获取config中基本的DNS信息，暂时不需要
@@ -61,6 +64,8 @@ func (r *RuntimeManager) getContainerConfig(container *apiObject.Container, sand
 	if err != nil {
 		return nil, err
 	}
+
+	logPath := container.Name + ".log"
 	// 2. 创建container
 	config := &runtimeapi.ContainerConfig{
 		Metadata: &runtimeapi.ContainerMetadata{
@@ -74,6 +79,7 @@ func (r *RuntimeManager) getContainerConfig(container *apiObject.Container, sand
 		Command:    container.Command,
 		WorkingDir: container.WorkingDir,
 		Mounts:     conversion.MountsToMounts(container.Mounts),
+		LogPath:    logPath,
 	}
 	log.DebugLog("ContainerConfig: " + config.String())
 

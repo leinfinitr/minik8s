@@ -12,6 +12,7 @@ import (
 	"minik8s/pkg/config"
 	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -108,6 +109,8 @@ func (a *ApiServer) Register() {
 	a.Router.PUT(config.ServiceURI, handlers.PutService)
 	// 删除制定Service
 	a.Router.DELETE(config.ServiceURI, handlers.DeleteService)
+	// 获取所有的services
+	a.Router.GET(config.ServicesURI, handlers.GetServices)
 
 	// 获取所有ReplicaSets
 	a.Router.GET(config.ReplicaSetsURI, handlers.GetReplicaSets)
@@ -156,9 +159,13 @@ func (a *ApiServer) Register() {
 
 	// 增加monitor的处理函数
 	// 首次注册节点
-	a.Router.PUT(config.MonitorURL, handlers.RegisterMonitor)
+	a.Router.PUT(config.MonitorNodeURL, handlers.RegisterNodeMonitor)
 	// 节点失联后，删除相关配置
-	a.Router.DELETE(config.MonitorURL, handlers.DeleteMonitor)
+	a.Router.DELETE(config.MonitorNodeURL, handlers.DeleteNodeMonitor)
+	// 注册暴露自定义指标的pod
+	a.Router.PUT(config.MonitorPodURL, handlers.RegisterPodMonitor)
+	// 删除暴露自定义指标的pod
+	a.Router.DELETE(config.MonitorPodURL, handlers.DeletePodMonitor)
 
 }
 
@@ -176,7 +183,8 @@ func ScanNodeStatus() {
 			if err != nil {
 				log.WarnLog("ScanNodeStatus: " + err.Error())
 			}
-			url := config.APIServerURL() + config.NodesURI + "/" + node.Metadata.Name + "/status"
+			url := config.APIServerURL() + config.NodeStatusURI
+			url = strings.Replace(url, config.NameReplace, node.Metadata.Name, 1)
 			httprequest.PutObjMsg(url, node)
 		}
 
