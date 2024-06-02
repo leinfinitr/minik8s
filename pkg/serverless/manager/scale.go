@@ -225,3 +225,12 @@ func (s *ScaleManagerImpl) AddServerless(serverless apiObject.Serverless) {
 func (s *ScaleManagerImpl) DeleteServerless(name string) {
 	delete(s.Serverless, name)
 }
+
+// GetAllServerless 获取所有的Serverless
+func (s *ScaleManagerImpl) GetAllServerless() []apiObject.Serverless {
+	serverless := make([]apiObject.Serverless, 0)
+	for _, s := range s.Serverless {
+		serverless = append(serverless, s)
+	}
+	return serverless
+}

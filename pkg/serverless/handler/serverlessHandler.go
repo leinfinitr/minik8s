@@ -61,31 +61,7 @@ func CreateServerless(c *gin.Context) {
 // GetServerless 获取所有的Serverless Function
 func GetServerless(c *gin.Context) {
 	log.InfoLog("GetServerless")
-	var podList []apiObject.Pod
-	// 从 etcd 中获取所有属于 Serverless 的 Pod 对象
-	response, err := etcdclient.EtcdStore.PrefixGet(config.EtcdServerlessPrefix)
-	if err != nil {
-		log.ErrorLog("GetServerless: " + err.Error())
-		c.JSON(500, err.Error())
-		return
-	}
-	// 遍历 response，依次将 json 字符串转换为 pod 对象
-	for _, podJson := range response {
-		var pod apiObject.Pod
-		err = json.Unmarshal([]byte(podJson), &pod)
-		if err != nil {
-			log.ErrorLog("GetServerless: " + err.Error())
-			c.JSON(500, err.Error())
-			return
-		}
-		podList = append(podList, pod)
-	}
-	// 将 pod 对象列表转换为 serverless 对象列表
-	var serverlessList []apiObject.Serverless
-	for _, pod := range podList {
-		serverless := conversion.PodToServerless(pod)
-		serverlessList = append(serverlessList, serverless)
-	}
+	serverlessList := manager.ScaleManager.GetAllServerless()
 	c.JSON(200, serverlessList)
 }
 

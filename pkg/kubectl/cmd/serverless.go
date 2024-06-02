@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 
 	"minik8s/pkg/apiObject"
@@ -158,9 +159,18 @@ func getAllServerless() {
 		os.Exit(1)
 	}
 	// 输出结果
+	writer := table.NewWriter()
+	writer.SetOutputMirror(os.Stdout)
+	writer.AppendHeader(table.Row{"Name", "Image", "HostPath", "FunctionFile"})
 	for _, serverless := range result {
-		fmt.Println("Name: " + serverless.Name + " Image: " + serverless.Image + " HostPath: " + serverless.HostPath + " Command: " + serverless.Command)
+		writer.AppendRow(table.Row{
+			serverless.Name,
+			serverless.Image,
+			serverless.HostPath,
+			serverless.FunctionFile,
+		})
 	}
+	writer.Render()
 }
 
 // deleteServerless 删除 serverless function
