@@ -28,6 +28,8 @@ type ScaleManagerImpl struct {
 	Instance map[string]apiObject.Pod
 	// 每个实例当前处理的请求数量
 	InstanceRequestNum map[string]int
+	// 每个实例距离最后一次处理请求所经过的周期
+	InstanceLastRequestTime map[string]int
 
 	// 每个Serverless Function对应的Pod
 	Pod map[string]apiObject.Pod
@@ -41,13 +43,14 @@ var ScaleManager *ScaleManagerImpl = nil
 func NewScaleManager() *ScaleManagerImpl {
 	if ScaleManager == nil {
 		ScaleManager = &ScaleManagerImpl{
-			Threshold:           10,
-			FunctionInstanceNum: make(map[string]int),
-			FunctionRequestNum:  make(map[string]int),
-			Instance:            make(map[string]apiObject.Pod),
-			InstanceRequestNum:  make(map[string]int),
-			Pod:                 make(map[string]apiObject.Pod),
-			Serverless:          make(map[string]apiObject.Serverless),
+			Threshold:               10,
+			FunctionInstanceNum:     make(map[string]int),
+			FunctionRequestNum:      make(map[string]int),
+			Instance:                make(map[string]apiObject.Pod),
+			InstanceRequestNum:      make(map[string]int),
+			InstanceLastRequestTime: make(map[string]int),
+			Pod:                     make(map[string]apiObject.Pod),
+			Serverless:              make(map[string]apiObject.Serverless),
 		}
 
 	}
@@ -72,14 +75,15 @@ func (s *ScaleManagerImpl) Run() {
 
 	go func() {
 		for {
-			for name, requestNum := range s.InstanceRequestNum {
+			for name, LastRequestTime := range s.InstanceLastRequestTime {
 				// 缩容
-				if requestNum == 0 {
+				s.InstanceLastRequestTime[name]++
+				if LastRequestTime > 30 {
 					s.DecreaseInstance(name)
 					continue
 				}
 			}
-			time.Sleep(60 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 }
@@ -119,6 +123,7 @@ func (s *ScaleManagerImpl) IncreaseInstance(name string) {
 	s.FunctionInstanceNum[name]++
 	s.Instance[instanceName] = pod
 	s.InstanceRequestNum[instanceName] = 0
+	s.InstanceLastRequestTime[instanceName] = 0
 
 	log.InfoLog("Create a new pod for " + name + " with name " + instanceName)
 }
@@ -142,6 +147,7 @@ func (s *ScaleManagerImpl) DecreaseInstance(instanceName string) {
 	s.FunctionInstanceNum[podName]--
 	delete(s.Instance, instanceName)
 	delete(s.InstanceRequestNum, instanceName)
+	delete(s.InstanceLastRequestTime, instanceName)
 
 	log.InfoLog("Delete pod " + instanceName + " for " + podName)
 }
@@ -174,6 +180,8 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	serverless := s.Serverless[name]
 	// 增加该实例处理的请求数量
 	s.InstanceRequestNum[minRequestInstanceName]++
+	// 重置该实例的最后一次处理请求所经过的周期
+	s.InstanceLastRequestTime[minRequestInstanceName] = 0
 	// 转发给 apiServer 运行 Pod 中的容器
 	url := config.APIServerURL() + config.PodExecURI
 	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
