@@ -30,6 +30,7 @@ func (s *ServerlessServer) Run() {
 	go s.Scale.Run()
 
 	// 主线程用于处理请求
+	log.InfoLog("ServerlessServer Run: " + s.Address + ":" + fmt.Sprint(s.Port))
 	err := s.Router.Run(s.Address + ":" + fmt.Sprint(s.Port))
 	if err != nil {
 		log.ErrorLog("ServerlessServer Run: " + err.Error())

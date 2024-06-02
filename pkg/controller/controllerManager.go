@@ -2,6 +2,7 @@ package controller
 
 import (
 	specctlrs "minik8s/pkg/controller/specCtlrs"
+	"minik8s/tools/log"
 )
 
 type ControllerManager interface {
@@ -31,6 +32,7 @@ func NewControllerManager() ControllerManager {
 }
 
 func (cm *ControllerManagerImpl) Run(stopCh <-chan struct{}) {
+	log.InfoLog("ControllerManager Run")
 	go cm.replicaSetController.Run()
 	go cm.hpaController.Run()
 	go cm.pvController.Run()

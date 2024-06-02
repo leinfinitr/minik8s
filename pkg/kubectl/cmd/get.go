@@ -103,7 +103,7 @@ func printNodesResult(nodes []apiObject.Node) {
 func printContainersResult(containers []apiObject.Container) {
 	writer := table.NewWriter()
 	writer.SetOutputMirror(os.Stdout)
-	writer.AppendHeader(table.Row{"Kind", "Name", "Image", "Status", "Ports"})
+	writer.AppendHeader(table.Row{"Kind", "Name", "ID", "Image", "Status", "Ports"})
 	for _, container := range containers {
 		printContainerResult(container, writer)
 	}
@@ -139,6 +139,7 @@ func printContainerResult(container apiObject.Container, writer table.Writer) {
 	writer.AppendRow(table.Row{
 		"Container",
 		container.Name,
+		container.ContainerID,
 		container.Image,
 		coloredStatus, // 使用包装了颜色的status
 		container.Ports,
@@ -259,7 +260,7 @@ func printServiceResult(service apiObject.Service, writer table.Writer) {
 func printPodsResult(pods []apiObject.Pod) {
 	writer := table.NewWriter()
 	writer.SetOutputMirror(os.Stdout)
-	writer.AppendHeader(table.Row{"Kind", "Name", "Status", "Node"})
+	writer.AppendHeader(table.Row{"Kind", "Name", "Status", "Node", "IP"})
 	for _, pod := range pods {
 		printPodResult(pod, writer)
 	}
@@ -288,6 +289,7 @@ func printPodResult(pod apiObject.Pod, writer table.Writer) {
 		pod.Metadata.Name,
 		coloredStatus, // 使用包装了颜色的status
 		pod.Spec.NodeName,
+		pod.Status.PodIP,
 	})
 }
 

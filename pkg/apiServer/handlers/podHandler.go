@@ -480,8 +480,16 @@ func CreatePod(c *gin.Context) {
 			// 处理使用了emptyDir的volume
 			if volume.EmptyDir.SizeLimit != "" {
 				// 创建emptyDir
+				cleanCmd := "rm -rf " + config.DefaultVolumePath + "/" + pod.Metadata.Name + "/" + volume.Name
 				mkdirCmd := "mkdir -p " + config.DefaultVolumePath + "/" + pod.Metadata.Name + "/" + volume.Name
-				cmd := exec.Command("sh", "-c", mkdirCmd)
+				cmd := exec.Command("sh", "-c", cleanCmd)
+				err = cmd.Run()
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				cmd = exec.Command("sh", "-c", mkdirCmd)
 				err = cmd.Run()
 				if err != nil {
 					log.ErrorLog("CreatePod: " + err.Error())
