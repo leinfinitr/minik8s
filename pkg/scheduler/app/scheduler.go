@@ -70,7 +70,6 @@ func (s *Scheduler) getNodesList() []apiObject.Node {
 		log.ErrorLog("json.Unmarshal err:" + err.Error())
 		return nil
 	}
-	fmt.Println(NodeList)
 	return NodeList
 }
 

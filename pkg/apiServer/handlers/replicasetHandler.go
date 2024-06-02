@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
@@ -60,7 +59,6 @@ func GetReplicaSets(c *gin.Context) {
 		err = json.Unmarshal([]byte(v), &rs)
 		if err != nil {
 			log.ErrorLog("GetReplicaSets: " + err.Error())
-			fmt.Println(err.Error())
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
