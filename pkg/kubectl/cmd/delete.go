@@ -2,102 +2,62 @@ package cmd
 
 import (
 	"fmt"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	"minik8s/pkg/kubectl/translator"
-	httprequest "minik8s/tools/httpRequest"
-	reflectprop "minik8s/tools/reflectProp"
 	"net/http"
 	"os"
-	"reflect"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"minik8s/pkg/config"
+
+	httprequest "minik8s/tools/httpRequest"
 )
 
 var deletedCmd = &cobra.Command{
 	Use:   "delete",
-	Short: "Delete a resource by filename or stdin",
-	Long:  "Delete resources by filenames, stdin, resources and names, or by resources and label selector",
+	Short: "Delete a resource by namespace, type and name",
+	Long:  "Delete a resource by namespace, type and name",
 	Run:   deleteHandler,
 }
 
 func deleteHandler(cmd *cobra.Command, args []string) {
-	if len(args) == 0 {
-		fmt.Println("Error: You must specify the type of resource to delete.")
+	if len(args) != 3 {
+		fmt.Println("Usage: delete <namespace> <resource type> <resource name>")
 		os.Exit(1)
 	}
-	if len(args) > 1 {
-		fmt.Println("Error: You may only specify one resource type to delete.")
-		os.Exit(1)
-	}
-	if len(args) == 1 {
-		resourceType := args[0]
-		fileInfo, err := os.Stat(resourceType)
-		if err != nil {
-			fmt.Println("Error: The resource type specified does not exist.")
-			os.Exit(1)
-		}
-		if fileInfo.IsDir() {
-			fmt.Println("Error: The resource type specified is a directory.")
-			os.Exit(1)
-		}
-		content, err := os.ReadFile(resourceType)
-		if err != nil {
-			fmt.Println("Error: Could not read the file specified.")
-			os.Exit(1)
-		}
-		kind, err := translator.FetchApiObjFromYaml(content)
-		if err != nil {
-			fmt.Println("Error: Could not fetch the kind from the yaml file.")
-			os.Exit(1)
-		}
-		var ActualType reflect.Type
-		var urlKind string
-		switch kind {
-		case "Pod":
-			ActualType = reflect.TypeOf(apiObject.Pod{})
-			urlKind = "pods"
-		case "Service":
-			ActualType = reflect.TypeOf(apiObject.Service{})
-			urlKind = "services"
-		case "ReplicaSet":
-			ActualType = reflect.TypeOf(apiObject.ReplicaSet{})
-		case "Dns":
-			ActualType = reflect.TypeOf(apiObject.Dns{})
-		default:
-			ActualType = nil
-		}
-		if ActualType == nil {
-			fmt.Println("Error: The resource type specified is not supported.")
-			os.Exit(1)
-		}
-		obj := reflect.New(ActualType).Interface()
-		err = translator.ParseApiObjFromYaml(content, obj)
-		if err != nil {
-			fmt.Println("Error: Could not parse the yaml file.")
-			os.Exit(1)
-		}
-		namespace := reflectprop.GetObjNamespace(obj)
-		name := reflectprop.GetObjName(obj)
-		if name == "" {
-			fmt.Println("Error: Could not get the name of the resource.")
-			os.Exit(1)
-		}
-		url := config.APIServerURL() + "/api/v1/namespaces/" + namespace + "/" + urlKind + "/" + name
-		resp, err := httprequest.DelMsg(url, obj)
-		if err != nil {
-			fmt.Println("Error: Could not delete the object.")
-			os.Exit(1)
-		}
+	nameSpace := args[0]
+	resourceType := args[1]
+	resourceName := args[2]
+	var url string
 
-		DeleteResultDisplay(kind, resp)
+	switch resourceType {
+	case "Pod":
+		url = config.APIServerURL() + config.PodURI
+	case "Service":
+		url = config.APIServerURL() + config.ServiceURI
+	case "ReplicaSet":
+		url = config.APIServerURL() + config.ReplicaSetURI
+	case "Dns":
+		url = config.APIServerURL() + config.DNSURI
+	default:
+		fmt.Println("Supported resource types: Pod, Service, ReplicaSet, Dns")
 	}
+
+	url = strings.Replace(url, config.NameSpaceReplace, nameSpace, -1)
+	url = strings.Replace(url, config.NameReplace, resourceName, -1)
+	resp, err := httprequest.DelMsg(url, nil)
+	if err != nil {
+		fmt.Println("Error: Could not delete the object.")
+		os.Exit(1)
+	}
+
+	DeleteResultDisplay(resourceName, resp)
 }
 
-func DeleteResultDisplay(kind string, resp *http.Response) {
+func DeleteResultDisplay(name string, resp *http.Response) {
 	if resp.StatusCode == 200 {
-		fmt.Println(kind + " deleted successfully.")
+		fmt.Println(name + " deleted successfully.")
 	} else {
-		fmt.Println("Error: Could not delete the " + kind + ".")
+		fmt.Println("Error: Could not delete the " + name + ".")
 	}
 }

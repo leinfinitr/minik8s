@@ -78,7 +78,7 @@ func (s *ScaleManagerImpl) Run() {
 			for name, LastRequestTime := range s.InstanceLastRequestTime {
 				// 缩容
 				s.InstanceLastRequestTime[name]++
-				if LastRequestTime > 30 {
+				if LastRequestTime > 30000 {
 					s.DecreaseInstance(name)
 					continue
 				}
@@ -231,7 +231,14 @@ func (s *ScaleManagerImpl) AddServerless(serverless apiObject.Serverless) {
 
 // DeleteServerless 删除一个Serverless
 func (s *ScaleManagerImpl) DeleteServerless(name string) {
+	log.DebugLog("Delete serverless " + name)
 	delete(s.Serverless, name)
+	// 删除该 Serverless 对应的所有实例
+	for instanceName := range s.Instance {
+		if strings.HasPrefix(instanceName, name) {
+			s.DecreaseInstance(instanceName)
+		}
+	}
 }
 
 // GetAllServerless 获取所有的Serverless
