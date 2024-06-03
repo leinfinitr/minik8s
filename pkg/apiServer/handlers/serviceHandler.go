@@ -217,25 +217,7 @@ func PutService(c *gin.Context) {
 	etcdclient.EtcdStore.Put(key, string(resJson))
 	log.InfoLog("PutService: " + newServiceNamespace + "/" + newServiceName)
 
-	// 获取所有的Node信息
-	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
-	if err != nil {
-		log.WarnLog("GetNodes: " + err.Error())
-		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
-		return
-	}
-
-	var nodes []apiObject.Node
-	for _, v := range res {
-		var node apiObject.Node
-		err = json.Unmarshal([]byte(v), &node)
-		if err != nil {
-			log.WarnLog("GetNodes: " + err.Error())
-			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
-			return
-		}
-		nodes = append(nodes, node)
-	}
+	nodes := GetALLNodes()
 
 	// 向所有的Node发送serviceEvent
 	for _, node := range nodes {
