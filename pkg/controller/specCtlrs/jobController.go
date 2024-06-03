@@ -21,7 +21,7 @@ type JobControllerImpl struct {
 var (
 	JobControllerDelay   = 3 * time.Second
 	JobControllerTimeGap = []time.Duration{10 * time.Second}
-	ServerImage = "minik8s/server:latest"
+	ServerImage = "jackhel0/task-server:latest"
 )
 
 func NewJobController() (JobController, error) {
@@ -52,7 +52,7 @@ func (jc *JobControllerImpl) syncJob() {
 
 }
 func (jc *JobControllerImpl) CreateJob(job apiObject.Job){
-	cmd := []string{"/bin/job-server", "--name", job.Metadata.Name, "--namespace", job.Metadata.Namespace,"--serverAddr",config.APIServerURL()}
+	cmd := []string{"/bin/server", "-jobNname", job.Metadata.Name, "-jobNamespace", job.Metadata.Namespace,"-serverAddr",config.APIServerURL()}
 	pod := &apiObject.Pod{
 		TypeMeta: apiObject.TypeMeta{
 			Kind:       "Pod",

@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Job
+metadata:
+  name: job-example1
+  namespace: test-job-namespace
+spec:
+  partition: dgx2
+  numTasks: 1
+  numTasksPerNode: 6
+  submitDir: "/root/minik8s/pkg/gpu/task"
+  runCmd: [
+    "module load cuda/9.2.88-gcc-4.8.5",
+    "nvcc matrix_add.cu -o matrix_add",
+    "nvcc matrix_multiply.cu -o matrix_multiply",
+    "./matrix_add",
+    "./matrix_multiply",
+  ]
+  output: "job-example1.out"
+  error: "job-example1.err"
+  userName: stu092
+  password: d8EKgScj612C
+  gpuNum: 1

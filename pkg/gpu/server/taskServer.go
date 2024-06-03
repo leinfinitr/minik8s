@@ -30,6 +30,8 @@ type JobParsedStatus struct {
 }
 
 func NewTaskServer(config *TaskServerConfig) (*TaskServer, error) {
+	log.InfoLog("username: " + config.UserName)
+	log.InfoLog("password: " + config.PassWord)
 	client, err := sshclient.NewSSHClient(config.UserName, config.PassWord)
 	if err != nil {
 		return nil, err
@@ -86,6 +88,7 @@ func (ts *TaskServer) GenerateScript() string {
 	scriptContent += fmt.Sprintf("#SBATCH --error=%s\n", ts.config.ErrorPath)
 	scriptContent += fmt.Sprintf("#SBATCH --partition=%s\n", ts.config.Partition)
 	scriptContent += fmt.Sprintf("#SBATCH --gres=gpu:%d\n", ts.config.GPUNum)
+	scriptContent += "#SBATCH -N 1\n"
 	scriptContent += ts.FormatRunCmd()
 	
 	return scriptContent
@@ -217,7 +220,8 @@ func (ts *TaskServer) RunTaskServer() {
 		return
 	}
 	//提交作业
-	cmd := fmt.Sprintf(submitSbatch, ts.config.RemoteBaseDir, ts.TaskPath())
+	cmd := fmt.Sprintf(submitSbatch, ts.config.RemoteBaseDir, path.Join(ts.config.RemoteBaseDir,ts.TaskPath()))
+	log.InfoLog("RunTaskServer: " + cmd)
 	res, err := ts.client.RunCmd(cmd)
 	if err != nil {
 		log.ErrorLog("RunCmd: " + err.Error())

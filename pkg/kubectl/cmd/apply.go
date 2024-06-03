@@ -288,7 +288,7 @@ func JobHandler(content []byte) {
 	url = strings.Replace(url, config.NameSpaceReplace, job.Metadata.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, job.Metadata.Name, -1)
 	log.DebugLog("PUT " + url)
-	resp, err = httprequest.PostObjMsg(url, jobCode)
+	resp, err = httprequest.PutObjMsg(url, jobCode)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
 		os.Exit(1)

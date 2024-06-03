@@ -16,5 +16,5 @@ type TaskServerConfig struct{
 
 const (
 	submitSbatch = "sbatch -D %s %s"
-	statusSbatch = "sacct -j %s --format=JobID,JobName,Partition,State,ExitCode --noheader"
+	statusSbatch = "sacct -j %s --format=JobID,Partition,State,ExitCode --noheader"
 )
