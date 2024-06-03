@@ -182,6 +182,11 @@ func AddDNS(c *gin.Context) {
 	}
 
 	// 更新覆盖Nginx的配置文件，并且重启Nginx
+	if err = reloadNginx(); err != nil {
+		log.ErrorLog("AddDNS: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(200, gin.H{"data": dns})
 
@@ -212,7 +217,7 @@ func DeleteDNS(c *gin.Context) {
 		c.JSON(404, gin.H{"error": "not found"})
 		return
 	}
-	//Update dnsRequest
+	// 获取DNS对象
 	var dns apiObject.Dns
 	err = json.Unmarshal([]byte(oldRes), &dns)
 	if err != nil {
@@ -220,6 +225,8 @@ func DeleteDNS(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
+	// 删除etcd中的DNS对象
 	err = etcdclient.EtcdStore.Delete(key)
 	if err != nil {
 		log.ErrorLog("DeleteDNS: " + err.Error())
@@ -304,6 +311,29 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 		fmt.Fprintln(writer, line)
 	}
 	writer.Flush()
+
+	return nil
+}
+
+func reloadNginx() error {
+	// 从etcd中获取Nginx的Pod
+	var nginxPod apiObject.Nginx
+	res, err := etcdclient.EtcdStore.Get(config.EtcdNginxPrefix)
+	if err != nil || res == "" {
+		return err
+	}
+
+	url := "http://" + config.APIServerLocalAddress + fmt.Sprint(config.KubeproxyAPIPort) + config.PodExecURI
+	url = strings.Replace(url, config.NameSpaceReplace, nginxPod.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, nginxPod.Name, -1)
+	url = strings.Replace(url, config.ContainerReplace, nginxPod.Containers[0].Name, -1)
+	url = strings.Replace(url, config.ParamReplace, "nginx -s reload", -1)
+
+	_, err = httprequest.GetMsg(url)
+	if err != nil {
+		log.ErrorLog("reloadNginx: " + err.Error())
+		return err
+	}
 
 	return nil
 }

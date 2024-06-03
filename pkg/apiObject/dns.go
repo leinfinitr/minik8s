@@ -33,6 +33,9 @@ type HostRequest struct {
 
 // Etcd中存储的数据结构，表示一个用于DNS服务的Nginx pod
 type Nginx struct {
-	PodIP string
-	Phase PodPhase
+	PodIP      string
+	Phase      PodPhase
+	Name       string
+	Namespace  string
+	Containers []Container
 }
