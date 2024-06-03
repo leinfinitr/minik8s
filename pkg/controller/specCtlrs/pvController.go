@@ -239,6 +239,14 @@ func (pc *PvControllerImpl) addPv(pv *apiObject.PersistentVolume) error {
 		return err
 	}
 	log.DebugLog("Create PersistentVolume: " + pvNamespace + "/" + pvName)
+	// 清空目录 /pvclient/:namespace/:name
+	rmCmd := "rm -rf " + config.PVClientPath + "/" + pv.Metadata.Namespace + "/" + pv.Metadata.Name + "/*"
+	cmd = exec.Command("sh", "-c", rmCmd)
+	err = cmd.Run()
+	if err != nil {
+		log.ErrorLog("Create PersistentVolume: " + err.Error())
+		return err
+	}
 	// 修改pv的状态
 	pv.Status.Phase = apiObject.VolumeAvailable
 	// 将pv存入map
