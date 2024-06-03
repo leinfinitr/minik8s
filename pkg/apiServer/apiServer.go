@@ -27,8 +27,6 @@ type ApiServer struct {
 	Router *gin.Engine
 }
 
-// 方法-------------------------------------------------------------
-
 // Run 启动ApiServer
 func (a *ApiServer) Run() {
 	log.InfoLog("ApiServer is running on " + a.Address + ":" + fmt.Sprint(a.Port))
