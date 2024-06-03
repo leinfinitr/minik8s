@@ -78,7 +78,7 @@ func (s *ScaleManagerImpl) Run() {
 			for name, LastRequestTime := range s.InstanceLastRequestTime {
 				// 缩容
 				s.InstanceLastRequestTime[name]++
-				if LastRequestTime > 30000 {
+				if LastRequestTime > 30 {
 					s.DecreaseInstance(name)
 					continue
 				}
@@ -113,11 +113,11 @@ func (s *ScaleManagerImpl) IncreaseInstance(name string) {
 	res, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
-		os.Exit(1)
+		return
 	}
 	if res.StatusCode != 201 {
 		log.ErrorLog("Could not create " + name)
-		os.Exit(1)
+		return
 	}
 	// 添加到 Instance 中
 	s.FunctionInstanceNum[name]++

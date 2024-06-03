@@ -17,5 +17,6 @@ if __name__ == "__main__":
                         result += chr((ord(c) - ord('A') + 7) % 26 + ord('A'))
                 else:
                     result += c
+            print(result)
         except ValueError:
             print(0)

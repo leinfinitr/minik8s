@@ -7,9 +7,9 @@ if __name__ == "__main__":
         print(0)
     else:
         try:
-            number = int(sys.argv[1])
+            number = sys.argv[1]
             result = ""
-            for char in str(number):
+            for char in number:
                 result += str((int(char) - 7) % 10)
             print(result)
         except ValueError:

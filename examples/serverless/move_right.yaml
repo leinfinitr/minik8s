@@ -1,5 +1,5 @@
 image: python:3.7-alpine
-name: count_words
+name: move_right
 hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
 functionFile: move_right.py
