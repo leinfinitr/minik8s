@@ -7,6 +7,8 @@ import (
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
 	"minik8s/tools/log"
+	"os/exec"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -75,14 +77,23 @@ func GetDNSs(c *gin.Context) {
 }
 
 func AddDNS(c *gin.Context) {
+	// 在真正的服务之前，要确保是否已经创建出了Nginx的Pod
+	nginxIP, err := GetNginxPod()
+	if err != nil {
+		log.ErrorLog("AddDNS: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
 	var dns apiObject.Dns
-	err := c.BindJSON(&dns)
+	err = c.BindJSON(&dns)
 	if err != nil {
 		log.ErrorLog("AddDNS: " + err.Error())
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	log.InfoLog("AddDNS: " + dns.Metadata.Namespace + "/" + dns.Metadata.Name)
+	dns.NginxIP = nginxIP
 
 	key := config.EtcdDnsPrefix + "/" + dns.Metadata.Namespace + "/" + dns.Metadata.Name
 	oldRes, err := etcdclient.EtcdStore.Get(key)
@@ -134,6 +145,7 @@ func AddDNS(c *gin.Context) {
 		dns.Spec.Paths[it].SvcIp = service.Spec.ClusterIP
 	}
 	dns.Metadata.UUID = uuid.New().String()
+
 	//Update dnsRequest
 	var dnsRequest apiObject.DnsRequest
 	dnsRequest.Action = "Create"
@@ -208,5 +220,30 @@ func DeleteDNS(c *gin.Context) {
 		log.ErrorLog("DeleteDNS: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+}
+
+func GetNginxPod() (string, error) {
+	// 从etcd中获取Nginx的Pod，如果不存在则创建
+	var nginxPod apiObject.Nginx
+	for {
+		res, err := etcdclient.EtcdStore.Get(config.EtcdNginxPrefix)
+		if err == nil || res != "" {
+			// Nginx的Pod已经存在
+			err = json.Unmarshal([]byte(res), &nginxPod)
+			if err == nil {
+				if nginxPod.PodIP != "" {
+					return nginxPod.PodIP, nil
+				}
+			}
+		}
+		if nginxPod.Phase == "" {
+			err = exec.Command("go", "run", "~/minik8s/pkg/kubectl/main", "apply", "~/minik8s/examples/dns_nginx.yaml").Run()
+		}
+		if nginxPod.Phase == apiObject.PodRunning {
+			return nginxPod.PodIP, nil
+		}
+		time.Sleep(2 * time.Second)
+
 	}
 }
