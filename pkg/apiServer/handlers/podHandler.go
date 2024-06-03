@@ -336,6 +336,21 @@ func UpdatePodStatus(c *gin.Context) {
 		return
 	}
 
+	if pod.Metadata.Labels[config.DNS_Label_Key] == config.DNS_Label_Value {
+		// 说明是DNS 用来转发的Pod服务，在Etcd中更新DNS的状态
+		var nginx apiObject.Nginx
+		nginx.PodIP = pod.Status.PodIP
+		nginx.Phase = pod.Status.Phase
+		if resjson, err := json.Marshal(nginx); err == nil {
+			err = etcdclient.EtcdStore.Put(config.EtcdDnsPrefix, string(resjson))
+			if err != nil {
+				log.ErrorLog("UpdateNginxStatus: " + err.Error())
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+		}
+	}
+
 	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
 	c.JSON(200, gin.H{"data": resJson})
 }
@@ -396,6 +411,24 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
 	}
+
+	// 判断是否是DNS Pod
+	if pod.Metadata.Labels[config.DNS_Label_Key] == config.DNS_Label_Value {
+		// 说明是DNS 用来转发的Pod服务，在Etcd中更新DNS的状态
+		var nginx apiObject.Nginx
+		nginx.PodIP = pod.Status.PodIP
+		nginx.Phase = apiObject.PodBuilding
+		if resjson, err := json.Marshal(nginx); err == nil {
+			err = etcdclient.EtcdStore.Put(config.EtcdDnsPrefix, string(resjson))
+			if err != nil {
+				log.ErrorLog("CreatePod: " + err.Error())
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+		}
+
+	}
+
 	// 若pod使用了volume，则对其进行处理
 	if pod.Spec.Volumes != nil {
 		for _, volume := range pod.Spec.Volumes {
