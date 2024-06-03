@@ -65,6 +65,8 @@ type Container struct {
 type ContainerPort struct {
 	// 端口的名称
 	Name string `json:"name" yaml:"name"`
+	// 是否是metrics端口，如果不为空，则表示是metrics端口，会进行监控和管理
+	Metrics string
 	// 容器端口
 	ContainerPort int32 `json:"containerPort" yaml:"containerPort"`
 	// 端口协议
@@ -103,8 +105,6 @@ type VolumeMount struct {
 	Name string `json:"name" yaml:"name"`
 	// 挂载路径
 	MountPath string `json:"mountPath" yaml:"mountPath"`
-	// 是否只读
-	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
 }
 
 type Mount struct {

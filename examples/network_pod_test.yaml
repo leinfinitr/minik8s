@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: network-pod-2
+  name: network-pod
   namespace: default
   labels:
     app: my-app
@@ -15,6 +15,6 @@ spec:
       command: ["/bin/sh", "-c", "python -m http.server 7080"]
       ports:
         - containerPort: 7080
-        - hostPort: 7080
+          hostPort: 7080
   restartPolicy: Always
 

@@ -1,6 +1,8 @@
 package conversion
 
 import (
+	"strings"
+
 	"minik8s/pkg/apiObject"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -18,17 +20,6 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 			Namespace: "serverless",
 		},
 		Spec: apiObject.PodSpec{
-			Volumes: []apiObject.Volume{
-				{
-					Name: serverless.Volume,
-					VolumeSource: apiObject.VolumeSource{
-						HostPath: apiObject.HostPathVolumeSource{
-							Path: serverless.HostPath,
-							Type: apiObject.HostPathDirectory,
-						},
-					},
-				},
-			},
 			Containers: []apiObject.Container{
 				{
 					Name:  serverless.Name,
@@ -36,15 +27,9 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 					Command: []string{
 						"/bin/sh",
 						"-c",
-						"sleep 600",
+						"pip install requirements.txt && while true; do sleep 1000; done",
 					},
 					WorkingDir: "/mnt",
-					VolumeMounts: []apiObject.VolumeMount{
-						{
-							Name:      serverless.Volume,
-							MountPath: "/mnt",
-						},
-					},
 					Mounts: []*apiObject.Mount{
 						{
 							HostPath:      serverless.HostPath,
@@ -66,7 +51,8 @@ func PodToServerless(pod apiObject.Pod) apiObject.Serverless {
 	}
 	for _, container := range pod.Spec.Containers {
 		serverless.Image = container.Image
-		serverless.Volume = container.VolumeMounts[0].Name
+		serverless.HostPath = container.Mounts[0].HostPath
+		serverless.Command = strings.Join(container.Command, " ")
 	}
 	return serverless
 }
@@ -83,4 +69,26 @@ func MountsToMounts(mounts []*apiObject.Mount) []*runtimeapi.Mount {
 		configMounts = append(configMounts, configMount)
 	}
 	return configMounts
+}
+
+// AddMountsToContainer 将一个 Mount 对象添加到 Container.Mounts
+func AddMountsToContainer(pod *apiObject.Pod, volume apiObject.Volume, hostPath string) {
+	for i, container := range pod.Spec.Containers {
+		for _, volumeMount := range container.VolumeMounts {
+			if volumeMount.Name == volume.Name {
+				// 为容器添加Mount
+				if container.Mounts == nil {
+					container.Mounts = make([]*apiObject.Mount, 0)
+				}
+				mount := &apiObject.Mount{
+					HostPath:      hostPath,
+					ContainerPath: volumeMount.MountPath,
+					ReadOnly:      false,
+				}
+				container.Mounts = append(container.Mounts, mount)
+			}
+		}
+		// 替换pod中的容器
+		pod.Spec.Containers[i] = container
+	}
 }

@@ -61,31 +61,7 @@ func CreateServerless(c *gin.Context) {
 // GetServerless 获取所有的Serverless Function
 func GetServerless(c *gin.Context) {
 	log.InfoLog("GetServerless")
-	var podList []apiObject.Pod
-	// 从 etcd 中获取所有属于 Serverless 的 Pod 对象
-	response, err := etcdclient.EtcdStore.PrefixGet(config.EtcdServerlessPrefix)
-	if err != nil {
-		log.ErrorLog("GetServerless: " + err.Error())
-		c.JSON(500, err.Error())
-		return
-	}
-	// 遍历 response，依次将 json 字符串转换为 pod 对象
-	for _, podJson := range response {
-		var pod apiObject.Pod
-		err = json.Unmarshal([]byte(podJson), &pod)
-		if err != nil {
-			log.ErrorLog("GetServerless: " + err.Error())
-			c.JSON(500, err.Error())
-			return
-		}
-		podList = append(podList, pod)
-	}
-	// 将 pod 对象列表转换为 serverless 对象列表
-	var serverlessList []apiObject.Serverless
-	for _, pod := range podList {
-		serverless := conversion.PodToServerless(pod)
-		serverlessList = append(serverlessList, serverless)
-	}
+	serverlessList := manager.ScaleManager.GetAllServerless()
 	c.JSON(200, serverlessList)
 }
 
@@ -107,6 +83,10 @@ func DeleteServerless(c *gin.Context) {
 		c.JSON(500, err.Error())
 		return
 	}
+
+	// 从 ScaleManager 中删除 serverless 对象
+	manager.ScaleManager.DeleteServerless(serverlessName)
+	manager.ScaleManager.DeletePod(serverlessName)
 
 	log.InfoLog("DeleteServerless: " + serverlessName)
 	c.JSON(200, "Delete serverless "+serverlessName+" success")
@@ -137,7 +117,6 @@ func UpdateServerlessFunction(c *gin.Context) {
 
 // RunServerlessFunction 运行Serverless Function
 func RunServerlessFunction(c *gin.Context) {
-	log.DebugLog("RunServerlessFunction")
 	serverlessName := c.Param("name")
 	param := c.Param("param")
 	if serverlessName == "" {
@@ -153,10 +132,16 @@ func RunServerlessFunction(c *gin.Context) {
 
 // RunFunction 运行Serverless Function
 func RunFunction(name string, param string) string {
+	// 检查该 Serverless 是否存在
+	if _, ok := manager.ScaleManager.Serverless[name]; !ok {
+		log.ErrorLog("RunFunction: " + name + " does not exist")
+		return "Serverless " + name + " does not exist"
+	}
+
 	// 运行请求数加一
 	manager.ScaleManager.IncreaseRequestNum(name)
 
-	// 交由 manager 进行处理
+	// 交由 ScaleManager 进行处理
 	result := manager.ScaleManager.RunFunction(name, param)
 
 	// 运行请求数减一

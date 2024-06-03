@@ -33,6 +33,7 @@ const (
 	Hpa                   ApplyObject = "Hpa"
 	Job                   ApplyObject = "Job"
 	JobCode 			 ApplyObject = "JobCode"
+	Dns                   ApplyObject = "Dns"
 )
 
 func applyHandler(cmd *cobra.Command, args []string) {
@@ -82,6 +83,8 @@ func applyHandler(cmd *cobra.Command, args []string) {
 			ReplicaSetHandler(content)
 		case "Job":
 			JobHandler(content)
+		case "Dns":
+			DnsHandler(content)
 		default:
 			log.ErrorLog("The kind specified is not supported.")
 			os.Exit(1)
@@ -151,13 +154,14 @@ func PersistentVolumeHandler(content []byte) {
 		log.ErrorLog("Could not unmarshal the yaml file.")
 		os.Exit(1)
 	}
+
 	url := config.APIServerURL() + config.PersistentVolumeURI
-	log.DebugLog("Post " + url)
-	_, err = httprequest.PostObjMsg(url, persistentVolume)
+	resp, err := httprequest.PostObjMsg(url, persistentVolume)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
 		os.Exit(1)
 	}
+	ApplyResultDisplay(PersistentVolume, resp)
 }
 
 func PersistentVolumeClaimHandler(content []byte) {
@@ -167,14 +171,14 @@ func PersistentVolumeClaimHandler(content []byte) {
 		log.ErrorLog("Could not unmarshal the yaml file.")
 		os.Exit(1)
 	}
+
 	url := config.APIServerURL() + config.PersistentVolumeClaimURI
-	log.DebugLog("Post " + url)
-	_, err = httprequest.PostObjMsg(url, pvc)
+	resp, err := httprequest.PostObjMsg(url, pvc)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
 		os.Exit(1)
 	}
-
+	ApplyResultDisplay(PersistentVolumeClaim, resp)
 }
 
 func HpaHandler(content []byte) {
@@ -297,6 +301,32 @@ func JobHandler(content []byte) {
 	ApplyResultDisplay(JobCode, resp)
 }
 
+
+
+func DnsHandler(content []byte) {
+	var dns apiObject.Dns
+	err := translator.ParseApiObjFromYaml(content, &dns)
+	if err != nil {
+		log.ErrorLog("Could not unmarshal the yaml file.")
+		os.Exit(1)
+	}
+	if dns.Metadata.Namespace == "" {
+		dns.Metadata.Namespace = "default"
+	}
+	if dns.Metadata.Name == "" {
+		log.ErrorLog("The name of the dns is required.")
+		os.Exit(1)
+	}
+	url := config.APIServerURL() + config.DNSURI
+	url = strings.Replace(url, config.NameSpaceReplace, dns.Metadata.Namespace, -1)
+	log.DebugLog("PUT " + url)
+	resp, err := httprequest.PostObjMsg(url, dns)
+	if err != nil {
+		log.ErrorLog("Could not post the object message." + err.Error())
+		os.Exit(1)
+	}
+	ApplyResultDisplay(Dns, resp)
+}
 func ApplyResultDisplay(kind ApplyObject, resp *http.Response) {
 	if resp.StatusCode == http.StatusCreated {
 		fmt.Printf("%s created\n", kind)

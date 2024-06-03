@@ -30,7 +30,7 @@ func GetKubeproxy() *Kubeproxy {
 		kubeproxy = &Kubeproxy{
 			serviceUUIDMap: make(map[string]apiObject.Service),
 			// serviceEvents:   make(chan *entity.ServiceEvent),
-			proxyAPIRouter:  gin.Default(),
+			proxyAPIRouter:  gin.New(),
 			apiServerConfig: *config.NewAPIServerConfig(),
 			iptableManager:  iptableManager.GetIptableManager(),
 		}

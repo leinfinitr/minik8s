@@ -52,7 +52,7 @@ func PutPrometheusConfig(config *apiObject.PrometheusConfig) error {
 }
 
 // 在首次注册时，在本地节点的prometheus配置文件中追加一个监控项
-func RegisterMonitor(c *gin.Context) {
+func RegisterNodeMonitor(c *gin.Context) {
 	log.InfoLog("Start RegisterMonitor")
 
 	// 1.从请求中获取Node的值
@@ -99,7 +99,7 @@ func RegisterMonitor(c *gin.Context) {
 
 		config.ScrapeConfigs = append(config.ScrapeConfigs, newScrapeConfig)
 	} else {
-		log.WarnLog("Node already registered")
+		log.DebugLog("Node already registered")
 		c.JSON(200, gin.H{"message": "Node already registered"})
 		return
 	}
@@ -111,14 +111,19 @@ func RegisterMonitor(c *gin.Context) {
 		return
 	}
 
-	// 5. 重启prometheus
+	// 5. 热加载prometheus
 	// curl -X POST http://192.168.1.7:9090/-/reload
-	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
 
 	c.JSON(200, gin.H{"message": "monitor registered successfully"})
 }
 
-func DeleteMonitor(c *gin.Context) {
+func DeleteNodeMonitor(c *gin.Context) {
 	// 1.从请求中获取Node的值
 	var node apiObject.Node
 	if err := c.ShouldBindJSON(&node); err != nil {
@@ -164,10 +169,127 @@ func DeleteMonitor(c *gin.Context) {
 		return
 	}
 
-	// 5. 重启prometheus
+	// 5. 热加载prometheus
 	// curl -X POST http://192.168.1.7:9090/-/reload
-	exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
 
 	c.JSON(200, gin.H{"message": "Node unregistered successfully"})
 
+}
+
+func RegisterPodMonitor(c *gin.Context) {
+	var monitorPod apiObject.MonitorPod
+	if err := c.ShouldBindJSON(&monitorPod); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 1. 读取prometheus配置文件
+	config := GetPrometheusConfig()
+	if config == nil {
+		c.JSON(500, gin.H{"error": "Failed to get Prometheus config"})
+		return
+	}
+
+	// 2. 在制定的job后面追加新的staticConfig，默认“pods”job是用来监控所有pod的
+	var podScrapeConfig *apiObject.ScrapeConfig
+	for _, scrapeConfig := range config.ScrapeConfigs {
+		if scrapeConfig.JobName == "pods" {
+			podScrapeConfig = &scrapeConfig
+			break
+		}
+	}
+
+	newStaticConfig := apiObject.StaticConfig{
+		Targets: []string{},
+		Labels:  map[string]string{"instance": monitorPod.PodName},
+	}
+
+	for _, uri := range monitorPod.MonitorUris {
+		newStaticConfig.Targets = append(newStaticConfig.Targets, uri)
+	}
+
+	if podScrapeConfig == nil {
+		// 不存在则创建新的job
+		podScrapeConfig = &apiObject.ScrapeConfig{
+			JobName:       "pods",
+			StaticConfigs: []apiObject.StaticConfig{},
+		}
+
+		podScrapeConfig.StaticConfigs = append(podScrapeConfig.StaticConfigs, newStaticConfig)
+		config.ScrapeConfigs = append(config.ScrapeConfigs, *podScrapeConfig)
+	} else {
+		podScrapeConfig.StaticConfigs = append(podScrapeConfig.StaticConfigs, newStaticConfig)
+	}
+
+	// 3. 保存并写入配置文件
+	err := PutPrometheusConfig(config)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to write Prometheus config"})
+		return
+	}
+
+	// 4. 热加载prometheus
+	// curl -X POST http://192.168.1.7:9090/-/reload
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
+
+	log.InfoLog("Pod monitor registered successfully")
+	c.JSON(200, gin.H{"message": "pod monitor registered successfully"})
+
+}
+
+func DeletePodMonitor(c *gin.Context) {
+	var monitorPod apiObject.MonitorPod
+	if err := c.ShouldBindJSON(&monitorPod); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 1. 读取prometheus配置文件
+	config := GetPrometheusConfig()
+	if config == nil {
+		c.JSON(500, gin.H{"error": "Failed to get Prometheus config"})
+		return
+	}
+
+	// 2. 在制定的job后面把同属于的pod的全部删除，默认“pods”job是用来监控所有pod的
+	for _, scrapeConfig := range config.ScrapeConfigs {
+		if scrapeConfig.JobName == "pods" {
+			for i, uri := range scrapeConfig.StaticConfigs {
+				if uri.Labels["instance"] == monitorPod.PodName {
+					scrapeConfig.StaticConfigs = append(scrapeConfig.StaticConfigs[:i], scrapeConfig.StaticConfigs[i+1:]...)
+					break
+				}
+			}
+		}
+	}
+
+	// 3. 保存并写入配置文件
+	err := PutPrometheusConfig(config)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to write Prometheus config"})
+		return
+	}
+
+	// 4. 热加载prometheus
+	// curl -X POST http://192.168.1.7:9090/-/reload
+	err = exec.Command("curl", "-X", "POST", "http://192.168.1.7:9090/-/reload").Run()
+	if err != nil {
+		log.ErrorLog("Failed to reload Prometheus: " + err.Error())
+		c.JSON(500, gin.H{"error": "Failed to reload Prometheus"})
+		return
+	}
+
+	log.InfoLog("Pod monitor delete successfully")
+	c.JSON(200, gin.H{"message": "pod monitor delete successfully"})
 }

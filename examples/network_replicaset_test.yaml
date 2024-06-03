@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ReplicaSet
+metadata:
+  name: pod-replica
+  namespace: default
+spec:
+  replicas: 3
+  minReadySeconds: 10
+  selector:
+    app: my-app
+  template:
+    metadata:
+      name: my-app-pod
+      namespace: default
+      labels:
+        app: my-app
+    spec:
+      containers:
+        - name: webserver
+          image: python:3.7-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "python -m http.server 7080"]
+          ports:
+            - containerPort: 7080
+            - hostPort: 7080

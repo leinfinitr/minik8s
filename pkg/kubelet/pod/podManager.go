@@ -66,7 +66,7 @@ func GetPodManager() PodManager {
 }
 
 func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
-	log.DebugLog("[PodManager] Arrived into AddPod")
+	log.InfoLog("Arrived into AddPod")
 	uuid := pod.GetPodUUID()
 	if _, ok := p.PodMapByUUID[uuid]; ok {
 		log.ErrorLog("Pod has been built already")

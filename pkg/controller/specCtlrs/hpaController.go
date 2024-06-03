@@ -2,7 +2,6 @@ package specctlrs
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
@@ -81,7 +80,7 @@ func (hc *HpaControllerImpl) handleHPA(hpa apiObject.HPA, pods []apiObject.Pod) 
 			selectedPods = append(selectedPods, pod)
 		}
 	}
-	fmt.Println("selectedPods: " + strconv.Itoa(len(selectedPods)))
+	log.DebugLog("selectedPods: " + strconv.Itoa(len(selectedPods)))
 	hpa.Status.CurrentReplicas = int32(len(selectedPods))
 	if hpa.Status.CurrentReplicas == 0 {
 		log.ErrorLog("handleHPA: " + hpa.Metadata.Namespace + "/" + hpa.Metadata.Name + " no pod selected")
@@ -111,7 +110,7 @@ func (hc *HpaControllerImpl) handleHPA(hpa apiObject.HPA, pods []apiObject.Pod) 
 			log.ErrorLog("handleHPA: " + hpa.Metadata.Namespace + "/" + hpa.Metadata.Name + " add one pod failed")
 		}
 	}
-	fmt.Print("current replicas: " + strconv.Itoa(int(hpa.Status.CurrentReplicas)) + " expected replicas: " + strconv.Itoa(expectedNm))
+	log.DebugLog("current replicas: " + strconv.Itoa(int(hpa.Status.CurrentReplicas)) + " expected replicas: " + strconv.Itoa(expectedNm))
 	if int32(expectedNm) < hpa.Status.CurrentReplicas {
 		err := hc.DeleteOnePod(selectedPods[0])
 		if err != nil {

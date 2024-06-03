@@ -6,26 +6,30 @@ metadata:
   labels:
     app: my-app
   annotations:
-    description: "An example pod of fileserver and downloader"
+    description: "An example pod of webserver and downloader"
 spec:
   volumes:
     - name: files-volume
-      emptyDir: {}
+      emptyDir:
+        sizeLimit: 1GB
   containers:
-    - name: fileserver
-      image: 7143192/fileserver:latest
-      imagePullPolicy: IfNotPresent
-      ports:
-        - containerPort: 8080
-      volumeMounts:
-        - name: files-volume
-          mountPath: "/usr/share/files"
-          
     - name: downloader
       image: 7143192/downloader:latest
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 3000
+        - hostPort: 3000
+      volumeMounts:
+        - name: files-volume
+          mountPath: "/usr/share/files"
+
+    - name: webserver
+      image: python:3.7-alpine
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-c", "python -m http.server 7080"]
+      ports:
+        - containerPort: 7080
+          hostPort: 7080
       volumeMounts:
         - name: files-volume
           mountPath: "/data"

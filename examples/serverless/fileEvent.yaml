@@ -1,0 +1,4 @@
+type: file
+params: ./examples/serverless/fileEvent.txt
+name: word_count
+args: fileEvent.txt

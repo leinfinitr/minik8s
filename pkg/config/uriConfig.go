@@ -31,6 +31,12 @@ const (
 	HpaURI       = "/api/v1/namespaces/:namespace/hpa/:name"
 	GlobalHpaURI = "/api/v1/hpa"
 
+	DNSsURI = "/api/v1/namespaces/:namespace/dns"
+	DNSURI  = "/api/v1/namespaces/:namespace/dns/:name"
+
+	GlobalDnsRequestURI = "/api/v1/dnsrequest"
+	DnsRequestURI       = "/api/v1/namespaces/:namespace/dnsrequest/:name"
+
 	ServerlessURI         = "/api/v1/serverless"
 	ServerlessFunctionURI = "/api/v1/serverless/function/:name"
 	ServerlessRunURI      = "/api/v1/serverless/run/:name/:param"
@@ -47,10 +53,11 @@ const (
 	PersistentVolumeURI  = "/api/v1/pv"
 	PersistentVolumesURI = "/api/v1/pv/:name"
 
-	PersistentVolumeClaimURI  = "/api/v1/pvc"
-	PersistentVolumeClaimsURI = "/api/v1/pvc/:name"
+	PersistentVolumeClaimsURI = "/api/v1/pvc"
+	PersistentVolumeClaimURI  = "/api/v1/pvc/:namespace/:name"
 
-	MonitorURL = "/api/v1/monitor"
+	MonitorNodeURL = "/api/v1/monitor/node"
+	MonitorPodURL  = "/api/v1/monitor/pod"
 )
 
 const (

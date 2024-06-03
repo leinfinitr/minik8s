@@ -43,11 +43,11 @@ func (r *RuntimeManager) CreatePod(pod *apiObject.Pod) error {
 		RuntimeHandler: "",
 	}
 
-	log.DebugLog("RunPodSandbox")
+	log.InfoLog("RunPodSandbox")
 	response, err := r.runtimeClient.RunPodSandbox(context.Background(), request)
 	if err != nil {
 		log.ErrorLog("Create Pod sandbox fail " + err.Error())
-		return nil
+		return err
 	}
 
 	log.DebugLog("Create Pod sandbox Success")
@@ -303,7 +303,7 @@ func (r *RuntimeManager) ExecPodContainer(req *apiObject.ExecReq) (string, error
 
 func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 
-	log.InfoLog("[RPC] Start UpdatePodStatus")
+	log.DebugLog("Start UpdatePodStatus")
 
 	// 记录所有容器的资源占用情况
 	var cpuUsage, memoryUsage float64
@@ -353,7 +353,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 
 		if (uint64(response1.Stats.Cpu.Timestamp) - uint64(response2.Status.StartedAt)) != 0 {
-			log.InfoLog(fmt.Sprintf("Cpu usage : %lu , all usage: %lu", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
+			log.DebugLog(fmt.Sprintf("Cpu usage : %d , all usage: %d", response1.Stats.Cpu.UsageCoreNanoSeconds.Value, uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt)))
 			cpuUsage += float64(response1.Stats.Cpu.UsageCoreNanoSeconds.Value) / float64(uint64(response1.Stats.Cpu.Timestamp)-uint64(response2.Status.StartedAt))
 		} else {
 			log.WarnLog("CPU usage is 0")
@@ -361,7 +361,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 
 		if memoryAll != 0 {
-			log.InfoLog(fmt.Sprintf("Memory usage : %d , all usage: %d", response1.Stats.Memory.UsageBytes.Value, memoryAll))
+			log.DebugLog(fmt.Sprintf("Memory usage : %d , all usage: %d", response1.Stats.Memory.UsageBytes.Value, memoryAll))
 			memoryUsage += float64(response1.Stats.Memory.UsageBytes.Value) / (float64(memoryAll))
 		} else {
 			log.WarnLog("Memory usage is 0")
@@ -369,8 +369,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		}
 	}
 
-	log.InfoLog(fmt.Sprintf("CPU usage %E: ", cpuUsage))
-	log.InfoLog(fmt.Sprintf("Memory usage %E: ", memoryUsage))
+	log.DebugLog(fmt.Sprintf("pod IP: %s CPU usage: %E , Memory usage :%E ", pod.Status.PodIP, cpuUsage, memoryUsage))
 	pod.Status.CpuUsage = cpuUsage
 	pod.Status.MemUsage = memoryUsage
 

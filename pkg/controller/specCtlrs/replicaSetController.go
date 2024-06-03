@@ -3,7 +3,6 @@ package specctlrs
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/config"
 	"minik8s/tools/executor"
@@ -140,7 +139,7 @@ func (rc *ReplicaSetControllerImpl) IncreaseReplicas(replicaMeta *apiObject.Obje
 		}
 
 		url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
-		fmt.Println(pod.Metadata.Namespace)
+		log.DebugLog(pod.Metadata.Namespace)
 		code, _, err := netRequest.PostRequestByTarget(url, &new_pod)
 
 		if err != nil {

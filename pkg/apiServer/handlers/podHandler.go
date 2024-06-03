@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"minik8s/tools/conversion"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -136,12 +139,41 @@ func DeletePod(c *gin.Context) {
 		return
 	}
 	nodeName := pod.Spec.NodeName
-	// 删除etcd中的Pod
-	err = etcdclient.EtcdStore.Delete(key)
-	if err != nil {
-		log.ErrorLog("DeletePods: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
+
+	// 若pod使用了pvc，则对其进行处理
+	if pod.Spec.Volumes != nil {
+		for _, volume := range pod.Spec.Volumes {
+			if volume.PersistentVolumeClaim != nil {
+				pvcKey := config.EtcdPvcPrefix + "/" + pod.Metadata.Namespace + "/" + volume.PersistentVolumeClaim.ClaimName
+				pvcResponse, _ := etcdclient.EtcdStore.Get(pvcKey)
+				// 若pvc不存在，则跳过
+				if pvcResponse == "" {
+					continue
+				}
+				// 若pvc存在，则将其与pod解绑
+				pvc := &apiObject.PersistentVolumeClaim{}
+				err = json.Unmarshal([]byte(pvcResponse), pvc)
+				if err != nil {
+					log.ErrorLog("DeletePods: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				url := config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
+				res, err := httprequest.DelMsg(url, nil)
+				if err != nil {
+					log.ErrorLog("Could not post the object message." + err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				if res.StatusCode != http.StatusOK {
+					log.ErrorLog("DeletePods: " + res.Status)
+					c.JSON(res.StatusCode, res.Status)
+					return
+				}
+			}
+		}
 	}
 	// 获取pod所在node的IP
 	res, err = etcdclient.EtcdStore.Get(config.EtcdNodePrefix + "/" + nodeName)
@@ -159,12 +191,49 @@ func DeletePod(c *gin.Context) {
 	}
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
+
+	// 如果是一个自定义Metrics的pod，则需要对该pod的监控配置进行删除
+	needMonitor := false
+	var monitorPod apiObject.MonitorPod
+	for _, container := range pod.Spec.Containers {
+		for _, port := range container.Ports {
+			if port.Metrics != "" {
+				needMonitor = true
+				url := address + ":" + fmt.Sprint(port.HostPort)
+				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
+			}
+		}
+	}
+	if needMonitor {
+		// 删除监控
+		monitorUri := config.MonitorPodURL
+		resp, err := httprequest.DelMsg(monitorUri, monitorPod)
+		if err != nil {
+			log.ErrorLog("DeletePods: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.ErrorLog("DeletePods: " + resp.Status)
+			c.JSON(500, gin.H{"error": resp.Status})
+			return
+		}
+	}
+
 	// 发送删除请求到kubelet
 	url := config.HttpSchema + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	delUri := url + config.PodURI
 	delUri = strings.Replace(delUri, config.NameSpaceReplace, namespace, -1)
 	delUri = strings.Replace(delUri, config.NameReplace, name, -1)
 	_, err = httprequest.DelMsg(delUri, *pod)
+	if err != nil {
+		log.ErrorLog("DeletePods: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 删除etcd中的Pod
+	err = etcdclient.EtcdStore.Delete(key)
 	if err != nil {
 		log.ErrorLog("DeletePods: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -228,7 +297,7 @@ func UpdatePodStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
-	log.InfoLog("UpdatePodStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
 
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
@@ -267,7 +336,7 @@ func UpdatePodStatus(c *gin.Context) {
 		return
 	}
 
-	log.InfoLog("UpdatePodStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
 	c.JSON(200, gin.H{"data": resJson})
 }
 
@@ -311,7 +380,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-
+	// 检查pod的name和namespace是否为空
 	newPodName := pod.Metadata.Name
 	newPodNamespace := pod.Metadata.Namespace
 	if newPodName == "" || newPodNamespace == "" {
@@ -319,7 +388,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
-
+	// 判断pod是否已经存在
 	key := config.EtcdPodPrefix + "/" + pod.Metadata.Namespace + "/" + pod.Metadata.Name
 	response, _ := etcdclient.EtcdStore.Get(key)
 	if response != "" {
@@ -327,11 +396,123 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
 	}
-	log.InfoLog("CreatePod: " + newPodNamespace + "/" + newPodName)
-
-	// 生成 UUID
+	// 若pod使用了volume，则对其进行处理
+	if pod.Spec.Volumes != nil {
+		for _, volume := range pod.Spec.Volumes {
+			// 处理使用了pvc的volume
+			if volume.PersistentVolumeClaim != nil {
+				pvcKey := config.EtcdPvcPrefix + "/" + pod.Metadata.Namespace + "/" + volume.PersistentVolumeClaim.ClaimName
+				pvcResponse, _ := etcdclient.EtcdStore.Get(pvcKey)
+				// 若pvc不存在，则返回错误
+				if pvcResponse == "" {
+					log.ErrorLog("CreatePod: PVC not found")
+					c.JSON(400, gin.H{"error": "PVC not found"})
+					return
+				}
+				// 若pvc存在，则检查pvc的状态是否为Bound、是否已经绑定到pod
+				pvc := &apiObject.PersistentVolumeClaim{}
+				err = json.Unmarshal([]byte(pvcResponse), pvc)
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				if pvc.Status.Phase != apiObject.ClaimBound || pvc.Status.IsBound {
+					log.ErrorLog("CreatePod: PVC can't be used")
+					c.JSON(400, gin.H{"error": "PVC can't be used"})
+					return
+				}
+				// 将pod绑定到pvc
+				url := config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
+				res, err := httprequest.PostObjMsg(url, pvc)
+				if err != nil {
+					log.ErrorLog("Could not post the object message." + err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				if res == nil {
+					log.ErrorLog("CreatePod: res is nil")
+					c.JSON(500, gin.H{"error": "res is nil"})
+					return
+				}
+				if res.StatusCode != http.StatusOK {
+					log.ErrorLog("CreatePod: " + res.Status)
+					c.JSON(res.StatusCode, gin.H{"error": res.Status})
+					return
+				}
+				// 获取pvKey
+				url = config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
+				res, err = httprequest.GetMsg(url)
+				if err != nil {
+					log.ErrorLog("Could not post the object message." + err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				if res == nil {
+					log.ErrorLog("CreatePod: res is nil")
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "res is nil"})
+					return
+				}
+				if res.StatusCode != http.StatusOK {
+					log.ErrorLog("CreatePod: " + res.Status)
+					c.JSON(res.StatusCode, gin.H{"error": res.Status})
+					return
+				}
+				// 解析pvKey
+				var pvKey string
+				err = json.NewDecoder(res.Body).Decode(&pvKey)
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				if pvKey == "" {
+					log.ErrorLog("CreatePod: pvName is empty")
+					c.JSON(400, gin.H{"error": "pvName is empty"})
+					return
+				}
+				log.DebugLog("Parse pv name: " + pvKey)
+				// 为pod中所有使用该持久化卷挂载的容器添加Mount
+				conversion.AddMountsToContainer(pod, volume, config.PVClientPath+"/"+pvKey)
+			}
+			// 处理使用了emptyDir的volume
+			if volume.EmptyDir.SizeLimit != "" {
+				// 创建emptyDir
+				cleanCmd := "rm -rf " + config.DefaultVolumePath + "/" + pod.Metadata.Name + "/" + volume.Name
+				mkdirCmd := "mkdir -p " + config.DefaultVolumePath + "/" + pod.Metadata.Name + "/" + volume.Name
+				cmd := exec.Command("sh", "-c", cleanCmd)
+				err = cmd.Run()
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				cmd = exec.Command("sh", "-c", mkdirCmd)
+				err = cmd.Run()
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
+				conversion.AddMountsToContainer(pod, volume, config.DefaultVolumePath+"/"+pod.Metadata.Name+"/"+volume.Name)
+			}
+			// 处理使用了hostPath的volume
+			if volume.HostPath.Path != "" {
+				// 如果hostPath不存在，则返回错误
+				if _, err := os.Stat(volume.HostPath.Path); os.IsNotExist(err) {
+					log.ErrorLog("CreatePod: hostPath not found")
+					c.JSON(400, gin.H{"error": "hostPath not found"})
+					return
+				}
+				conversion.AddMountsToContainer(pod, volume, volume.HostPath.Path)
+			}
+		}
+	}
+	// 完成检查，生成 UUID
 	pod.Metadata.UUID = uuid.New().String()
-
+	log.InfoLog("CreatePod: " + newPodNamespace + "/" + newPodName)
 	// 发送的时候筛选 node
 	ScheduledUri := config.SchedulerURL() + config.SchedulerConfigPath
 	resp, err := http.Get(ScheduledUri)
@@ -347,17 +528,21 @@ func CreatePod(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	// 得到node的IP
 	pod.Spec.NodeName = node.Metadata.Name
+	// 得到node的IP
 	addresses := node.Status.Addresses
 	address := addresses[0].Address
-	log.DebugLog("CreatePod: " + address)
+	log.InfoLog("CreatePod: " + address)
+	// 打印创建的pod信息
+	podBytes, _ := json.Marshal(pod)
+	log.DebugLog("CreatePod: " + string(podBytes))
 	// 发送创建请求到kubelet
 	url := config.HttpSchema + address + ":" + fmt.Sprint(config.KubeletAPIPort)
 	createUri := url + config.PodsURI
 	createUri = strings.Replace(createUri, config.NameSpaceReplace, newPodNamespace, -1)
 	createUri = strings.Replace(createUri, config.NameReplace, newPodName, -1)
 	log.DebugLog("createUri: " + createUri)
+
 	// 发送创建请求并解析返回的pod信息
 	resp, err = httprequest.PostObjMsg(createUri, pod)
 	if err != nil {
@@ -388,6 +573,35 @@ func CreatePod(c *gin.Context) {
 		log.ErrorLog("CreatePod: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
+	}
+
+	// 如果是一个自定义Metrics的pod，则需要对该pod进行监控
+	needMonitor := false
+	var monitorPod apiObject.MonitorPod
+	monitorPod.PodName = newPodName
+	for _, container := range pod.Spec.Containers {
+		for _, port := range container.Ports {
+			if port.Metrics != "" {
+				needMonitor = true
+				url := pod.Status.PodIP + ":" + fmt.Sprint(port.HostPort)
+				monitorPod.MonitorUris = append(monitorPod.MonitorUris, url)
+			}
+		}
+	}
+	if needMonitor {
+		// 注册监控
+		url := config.HttpSchema + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.MonitorPodURL
+		resp, err := httprequest.PutObjMsg(url, monitorPod)
+		if err != nil {
+			log.ErrorLog("CreatePod: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if resp.StatusCode != http.StatusOK {
+			log.ErrorLog("CreatePod: " + resp.Status)
+			c.JSON(500, gin.H{"error": resp.Status})
+			return
+		}
 	}
 
 	c.JSON(201, reaJson)

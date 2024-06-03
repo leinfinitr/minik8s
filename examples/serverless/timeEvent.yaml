@@ -1,0 +1,4 @@
+type: time
+params: 10s
+name: add
+args: 10

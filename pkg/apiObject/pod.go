@@ -81,18 +81,14 @@ type Volume struct {
 	// 空目录
 	EmptyDir EmptyDirVolumeSource `json:"emptyDir" yaml:"emptyDir"`
 	// 存储卷的来源
-	VolumeSource
+	HostPath HostPathVolumeSource `json:"hostPath" yaml:"hostPath"`
 	// 持久化卷声明
-	PersistentVolumeClaim PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim" yaml:"persistentVolumeClaim"`
+	PersistentVolumeClaim *PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim" yaml:"persistentVolumeClaim"`
 }
 
 type EmptyDirVolumeSource struct {
 	// 空目录的大小
 	SizeLimit string `json:"sizeLimit" yaml:"sizeLimit"`
-}
-type VolumeSource struct {
-	// 主机路径
-	HostPath HostPathVolumeSource `json:"hostPath" yaml:"hostPath"`
 }
 
 type HostPathVolumeSource struct {
@@ -107,8 +103,6 @@ type HostPathType string
 type PersistentVolumeClaimVolumeSource struct {
 	// 持久化卷声明的名称
 	ClaimName string `json:"claimName" yaml:"claimName"`
-	// 持久化卷声明的读写模式
-	ReadOnly bool `json:"readOnly" yaml:"readOnly"`
 }
 
 type PodPhase string

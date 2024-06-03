@@ -14,4 +14,4 @@ spec:
       imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 8000
-        - targetPort: 8000
+          targetPort: 8000

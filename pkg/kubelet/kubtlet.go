@@ -128,7 +128,7 @@ func (k *Kubelet) buildNode() {
 
 // UpdateNodeStatusInternal 更新node的状态
 func (k *Kubelet) UpdateNodeStatusInternal() {
-	log.InfoLog("UpdateNodeStatus")
+	log.DebugLog("UpdateNodeStatus")
 
 	// 注册所需的参数
 	HostIP, _ := host.GetHostIP()
@@ -199,14 +199,14 @@ func NewKubelet() *Kubelet {
 	return &Kubelet{
 		ApiServerConfig:  *config.NewAPIServerConfig(),
 		PodManager:       pod.GetPodManager(),
-		KubeletAPIRouter: gin.Default(),
+		KubeletAPIRouter: gin.New(),
 		node:             nil,
 	}
 }
 
 // UpdateNodeStatus 更新node的状态
 func (k *Kubelet) UpdateNodeStatus(c *gin.Context) {
-	log.InfoLog("UpdateNodeStatus")
+	log.DebugLog("UpdateNodeStatus")
 	if k.node == nil {
 		k.buildNode()
 	} else {
