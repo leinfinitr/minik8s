@@ -4,7 +4,7 @@ metadata:
   name: network-pod
   namespace: default
   labels:
-    app: my-app
+    app: normal-app
   annotations:
     description: "An example pod of fileserver and downloader"
 spec:
