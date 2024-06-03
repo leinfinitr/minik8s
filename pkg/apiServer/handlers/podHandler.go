@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -732,8 +733,15 @@ func ExecPod(c *gin.Context) {
 	containerID := ""
 	for _, containers := range pod.Spec.Containers {
 		if containers.Name == container {
-			containerID = containers.ContainerID
-			break
+			// 如果存在该container但是containerID为空，说明正在启动中
+			// 循环十次等待containerID不为空，每次等待1s
+			for i := 0; i < 10; i++ {
+				if containers.ContainerID != "" {
+					containerID = containers.ContainerID
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
 		}
 	}
 	if containerID == "" {
