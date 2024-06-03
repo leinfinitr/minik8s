@@ -1,4 +1,4 @@
 type: file
 params: ./examples/serverless/fileEvent.txt
-name: word_count
+name: encrypt
 args: fileEvent.txt

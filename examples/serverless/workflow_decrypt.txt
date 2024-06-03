@@ -1,0 +1,4 @@
+convert_num
+add
+convert_char
+move_left

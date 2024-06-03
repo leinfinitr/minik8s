@@ -1,6 +1,6 @@
 image: python:3.7-alpine
-name: count_words
+name: convert_char
 hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
-functionFile: count_words.py
-command: python count_words.py
+functionFile: convert_char.py
+command: python convert_char.py

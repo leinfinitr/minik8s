@@ -1,6 +1,6 @@
 image: python:3.7-alpine
-name: split_words
+name: encrypt
 hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
-functionFile: split_words.py
-command: python split_words.py
+functionFile: encrypt.py
+command: python encrypt.py

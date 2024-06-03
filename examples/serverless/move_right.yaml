@@ -1,6 +1,6 @@
 image: python:3.7-alpine
-name: word_count
+name: count_words
 hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
-functionFile: word_count.py
-command: python word_count.py
+functionFile: move_right.py
+command: python move_right.py
