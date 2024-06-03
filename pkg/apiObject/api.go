@@ -33,4 +33,4 @@ const (
 	JobType = "Job"
 )
 
-var AllTypeList = []string{PodType, ServiceType, ReplicaSetType, NodeType, HpaType, ContainerType}
+var AllTypeList = []string{PodType, ServiceType, ReplicaSetType, NodeType, HpaType, ContainerType,JobType}
