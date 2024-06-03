@@ -769,8 +769,8 @@ func ExecPod(c *gin.Context) {
 			// 如果存在该container但是containerID为空，说明正在启动中
 			// 循环十次等待containerID不为空，每次等待1s
 			for i := 0; i < 10; i++ {
-				if containers.ContainerID != "" {
-					containerID = containers.ContainerID
+				containerID = containers.ContainerID
+				if containerID != "" {
 					break
 				}
 				time.Sleep(1 * time.Second)
@@ -778,7 +778,7 @@ func ExecPod(c *gin.Context) {
 		}
 	}
 	if containerID == "" {
-		log.ErrorLog("ExecPod: containerID is empty")
+		log.ErrorLog("ExecPod: container " + container + " ID is empty")
 		c.JSON(400, "containerID is empty")
 		return
 	}

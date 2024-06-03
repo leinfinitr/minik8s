@@ -161,11 +161,11 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 		time.Sleep(1 * time.Second)
 	}
 	// 遍历所有实例，找到一个属于当前Function且请求最少的实例
-	minRequestNum := math.MaxInt
+	minInstanceRequestNum := math.MaxInt
 	minRequestInstanceName := ""
 	for instanceName, requestNum := range s.InstanceRequestNum {
-		if strings.HasPrefix(instanceName, name) && requestNum < minRequestNum {
-			minRequestNum = s.InstanceRequestNum[instanceName]
+		if strings.HasPrefix(instanceName, name) && requestNum < minInstanceRequestNum {
+			minInstanceRequestNum = s.InstanceRequestNum[instanceName]
 			minRequestInstanceName = instanceName
 		}
 	}
@@ -175,19 +175,16 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 		log.ErrorLog("Could not find a suitable instance for " + name)
 		os.Exit(1)
 	}
-	// 取出该实例
-	pod := s.Instance[minRequestInstanceName]
-	serverless := s.Serverless[name]
 	// 增加该实例处理的请求数量
 	s.InstanceRequestNum[minRequestInstanceName]++
 	// 重置该实例的最后一次处理请求所经过的周期
 	s.InstanceLastRequestTime[minRequestInstanceName] = 0
 	// 转发给 apiServer 运行 Pod 中的容器
 	url := config.APIServerURL() + config.PodExecURI
-	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
-	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
-	url = strings.Replace(url, config.ContainerReplace, pod.Spec.Containers[0].Name, -1)
-	url = strings.Replace(url, config.ParamReplace, serverless.Command+" "+param, -1)
+	url = strings.Replace(url, config.NameSpaceReplace, "serverless", -1)
+	url = strings.Replace(url, config.NameReplace, minRequestInstanceName, -1)
+	url = strings.Replace(url, config.ContainerReplace, minRequestInstanceName, -1)
+	url = strings.Replace(url, config.ParamReplace, s.Serverless[name].Command+" "+param, -1)
 	response, err := httprequest.GetMsg(url)
 	if err != nil {
 		log.ErrorLog("Could not post the message." + err.Error())
@@ -204,7 +201,7 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	result := string(body)
 	// 去掉result中首尾的引号
 	result = result[1 : len(result)-1]
-	log.InfoLog("Run function " + name + " with param " + param + " result: " + result)
+	log.InfoLog("Run function " + name + " in " + minRequestInstanceName + " with param " + param + " result: " + result)
 	return result
 }
 
