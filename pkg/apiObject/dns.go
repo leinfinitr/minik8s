@@ -19,6 +19,18 @@ type Path struct {
 	SvcName string `json:"svcName" yaml:"svcName"`
 }
 
+type DnsRequest struct {
+	Action  string     `json:"action" yaml:"action"`
+	DnsMeta ObjectMeta `json:"dnsMeta" yaml:"dnsMeta"`
+}
+
+type HostRequest struct {
+	Action    string   `json:"action" yaml:"action"`
+	DnsObject Dns      `json:"dnsObject" yaml:"dnsObject"`
+	DnsConfig string   `json:"dnsConfig" yaml:"dnsConfig"`
+	HostList  []string `json:"hostList" yaml:"hostList"`
+}
+
 // Etcd中存储的数据结构，表示一个用于DNS服务的Nginx pod
 type Nginx struct {
 	PodIP string
