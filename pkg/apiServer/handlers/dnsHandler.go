@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"minik8s/pkg/apiObject"
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	"minik8s/pkg/config"
+	httprequest "minik8s/tools/httpRequest"
 	"minik8s/tools/log"
+	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -85,6 +89,7 @@ func AddDNS(c *gin.Context) {
 		return
 	}
 
+	// 读取请求中的DNS对象
 	var dns apiObject.Dns
 	err = c.BindJSON(&dns)
 	if err != nil {
@@ -95,6 +100,7 @@ func AddDNS(c *gin.Context) {
 	log.InfoLog("AddDNS: " + dns.Metadata.Namespace + "/" + dns.Metadata.Name)
 	dns.NginxIP = nginxIP
 
+	// 检查DNS对象是否已经存在
 	key := config.EtcdDnsPrefix + "/" + dns.Metadata.Namespace + "/" + dns.Metadata.Name
 	oldRes, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
@@ -116,6 +122,7 @@ func AddDNS(c *gin.Context) {
 		dns.Metadata.Namespace = "default"
 	}
 
+	// 获取每个子路径对应的service的IP
 	for it, path := range dns.Spec.Paths {
 		log.InfoLog("AddDNS: " + dns.Metadata.Namespace + "/" + dns.Metadata.Name + " path " + fmt.Sprint(it))
 		if path.SvcName == "" {
@@ -146,24 +153,38 @@ func AddDNS(c *gin.Context) {
 	}
 	dns.Metadata.UUID = uuid.New().String()
 
-	//Update dnsRequest
-	var dnsRequest apiObject.DnsRequest
-	dnsRequest.Action = "Create"
-	dnsRequest.DnsMeta = dns.Metadata
-	dnsRequestJson, err := json.Marshal(dnsRequest)
+	// 更新每个节点的hosts文件
+	Nodes := GetALLNodes()
+	for _, node := range Nodes {
+		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.DNSURI
+		res, err := httprequest.PutObjMsg(url, dns)
+		if err != nil || res.StatusCode != config.HttpSuccessCode {
+			log.ErrorLog("AddDNS: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// 更新etcd
+	dnsJson, err := json.Marshal(dns)
 	if err != nil {
 		log.ErrorLog("AddDNS: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	key = config.EtcdDnsRequestPrefix + "/" + dns.Metadata.Namespace + "/" + dns.Metadata.Name
-	err = etcdclient.EtcdStore.Put(key, string(dnsRequestJson))
-	if err != nil {
+	err = etcdclient.EtcdStore.Put(key, string(dnsJson))
+
+	// 在Nginx中增加相关配置
+	if err = updateNginxConfig(&dns); err != nil {
 		log.ErrorLog("AddDNS: " + err.Error())
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(201, gin.H{"data": dns})
+
+	// 更新覆盖Nginx的配置文件，并且重启Nginx
+
+	c.JSON(200, gin.H{"data": dns})
+
 }
 
 func DeleteDNS(c *gin.Context) {
@@ -205,22 +226,6 @@ func DeleteDNS(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	var dnsRequest apiObject.DnsRequest
-	dnsRequest.Action = "Delete"
-	dnsRequest.DnsMeta = dns.Metadata
-	dnsRequestJson, err := json.Marshal(dnsRequest)
-	if err != nil {
-		log.ErrorLog("DeleteDNS: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-	key = config.EtcdDnsRequestPrefix + "/" + namespace + "/" + name
-	err = etcdclient.EtcdStore.Put(key, string(dnsRequestJson))
-	if err != nil {
-		log.ErrorLog("DeleteDNS: " + err.Error())
-		c.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
 }
 
 func GetNginxPod() (string, error) {
@@ -238,6 +243,9 @@ func GetNginxPod() (string, error) {
 			}
 		}
 		if nginxPod.Phase == "" {
+			// 创建PVC
+			err = exec.Command("go", "run", "~/minik8s/pkg/kubectl/main", "apply", "~/minik8s/examples/dns_nginx_pvc.yaml").Run()
+			time.Sleep(3 * time.Second)
 			err = exec.Command("go", "run", "~/minik8s/pkg/kubectl/main", "apply", "~/minik8s/examples/dns_nginx.yaml").Run()
 		}
 		if nginxPod.Phase == apiObject.PodRunning {
@@ -246,4 +254,60 @@ func GetNginxPod() (string, error) {
 		time.Sleep(2 * time.Second)
 
 	}
+}
+
+func updateNginxConfig(dns *apiObject.Dns) error {
+
+	configPath := config.LocalConfigPath
+	configPath = strings.Replace(configPath, ":namespace", dns.Metadata.Namespace, -1)
+	configPath = strings.Replace(configPath, ":name", dns.Metadata.Name, -1)
+	// 读取文件
+	file, err := os.Open(configPath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// 读取文件的每一行
+	scanner := bufio.NewScanner(file)
+	var lines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		// 如果找到了 server_name
+		if strings.Contains(line, "server_name") {
+			// 增加新的server_name
+			line = line + " " + dns.Spec.Host + ";"
+			lines = append(lines, line)
+
+			// 增加location
+			for _, path := range dns.Spec.Paths {
+				location := "location /" + path.SubPath + " {\n" +
+					"    proxy_pass http://" + path.SvcIp + ":" + path.SvcPort + ";\n" +
+					"}"
+				lines = append(lines, location)
+			}
+		} else {
+			lines = append(lines, line)
+		}
+	}
+
+	// 写回文件
+	file, err = os.Create(configPath)
+	if err != nil {
+		panic(err)
+
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for _, line := range lines {
+		fmt.Fprintln(writer, line)
+	}
+	writer.Flush()
+
+	return nil
+}
+
+func deleteNginxConfig(dns *apiObject.Dns) error {
+	return nil
 }
