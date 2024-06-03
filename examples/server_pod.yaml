@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: job-example2
+  name: job-example10
   namespace: test-job-namespace
 spec:
   containers:
-    - name: server523499
+    - name: server523600
       image: jackhel0/task-server:latest
-      imagePullPolicy: IfNotPresent
-      command: ["/bin/server", "-jobName", "job-example2", "-jobNamespace", "test-job-namespace","-serverAddr","192.168.1.12:7000"]
+      imagePullPolicy: Always
+      command: ["/bin/server", "-jobName", "job-example1", "-jobNamespace", "test-job-namespace","-serverAddr","192.168.1.12:7000"]

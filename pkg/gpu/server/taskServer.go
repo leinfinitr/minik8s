@@ -168,6 +168,8 @@ func (ts *TaskServer) CheckAndUpdateStatus(taskId string) int {
 func (ts *TaskServer)ProcessResult() error{
 	remoteOutputPath := path.Join(ts.config.RemoteBaseDir, ts.config.OutputPath)
 	remoteErrorPath := path.Join(ts.config.RemoteBaseDir, ts.config.ErrorPath)
+	log.InfoLog("ProcessResult: " + remoteOutputPath)
+	log.InfoLog("ProcessResult: " + remoteErrorPath)
 	localOutputPath := path.Join(ts.config.BaseDir, ts.config.OutputPath)
 	err := ts.client.DownloadFile(remoteOutputPath, localOutputPath)
 	if err != nil {

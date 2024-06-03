@@ -9,7 +9,7 @@ spec:
   numTasksPerNode: 6
   submitDir: "/root/minik8s/pkg/gpu/task"
   runCmd: [
-    "module load cuda/9.2.88-gcc-4.8.5",
+    "module load gcc cuda",
     "nvcc matrix_add.cu -o matrix_add",
     "nvcc matrix_multiply.cu -o matrix_multiply",
     "./matrix_add",
