@@ -7,4 +7,5 @@ const (
 	NginxConfigPath    = "/etc/nginx/nginx.conf"
 	NginxMntConfigPath = "/mnt/nginx.conf"
 	LocalConfigPath    = "/pvclient/:namespace/:name/nginx.conf"
+	LocalOriginalPath  = "/root/nginx.conf"
 )

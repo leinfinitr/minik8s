@@ -26,9 +26,8 @@ type PodManager interface {
 type podManagerImpl struct {
 	/* 实现从UUID到pod的映射 */
 	PodMapByUUID map[string]*apiObject.Pod
-
+	/* 事件队列 */
 	EventQueue chan EventType
-
 	/* 不同事件的处理函数 */
 	AddPodHandler            func(pod *apiObject.Pod) error
 	StartPodHandler          func(pod *apiObject.Pod) error
@@ -73,12 +72,6 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 		return errors.New("pod message has been handled")
 	}
 
-	p.PodMapByUUID[uuid] = pod
-	if _, ok := p.PodMapByUUID[uuid]; !ok {
-		log.ErrorLog("Pod has not been added")
-		return errors.New("pod message has been handled")
-	}
-
 	pod.Status.Phase = apiObject.PodBuilding
 
 	err := p.AddPodHandler(pod)
@@ -90,6 +83,8 @@ func (p *podManagerImpl) AddPod(pod *apiObject.Pod) error {
 		log.InfoLog("AddPodHandler success")
 		pod.Status.Phase = apiObject.PodSucceeded
 	}
+
+	p.PodMapByUUID[uuid] = pod
 	return nil
 }
 

@@ -324,13 +324,11 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 	configPath = strings.Replace(configPath, ":namespace", dns.Metadata.Namespace, -1)
 	configPath = strings.Replace(configPath, ":name", dns.Metadata.Name, -1)
 
-	// 如果不存在该文件，则创建
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		file, err := os.Create(configPath)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
+	// 增加一个初始化的config到路径下
+	err := exec.Command("cp", config.LocalOriginalPath, configPath).Run()
+	if err != nil {
+		log.ErrorLog("updateNginxConfig: " + err.Error())
+		return err
 	}
 
 	// 读取文件
@@ -340,18 +338,33 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 	}
 	defer file.Close()
 
-	// 直接在文件末尾追加
-	writer := bufio.NewWriter(file)
-	fmt.Fprintln(writer, "server {")
-	fmt.Fprintln(writer, "    listen 80;")
-	fmt.Fprintln(writer, "    server_name "+dns.Spec.Host+";")
-	for _, path := range dns.Spec.Paths {
-		fmt.Fprintln(writer, "    location /"+path.SubPath+" {")
-		fmt.Fprintln(writer, "        proxy_pass http://"+path.SvcIp+":"+fmt.Sprint(path.SvcPort)+";")
-		fmt.Fprintln(writer, "    }")
+	// 一行一行读取，在http块内的最后加上新的server
+	scanner := bufio.NewScanner(file)
+	var lines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
 	}
-	fmt.Fprintln(writer, "}")
-	writer.Flush()
+
+	// 先把最后的}删除，然后加上server之后再加上}
+	if len(lines) > 0 {
+		lines = lines[:len(lines)-1]
+	}
+	lines = append(lines, "server {")
+	lines = append(lines, "    listen 80;")
+	lines = append(lines, "    server_name "+dns.Spec.Host+";")
+	for _, path := range dns.Spec.Paths {
+		lines = append(lines, "    location "+path.SubPath+" {")
+		lines = append(lines, "        proxy_pass http://"+path.SvcIp+":"+path.SvcPort+"/;")
+		lines = append(lines, "    }")
+	}
+	lines = append(lines, "}")
+
+	// 写入文件
+	err = os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0644)
+	if err != nil {
+		log.ErrorLog("updateNginxConfig: " + err.Error())
+	}
 
 	return nil
 }
@@ -415,18 +428,10 @@ func deleteNginxConfig(dns *apiObject.Dns) error {
 	}
 
 	// 写回文件
-	file, err = os.Create(configPath)
+	err = os.WriteFile(configPath, []byte(strings.Join(lines, "\n")), 0644)
 	if err != nil {
-		panic(err)
-
+		log.ErrorLog("deleteNginxConfig: " + err.Error())
 	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-	for _, line := range lines {
-		fmt.Fprintln(writer, line)
-	}
-	writer.Flush()
 
 	return nil
 }
