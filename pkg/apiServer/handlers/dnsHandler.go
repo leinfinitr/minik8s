@@ -173,6 +173,11 @@ func AddDNS(c *gin.Context) {
 		return
 	}
 	err = etcdclient.EtcdStore.Put(key, string(dnsJson))
+	if err != nil {
+		log.ErrorLog("AddDNS: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
 
 	// 在Nginx中增加相关配置
 	if err = updateNginxConfig(&dns); err != nil {
@@ -226,6 +231,32 @@ func DeleteDNS(c *gin.Context) {
 		return
 	}
 
+	// 删除每个节点的hosts文件
+	Nodes := GetALLNodes()
+	for _, node := range Nodes {
+		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.DNSURI
+		res, err := httprequest.DelMsg(url, dns)
+		if err != nil || res.StatusCode != config.HttpSuccessCode {
+			log.ErrorLog("DeleteDNS: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	// 更新Nginx的配置文件
+	if err = deleteNginxConfig(&dns); err != nil {
+		log.ErrorLog("DeleteDNS: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 更新覆盖Nginx的配置文件，并且重启Nginx
+	if err = reloadNginx(); err != nil {
+		log.ErrorLog("DeleteDNS: " + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
 	// 删除etcd中的DNS对象
 	err = etcdclient.EtcdStore.Delete(key)
 	if err != nil {
@@ -268,6 +299,16 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 	configPath := config.LocalConfigPath
 	configPath = strings.Replace(configPath, ":namespace", dns.Metadata.Namespace, -1)
 	configPath = strings.Replace(configPath, ":name", dns.Metadata.Name, -1)
+
+	// 如果不存在该文件，则创建
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		file, err := os.Create(configPath)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+	}
+
 	// 读取文件
 	file, err := os.Open(configPath)
 	if err != nil {
@@ -327,7 +368,7 @@ func reloadNginx() error {
 	url = strings.Replace(url, config.NameSpaceReplace, nginxPod.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, nginxPod.Name, -1)
 	url = strings.Replace(url, config.ContainerReplace, nginxPod.Containers[0].Name, -1)
-	url = strings.Replace(url, config.ParamReplace, "nginx -s reload", -1)
+	url = strings.Replace(url, config.ParamReplace, "mv /mnt/nginx.conf /etc/nginx/nginx.conf && nginx -s reload", -1)
 
 	_, err = httprequest.GetMsg(url)
 	if err != nil {
@@ -339,5 +380,59 @@ func reloadNginx() error {
 }
 
 func deleteNginxConfig(dns *apiObject.Dns) error {
+	configPath := config.LocalConfigPath
+	configPath = strings.Replace(configPath, ":namespace", dns.Metadata.Namespace, -1)
+	configPath = strings.Replace(configPath, ":name", dns.Metadata.Name, -1)
+	// 读取文件
+	file, err := os.Open(configPath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// 读取文件的每一行
+	scanner := bufio.NewScanner(file)
+	var lines []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		// 如果找到了 server_name
+		if strings.Contains(line, "server_name") {
+			// 如果找到了server_name，在这一行中找到了要删除的host，只删除host就行
+			if strings.Contains(line, dns.Spec.Host) {
+				// 删除这个host
+				line = strings.Replace(line, " "+dns.Spec.Host, "", -1)
+			}
+			lines = append(lines, line)
+		} else {
+			for _, path := range dns.Spec.Paths {
+				if strings.Contains(line, "location /"+path.SubPath) {
+					// 删除这个location
+					for {
+						if strings.Contains(line, "}") {
+							break
+						}
+						line = scanner.Text()
+					}
+				}
+			}
+			lines = append(lines, line)
+		}
+
+	}
+
+	// 写回文件
+	file, err = os.Create(configPath)
+	if err != nil {
+		panic(err)
+
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for _, line := range lines {
+		fmt.Fprintln(writer, line)
+	}
+	writer.Flush()
+
 	return nil
 }
