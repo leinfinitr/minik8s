@@ -313,7 +313,7 @@ func GetNginxPod() (string, error) {
 			}
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 
 	}
 }
@@ -340,41 +340,17 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 	}
 	defer file.Close()
 
-	// 读取文件的每一行
-	scanner := bufio.NewScanner(file)
-	var lines []string
-	for scanner.Scan() {
-		line := scanner.Text()
-		// 如果找到了 server_name
-		if strings.Contains(line, "server_name") {
-			// 增加新的server_name
-			line = line + " " + dns.Spec.Host + ";"
-			lines = append(lines, line)
-
-			// 增加location
-			for _, path := range dns.Spec.Paths {
-				location := "location /" + path.SubPath + " {\n" +
-					"    proxy_pass http://" + path.SvcIp + ":" + path.SvcPort + ";\n" +
-					"}"
-				lines = append(lines, location)
-			}
-		} else {
-			lines = append(lines, line)
-		}
-	}
-
-	// 写回文件
-	file, err = os.Create(configPath)
-	if err != nil {
-		panic(err)
-
-	}
-	defer file.Close()
-
+	// 直接在文件末尾追加
 	writer := bufio.NewWriter(file)
-	for _, line := range lines {
-		fmt.Fprintln(writer, line)
+	fmt.Fprintln(writer, "server {")
+	fmt.Fprintln(writer, "    listen 80;")
+	fmt.Fprintln(writer, "    server_name "+dns.Spec.Host+";")
+	for _, path := range dns.Spec.Paths {
+		fmt.Fprintln(writer, "    location /"+path.SubPath+" {")
+		fmt.Fprintln(writer, "        proxy_pass http://"+path.SvcIp+":"+fmt.Sprint(path.SvcPort)+";")
+		fmt.Fprintln(writer, "    }")
 	}
+	fmt.Fprintln(writer, "}")
 	writer.Flush()
 
 	return nil
@@ -388,11 +364,11 @@ func reloadNginx() error {
 		return err
 	}
 
-	url := "http://" + config.APIServerLocalAddress + fmt.Sprint(config.KubeproxyAPIPort) + config.PodExecURI
+	url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.PodExecURI
 	url = strings.Replace(url, config.NameSpaceReplace, nginxPod.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, nginxPod.Name, -1)
-	url = strings.Replace(url, config.ContainerReplace, nginxPod.Containers[0].Name, -1)
-	url = strings.Replace(url, config.ParamReplace, "mv /mnt/nginx.conf /etc/nginx/nginx.conf && nginx -s reload", -1)
+	url = strings.Replace(url, config.ContainerReplace, nginxPod.ContainerName, -1)
+	url = strings.Replace(url, config.ParamReplace, "cp /mnt/nginx.conf /etc/nginx/nginx.conf && nginx -s reload", -1)
 
 	_, err = httprequest.GetMsg(url)
 	if err != nil {
@@ -414,34 +390,28 @@ func deleteNginxConfig(dns *apiObject.Dns) error {
 	}
 	defer file.Close()
 
-	// 读取文件的每一行
+	// 读取文件的每一行，遍历后找到需要被删除的server的前后下标，然后删除
 	scanner := bufio.NewScanner(file)
 	var lines []string
 	for scanner.Scan() {
 		line := scanner.Text()
-		// 如果找到了 server_name
-		if strings.Contains(line, "server_name") {
-			// 如果找到了server_name，在这一行中找到了要删除的host，只删除host就行
-			if strings.Contains(line, dns.Spec.Host) {
-				// 删除这个host
-				line = strings.Replace(line, " "+dns.Spec.Host, "", -1)
+		if strings.Contains(line, "server_name "+dns.Spec.Host) {
+			// 把lines的最后两行删除
+			if len(lines) > 1 {
+				lines = lines[:len(lines)-2]
 			}
-			lines = append(lines, line)
-		} else {
-			for _, path := range dns.Spec.Paths {
-				if strings.Contains(line, "location /"+path.SubPath) {
-					// 删除这个location
-					for {
-						if strings.Contains(line, "}") {
-							break
-						}
-						line = scanner.Text()
-					}
+
+			// 往后遍历寻找下一个server的位置
+			for scanner.Scan() {
+				line = scanner.Text()
+				if strings.Contains(line, "server {") {
+					lines = append(lines, line)
+					break
 				}
 			}
+		} else {
 			lines = append(lines, line)
 		}
-
 	}
 
 	// 写回文件

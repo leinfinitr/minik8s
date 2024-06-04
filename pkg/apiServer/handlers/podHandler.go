@@ -344,6 +344,7 @@ func UpdatePodStatus(c *gin.Context) {
 		nginx.Phase = pod.Status.Phase
 		nginx.Namespace = pod.Metadata.Namespace
 		nginx.Name = pod.Metadata.Name
+		nginx.ContainerName = pod.Spec.Containers[0].Name
 		if resjson, err := json.Marshal(nginx); err == nil {
 			err = etcdclient.EtcdStore.Put(config.EtcdNginxPrefix, string(resjson))
 			if err != nil {

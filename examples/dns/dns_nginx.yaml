@@ -8,7 +8,7 @@ spec:
   volumes:
     - name: dns-pvc-volume
       persistentVolumeClaim:
-        claimName: dns_pvc
+        claimName: my-dns
         readOnly: false
   containers:
   - name: nginx
