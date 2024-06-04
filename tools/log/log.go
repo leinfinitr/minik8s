@@ -15,7 +15,7 @@ import (
 // Warn: 黄色
 // Debug: 蓝色
 
-var ifDebug = false
+var ifDebug = true
 var ifFile = false
 var ifPrint = true
 var logPath = "./k8s.log"

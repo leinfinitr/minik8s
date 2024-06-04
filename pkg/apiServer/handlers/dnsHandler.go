@@ -268,8 +268,8 @@ func DeleteDNS(c *gin.Context) {
 
 func GetNginxPod() (string, error) {
 	// 从etcd中获取Nginx的Pod，如果不存在则创建
-	var nginxPod apiObject.Nginx
 	for {
+		var nginxPod apiObject.Nginx
 		res, err := etcdclient.EtcdStore.Get(config.EtcdNginxPrefix)
 		if err == nil || res != "" {
 			// Nginx的Pod已经存在
@@ -280,15 +280,39 @@ func GetNginxPod() (string, error) {
 				}
 			}
 		}
-		if nginxPod.Phase == "" {
-			// 创建PVC
-			err = exec.Command("go", "run", "~/minik8s/pkg/kubectl/main", "apply", "~/minik8s/examples/dns_nginx_pvc.yaml").Run()
-			time.Sleep(3 * time.Second)
-			err = exec.Command("go", "run", "~/minik8s/pkg/kubectl/main", "apply", "~/minik8s/examples/dns_nginx.yaml").Run()
-		}
 		if nginxPod.Phase == apiObject.PodRunning {
 			return nginxPod.PodIP, nil
 		}
+		if nginxPod.Phase == "" {
+			// 创建PVC
+			//  go run minik8s/pkg/kubectl/main apply ./examples/dns/dns_pvc.yaml
+			log.DebugLog("GetNginxPod: create pvc and create nginx pod")
+			pvc := exec.Command("go", "run", "minik8s/pkg/kubectl/main", "apply", "./examples/dns/dns_pvc.yaml")
+			err = pvc.Run()
+			if err != nil {
+				log.ErrorLog("Set PVC: " + err.Error())
+				return "", err
+			}
+			time.Sleep(4 * time.Second)
+			pod := exec.Command("go", "run", "minik8s/pkg/kubectl/main", "apply", "./examples/dns/dns_nginx.yaml")
+			err = pod.Run()
+			if err != nil {
+				log.ErrorLog("Set Nginx: " + err.Error())
+				return "", err
+			}
+			nginxPod.Phase = apiObject.PodBuilding
+			resjson, err := json.Marshal(nginxPod)
+			if err != nil {
+				log.ErrorLog("GetNginxPod: " + err.Error())
+				return "", err
+			}
+			err = etcdclient.EtcdStore.Put(config.EtcdNginxPrefix, string(resjson))
+			if err != nil {
+				log.ErrorLog("GetNginxPod: " + err.Error())
+				return "", err
+			}
+		}
+
 		time.Sleep(2 * time.Second)
 
 	}

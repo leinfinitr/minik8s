@@ -3,7 +3,7 @@ kind: Dns
 metadata:
   name: my-dns
   namespace: default
-  label:
+  labels:
     app: my-app
 spec:
   host: mydns.com
