@@ -318,11 +318,11 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		response1, err := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
 			ContainerId: container.ContainerID,
 		})
-		if err != nil {
-			log.ErrorLog("Container status from CRI failed" + err.Error())
-			container.ContainerStatus = apiObject.ContainerUnknown
-			return err
-		}
+		// if err != nil {
+		// 	log.ErrorLog("Container status from CRI failed" + err.Error())
+		// 	container.ContainerStatus = apiObject.ContainerUnknown
+		// 	return err
+		// }
 
 		response2, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
 			ContainerId: container.ContainerID,
