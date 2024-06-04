@@ -86,7 +86,7 @@ func (a *ApiServer) Register() {
 
 	// 获取指定Pod的状态
 	a.Router.GET(config.PodStatusURI, handlers.GetPodStatus)
-	// 更新Pod的状态
+	// 更新Pod的状态，该请求来自于 kubelet
 	a.Router.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
 
 	// 执行指定Pod和container的命令

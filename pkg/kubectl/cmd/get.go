@@ -237,7 +237,7 @@ func getReplicaSetHandler(namespace string) {
 func printServicesResult(services []apiObject.Service) {
 	writer := table.NewWriter()
 	writer.SetOutputMirror(os.Stdout)
-	writer.AppendHeader(table.Row{"Kind", "Name", "ClusterIP", "Ports"})
+	writer.AppendHeader(table.Row{"Kind", "Namespace", "Name", "ClusterIP", "Ports"})
 	for _, service := range services {
 		printServiceResult(service, writer)
 	}
@@ -251,6 +251,7 @@ func printServiceResult(service apiObject.Service, writer table.Writer) {
 	}
 	writer.AppendRow(table.Row{
 		"Service",
+		service.Metadata.Namespace,
 		service.Metadata.Name,
 		service.Spec.ClusterIP,
 		ports,

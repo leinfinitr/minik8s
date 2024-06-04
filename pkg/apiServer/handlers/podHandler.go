@@ -716,16 +716,10 @@ func UpdatePodProps(new *apiObject.Pod) {
 	updateUri := url + config.PodURI
 	updateUri = strings.Replace(updateUri, config.NameSpaceReplace, new.Metadata.Namespace, -1)
 	updateUri = strings.Replace(updateUri, config.NameReplace, new.Metadata.Name, -1)
-	resp, err := httprequest.PutObjMsg(updateUri, podBytes)
+	_, err = httprequest.PutObjMsg(updateUri, podBytes)
 	if err != nil {
 		log.ErrorLog("UpdatePodProps: " + err.Error())
 		return
-	}
-	// 将resp中更新的pod信息存入new
-	new = &apiObject.Pod{}
-	err = json.NewDecoder(resp.Body).Decode(new)
-	if err != nil {
-		log.ErrorLog("UpdatePodProps: " + err.Error())
 	}
 }
 

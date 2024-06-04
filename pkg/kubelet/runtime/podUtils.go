@@ -314,7 +314,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		return err
 	}
 
-	for _, container := range pod.Spec.Containers {
+	for id, container := range pod.Spec.Containers {
 		response1, _ := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
 			ContainerId: container.ContainerID,
 		})
@@ -325,19 +325,19 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 
 		switch response2.Status.State {
 		case runtimeapi.ContainerState_CONTAINER_CREATED:
-			container.ContainerStatus = apiObject.ContainerCreated
 			pod.Status.Phase = apiObject.PodSucceeded
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerCreated
 		case runtimeapi.ContainerState_CONTAINER_RUNNING:
-			container.ContainerStatus = apiObject.ContainerRunning
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerRunning
 		case runtimeapi.ContainerState_CONTAINER_EXITED:
-			container.ContainerStatus = apiObject.ContainerExited
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerExited
 		default:
-			container.ContainerStatus = apiObject.ContainerUnknown
 			pod.Status.Phase = apiObject.PodFailed
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerUnknown
 			continue
 		}
 
-		if container.ContainerStatus != apiObject.ContainerRunning {
+		if pod.Spec.Containers[id].ContainerStatus != apiObject.ContainerRunning {
 			continue
 		}
 

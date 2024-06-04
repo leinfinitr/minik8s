@@ -130,7 +130,7 @@ func DeleteService(c *gin.Context) {
 	key := config.EtcdServicePrefix + "/" + namespace + "/" + name
 	response, err := etcdclient.EtcdStore.Get(key)
 	if response == "" || err != nil {
-		log.ErrorLog("DeleteService error: service not exists")
+		log.ErrorLog("DeleteService error: service " + namespace + "/" + name + " not exists")
 		c.JSON(400, gin.H{"error": "service not exists"})
 		return
 	}
