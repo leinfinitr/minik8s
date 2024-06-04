@@ -1,11 +1,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: job-example10
+  name: job-example12
   namespace: test-job-namespace
 spec:
   containers:
-    - name: server523600
+    - name: server523613
       image: jackhel0/task-server:latest
       imagePullPolicy: Always
-      command: ["/bin/server", "-jobName", "job-example1", "-jobNamespace", "test-job-namespace","-serverAddr","192.168.1.12:7000"]
+      command: ["/bin/sh", "-c","echo \"nameserver 223.5.5.5\" > /etc/resolv.conf &&
+          /bin/server -jobName job-example1 -jobNamespace test-job-namespace -serverAddr http://192.168.1.12:7000"]

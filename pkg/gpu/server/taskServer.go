@@ -195,6 +195,8 @@ func (ts *TaskServer)ProcessResult() error{
 	var jobCode apiObject.JobCode
 	jobCode.OutputContent = outputContent
 	jobCode.ErrorContent = errorContent
+	log.InfoLog("ProcessResult: " + string(outputContent))
+	log.InfoLog("ProcessResult: " + string(errorContent))
 	url := ts.config.ServerUri + config.JobCodeURI
 	url = strings.Replace(url, config.NameSpaceReplace, ts.config.TaskNameSpace, -1)
 	url = strings.Replace(url, config.NameReplace, ts.config.TaskName, -1)
@@ -243,7 +245,7 @@ func (ts *TaskServer) RunTaskServer() {
 			log.InfoLog("Task processing")
 			return false
 		case 1:
-			time.Sleep(5 * time.Second)
+			time.Sleep(8 * time.Second)
 			log.InfoLog("Task finished")
 			err := ts.ProcessResult()
 			if err != nil {

@@ -52,7 +52,9 @@ func (jc *JobControllerImpl) syncJob() {
 
 }
 func (jc *JobControllerImpl) CreateJob(job apiObject.Job){
-	cmd := []string{"/bin/server", "-jobNname", job.Metadata.Name, "-jobNamespace", job.Metadata.Namespace,"-serverAddr",config.APIServerURL()}
+	// cmd := []string{"/bin/server", "-jobNname", job.Metadata.Name, "-jobNamespace", job.Metadata.Namespace,"-serverAddr",config.APIServerURL()}
+	cmd := []string{"/bin/sh", "-c", `echo "nameserver 223.5.5.5" > /etc/resolv.conf &&
+    /bin/server -jobName ` + job.Metadata.Name + ` -jobNamespace ` + job.Metadata.Namespace + ` -serverAddr ` + config.APIServerURL()}
 	pod := &apiObject.Pod{
 		TypeMeta: apiObject.TypeMeta{
 			Kind:       "Pod",
