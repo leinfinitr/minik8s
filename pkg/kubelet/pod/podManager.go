@@ -101,6 +101,8 @@ func (p *podManagerImpl) DeletePod(pod *apiObject.Pod) error {
 		return errors.New("pod message has been handled")
 	}
 
+	delete(p.PodMapByUUID, uuid)
+
 	err := p.DeletePodHandler(pod)
 	if err != nil {
 		log.ErrorLog("DeletePodHandler error: " + err.Error())
@@ -108,7 +110,6 @@ func (p *podManagerImpl) DeletePod(pod *apiObject.Pod) error {
 	} else {
 		log.InfoLog("DeletePodHandler success")
 	}
-	delete(p.PodMapByUUID, uuid)
 	return nil
 }
 

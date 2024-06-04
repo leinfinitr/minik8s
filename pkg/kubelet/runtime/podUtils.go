@@ -310,27 +310,28 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 
 	memoryAll, err := host.GetTotalMemory()
 	if err != nil {
-		log.ErrorLog("GetTotalMemory failed" + err.Error())
+		log.WarnLog("GetTotalMemory failed" + err.Error())
 		return err
 	}
 
 	for _, container := range pod.Spec.Containers {
-		response1, err := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
+		response1, _ := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
 			ContainerId: container.ContainerID,
 		})
-		// if err != nil {
-		// 	log.ErrorLog("Container status from CRI failed" + err.Error())
-		// 	container.ContainerStatus = apiObject.ContainerUnknown
-		// 	return err
-		// }
 
 		response2, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
 			ContainerId: container.ContainerID,
 		})
 		if err != nil {
-			log.ErrorLog("Container status from CRI failed" + err.Error())
+			log.WarnLog("Container status from CRI failed" + err.Error())
 			container.ContainerStatus = apiObject.ContainerUnknown
-			return err
+			continue
+		}
+
+		if response1 == nil || response2 == nil {
+			log.WarnLog("Container status from CRI failed")
+			container.ContainerStatus = apiObject.ContainerUnknown
+			continue
 		}
 
 		switch response2.Status.State {
@@ -344,7 +345,7 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 		default:
 			container.ContainerStatus = apiObject.ContainerUnknown
 			pod.Status.Phase = apiObject.PodFailed
-			return errors.New("container " + container.ContainerID + " status is unknown")
+			continue
 		}
 
 		if container.ContainerStatus != apiObject.ContainerRunning {
