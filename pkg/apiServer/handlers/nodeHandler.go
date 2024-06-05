@@ -55,28 +55,61 @@ func CreateNode(c *gin.Context) {
 	}
 
 	if len(res) > 0 {
-		// 节点已经存在，需要对pod进行特殊处理，与kubelet同步pod的信息
+		// 节点已经存在，则无需重新注册
 		log.InfoLog("CreateNode: node already exists")
 		c.JSON(config.HttpSuccessCode, "message: node already exists")
-		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdPodPrefix)
+	} else {
+		// 新节点，需要注册
+		// 注册monitor
+		url := config.APIServerURL() + config.MonitorNodeURL
+		if resp, err := httprequest.PutObjMsg(url, node); err != nil || resp.StatusCode != config.HttpSuccessCode {
+			log.WarnLog("CreateNode: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+
+		// 节点首次注册，直接保存节点信息
+		if node.Kind != apiObject.NodeType {
+			log.WarnLog("CreateNode: node kind is not correct")
+			c.JSON(config.HttpErrorCode, gin.H{"error": "node kind is not correct"})
+			return
+		}
+		resJson, err := json.Marshal(node)
 		if err != nil {
 			log.WarnLog("CreateNode: " + err.Error())
 			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 			return
 		}
-		var pods []apiObject.Pod
-		for _, v := range res {
-			var pod apiObject.Pod
-			err = json.Unmarshal([]byte(v), &pod)
-			if err != nil {
-				log.WarnLog("CreateNode: " + err.Error())
-				continue
-			}
-			if pod.Spec.NodeName == node.Metadata.Name {
-				pods = append(pods, pod)
-			}
+		err = etcdclient.EtcdStore.Put(config.EtcdNodePrefix+"/"+node.Metadata.Name, string(resJson))
+		if err != nil {
+			log.WarnLog("CreateNode: " + err.Error())
+			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
 		}
-		// 把pods信息发送到给kubelet，同步pods信息
+	}
+
+	res, err = etcdclient.EtcdStore.PrefixGet(config.EtcdPodPrefix)
+	if err != nil {
+		log.WarnLog("CreateNode: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
+	var pods []apiObject.Pod
+	for _, v := range res {
+		var pod apiObject.Pod
+		err = json.Unmarshal([]byte(v), &pod)
+		if err != nil {
+			log.WarnLog("CreateNode: " + err.Error())
+			continue
+		}
+		if pod.Spec.NodeName == node.Metadata.Name {
+			pods = append(pods, pod)
+		}
+	}
+
+	// 把pods信息发送到给kubelet，同步pods信息
+	if len(pods) > 0 {
+		log.InfoLog("Start Sync Pods Infomation with Node: " + node.Metadata.Name)
 		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodsSyncURI
 		resp, err := httprequest.PostObjMsg(url, pods)
 		if err != nil || resp.StatusCode != config.HttpSuccessCode {
@@ -84,38 +117,8 @@ func CreateNode(c *gin.Context) {
 			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(config.HttpSuccessCode, "message: create node success")
-		return
 	}
 
-	// 注册monitor
-	url := config.APIServerURL() + config.MonitorNodeURL
-	if resp, err := httprequest.PutObjMsg(url, node); err != nil || resp.StatusCode != config.HttpSuccessCode {
-		log.WarnLog("CreateNode: " + err.Error())
-		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 节点首次注册，直接保存节点信息
-	if node.Kind != apiObject.NodeType {
-		log.WarnLog("CreateNode: node kind is not correct")
-		c.JSON(config.HttpErrorCode, gin.H{"error": "node kind is not correct"})
-		return
-	}
-	resJson, err := json.Marshal(node)
-	if err != nil {
-		log.WarnLog("CreateNode: " + err.Error())
-		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
-		return
-	}
-	err = etcdclient.EtcdStore.Put(config.EtcdNodePrefix+"/"+node.Metadata.Name, string(resJson))
-	if err != nil {
-		log.WarnLog("CreateNode: " + err.Error())
-		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
-		return
-	}
-
-	// nodes[node.Metadata.Name] = node
 	log.InfoLog("CreateNode: " + node.Metadata.Name + " Node IP: " + node.Status.Addresses[0].Address)
 	c.JSON(config.HttpSuccessCode, "message: create node success")
 	// 将信息广播给所有node
