@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: Hpa
 metadata:
-  name: my-hpa
+  name: hpa
 spec:
   scaleTargetRef:
     apiVersion: v1
     kind: Pod
     metadata:
-      name: my-pod
-      namespace: my-namespace
+      name: hpa-pod
+      namespace: hpa-namespace
   selector:
-      app: my-app11
+      app: hpa-pod-app
   minReplicas: 1
   maxReplicas: 20
   adjustInterval: 10s
