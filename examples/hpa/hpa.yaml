@@ -13,7 +13,7 @@ spec:
       app: my-app11
   minReplicas: 1
   maxReplicas: 20
-  adjustInterval: 30s
+  adjustInterval: 10s
   metrics:
     cpuPercent: 0.5
     memoryPercent: 0.6
