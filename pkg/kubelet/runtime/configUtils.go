@@ -67,6 +67,13 @@ func (r *RuntimeManager) getContainerConfig(container *apiObject.Container, sand
 
 	logPath := container.Name + ".log"
 	// 2. 创建container
+	// 需要在dns中追加/etc/hosts文件，以便容器内部可以访问到集群内部署的DNS服务
+	container.Mounts = append(container.Mounts, &apiObject.Mount{
+		ContainerPath: "/etc/hosts",
+		HostPath:      "/etc/hosts",
+		ReadOnly:      true,
+	})
+
 	config := &runtimeapi.ContainerConfig{
 		Metadata: &runtimeapi.ContainerMetadata{
 			Name:    container.Name,

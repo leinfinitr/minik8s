@@ -90,7 +90,7 @@ func (a *ApiServer) Register() {
 	a.Router.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
 
 	// 执行指定Pod和container的命令
-	a.Router.GET(config.PodExecURI, handlers.ExecPod)
+	a.Router.POST(config.PodExecURI, handlers.ExecPod)
 
 	// 获取所有Pod
 	a.Router.GET(config.PodsURI, handlers.GetPods)

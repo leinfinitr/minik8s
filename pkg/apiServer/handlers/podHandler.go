@@ -610,8 +610,15 @@ func ExecPod(c *gin.Context) {
 	name := c.Param("name")
 	namespace := c.Param("namespace")
 	container := c.Param("container")
-	param := c.Param("param")
-	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + container)
+	cmd := apiObject.Command{}
+	err := c.ShouldBindJSON(&cmd)
+	if err != nil {
+		log.ErrorLog("ExecPod: " + err.Error())
+		c.JSON(500, err.Error())
+		return
+	}
+	param := cmd.Cmd
+	log.InfoLog("ExecPod: " + namespace + "/" + name + "/" + container)
 
 	// 取出Pod
 	key := config.EtcdPodPrefix + "/" + namespace + "/" + name
@@ -667,13 +674,12 @@ func ExecPod(c *gin.Context) {
 	address := addresses[0].Address
 
 	// 执行命令
-	log.DebugLog("ExecPod: " + namespace + "/" + name + "/" + containerID + "/" + param)
+	log.InfoLog("ExecPod: " + namespace + "/" + name + "/" + containerID + "/" + param)
 	execUri := config.HttpSchema + address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodExecURI
 	execUri = strings.Replace(execUri, config.NameSpaceReplace, namespace, -1)
 	execUri = strings.Replace(execUri, config.NameReplace, name, -1)
 	execUri = strings.Replace(execUri, config.ContainerReplace, containerID, -1)
-	execUri = strings.Replace(execUri, config.ParamReplace, param, -1)
-	resp, err := httprequest.GetMsg(execUri)
+	resp, err := httprequest.PostObjMsg(execUri, cmd)
 	if err != nil {
 		log.ErrorLog("ExecPod: " + err.Error())
 		c.JSON(500, err.Error())

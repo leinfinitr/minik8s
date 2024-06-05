@@ -350,14 +350,16 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 	if len(lines) > 0 {
 		lines = lines[:len(lines)-1]
 	}
-	lines = append(lines, "server {")
-	lines = append(lines, "    listen 80;")
-	lines = append(lines, "    server_name "+dns.Spec.Host+";")
+	lines = append(lines, "    server {")
+	lines = append(lines, "        listen 80;")
+	lines = append(lines, "        server_name "+dns.Spec.Host+";")
 	for _, path := range dns.Spec.Paths {
-		lines = append(lines, "    location "+path.SubPath+" {")
-		lines = append(lines, "        proxy_pass http://"+path.SvcIp+":"+path.SvcPort+"/;")
-		lines = append(lines, "    }")
+		lines = append(lines, "        location "+path.SubPath+" {")
+		lines = append(lines, "            proxy_pass http://"+path.SvcIp+":"+path.SvcPort+"/;")
+		lines = append(lines, "        }")
 	}
+	lines = append(lines, "    }")
+
 	lines = append(lines, "}")
 
 	// 写入文件
@@ -376,15 +378,20 @@ func reloadNginx() error {
 	if err != nil || res == "" {
 		return err
 	}
+	err = json.Unmarshal([]byte(res), &nginxPod)
+	if err != nil {
+		return err
+	}
 
-	url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.PodExecURI
+	url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodExecURI
 	url = strings.Replace(url, config.NameSpaceReplace, nginxPod.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, nginxPod.Name, -1)
 	url = strings.Replace(url, config.ContainerReplace, nginxPod.ContainerName, -1)
-	url = strings.Replace(url, config.ParamReplace, "cp /mnt/nginx.conf /etc/nginx/nginx.conf && nginx -s reload", -1)
 
-	_, err = httprequest.GetMsg(url)
-	if err != nil {
+	cmd := apiObject.Command{Cmd: "cp /mnt/nginx.conf /etc/nginx/nginx.conf && nginx -s reload"}
+	log.InfoLog("reloadNginx: " + url)
+	resp, err := httprequest.PostObjMsg(url, cmd)
+	if err != nil || resp.StatusCode != config.HttpSuccessCode {
 		log.ErrorLog("reloadNginx: " + err.Error())
 		return err
 	}
