@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Dns
+metadata:
+  name: my-dns
+  namespace: default
+  labels:
+    app: my-app
+spec:
+  host: mydns.com
+  paths:
+  - subPath: /service/example
+    svcName: myservice-clusterIP
+    svcPort: 7080
+  - subPath: /service/example2
+    svcName: myservice-clusterIP2
+    svcPort: 9876

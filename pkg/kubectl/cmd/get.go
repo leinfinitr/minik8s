@@ -346,7 +346,7 @@ func printJobResult(job apiObject.Job, writer table.Writer) {
 func printServicesResult(services []apiObject.Service) {
 	writer := table.NewWriter()
 	writer.SetOutputMirror(os.Stdout)
-	writer.AppendHeader(table.Row{"Kind", "Name", "ClusterIP", "Ports"})
+	writer.AppendHeader(table.Row{"Kind", "Namespace", "Name", "ClusterIP", "Ports"})
 	for _, service := range services {
 		printServiceResult(service, writer)
 	}
@@ -360,6 +360,7 @@ func printServiceResult(service apiObject.Service, writer table.Writer) {
 	}
 	writer.AppendRow(table.Row{
 		"Service",
+		service.Metadata.Namespace,
 		service.Metadata.Name,
 		service.Spec.ClusterIP,
 		ports,
@@ -369,7 +370,7 @@ func printServiceResult(service apiObject.Service, writer table.Writer) {
 func printPodsResult(pods []apiObject.Pod) {
 	writer := table.NewWriter()
 	writer.SetOutputMirror(os.Stdout)
-	writer.AppendHeader(table.Row{"Kind", "Name", "Status", "Node", "IP"})
+	writer.AppendHeader(table.Row{"Kind", "Namespace", "Name", "Status", "Node", "IP"})
 	for _, pod := range pods {
 		printPodResult(pod, writer)
 	}
@@ -395,6 +396,7 @@ func printPodResult(pod apiObject.Pod, writer table.Writer) {
 
 	writer.AppendRow(table.Row{
 		"Pod",
+		pod.Metadata.Namespace,
 		pod.Metadata.Name,
 		coloredStatus, // 使用包装了颜色的status
 		pod.Spec.NodeName,

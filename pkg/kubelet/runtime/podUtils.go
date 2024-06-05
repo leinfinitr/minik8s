@@ -310,45 +310,34 @@ func (r *RuntimeManager) UpdatePodStatus(pod *apiObject.Pod) error {
 
 	memoryAll, err := host.GetTotalMemory()
 	if err != nil {
-		log.ErrorLog("GetTotalMemory failed" + err.Error())
+		log.WarnLog("GetTotalMemory failed" + err.Error())
 		return err
 	}
 
-	for _, container := range pod.Spec.Containers {
-		response1, err := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
+	for id, container := range pod.Spec.Containers {
+		response1, _ := r.runtimeClient.ContainerStats(context.Background(), &runtimeapi.ContainerStatsRequest{
 			ContainerId: container.ContainerID,
 		})
 
-		// if err != nil {
-		// 	log.ErrorLog("Container status from CRI failed" + err.Error())
-		// 	container.ContainerStatus = apiObject.ContainerUnknown
-		// 	return err
-		// }
-
-		response2, err := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
+		response2, _ := r.runtimeClient.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
 			ContainerId: container.ContainerID,
 		})
-		if err != nil {
-			log.ErrorLog("Container status from CRI failed" + err.Error())
-			container.ContainerStatus = apiObject.ContainerUnknown
-			return err
-		}
 
 		switch response2.Status.State {
 		case runtimeapi.ContainerState_CONTAINER_CREATED:
-			container.ContainerStatus = apiObject.ContainerCreated
 			pod.Status.Phase = apiObject.PodSucceeded
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerCreated
 		case runtimeapi.ContainerState_CONTAINER_RUNNING:
-			container.ContainerStatus = apiObject.ContainerRunning
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerRunning
 		case runtimeapi.ContainerState_CONTAINER_EXITED:
-			container.ContainerStatus = apiObject.ContainerExited
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerExited
 		default:
-			container.ContainerStatus = apiObject.ContainerUnknown
 			pod.Status.Phase = apiObject.PodFailed
-			return errors.New("container " + container.ContainerID + " status is unknown")
+			pod.Spec.Containers[id].ContainerStatus = apiObject.ContainerUnknown
+			continue
 		}
 
-		if container.ContainerStatus != apiObject.ContainerRunning {
+		if pod.Spec.Containers[id].ContainerStatus != apiObject.ContainerRunning {
 			continue
 		}
 

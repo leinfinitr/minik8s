@@ -267,3 +267,24 @@ func PingNodeStatus(c *gin.Context) {
 		c.JSON(config.HttpSuccessCode, "")
 	}
 }
+
+func GetALLNodes() []apiObject.Node {
+	// 获取所有的Node信息
+	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+	if err != nil {
+		log.WarnLog("GetNodes: " + err.Error())
+		return nil
+	}
+
+	var nodes []apiObject.Node
+	for _, v := range res {
+		var node apiObject.Node
+		err = json.Unmarshal([]byte(v), &node)
+		if err != nil {
+			log.WarnLog("GetNodes: " + err.Error())
+			return nil
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes
+}

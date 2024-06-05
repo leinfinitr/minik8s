@@ -1,6 +1,6 @@
 image: python:3.7-alpine
-name: get_max
+name: convert_char
 hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
-functionFile: get_max.py
-command: python get_max.py
+functionFile: convert_char.py
+command: python convert_char.py

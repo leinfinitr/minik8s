@@ -1,0 +1,4 @@
+move_right
+convert_num
+IF GREATER 77851361 THEN add ELSE subtract
+convert_char

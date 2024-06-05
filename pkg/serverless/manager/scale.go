@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"minik8s/pkg/apiObject"
@@ -35,6 +36,9 @@ type ScaleManagerImpl struct {
 	Pod map[string]apiObject.Pod
 	// 每个Serverless Function对应的Serverless
 	Serverless map[string]apiObject.Serverless
+
+	// 控制并发的锁
+	Lock sync.Mutex
 }
 
 var ScaleManager *ScaleManagerImpl = nil
@@ -113,17 +117,19 @@ func (s *ScaleManagerImpl) IncreaseInstance(name string) {
 	res, err := httprequest.PostObjMsg(url, pod)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
-		os.Exit(1)
+		return
 	}
 	if res.StatusCode != 201 {
 		log.ErrorLog("Could not create " + name)
-		os.Exit(1)
+		return
 	}
 	// 添加到 Instance 中
+	s.Lock.Lock()
 	s.FunctionInstanceNum[name]++
 	s.Instance[instanceName] = pod
 	s.InstanceRequestNum[instanceName] = 0
 	s.InstanceLastRequestTime[instanceName] = 0
+	s.Lock.Unlock()
 
 	log.InfoLog("Create a new pod for " + name + " with name " + instanceName)
 }
@@ -144,10 +150,12 @@ func (s *ScaleManagerImpl) DecreaseInstance(instanceName string) {
 		os.Exit(1)
 	}
 	// 从 Instance 中删除
+	s.Lock.Lock()
 	s.FunctionInstanceNum[podName]--
 	delete(s.Instance, instanceName)
 	delete(s.InstanceRequestNum, instanceName)
 	delete(s.InstanceLastRequestTime, instanceName)
+	s.Lock.Unlock()
 
 	log.InfoLog("Delete pod " + instanceName + " for " + podName)
 }
@@ -161,11 +169,11 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 		time.Sleep(1 * time.Second)
 	}
 	// 遍历所有实例，找到一个属于当前Function且请求最少的实例
-	minRequestNum := math.MaxInt
+	minInstanceRequestNum := math.MaxInt
 	minRequestInstanceName := ""
 	for instanceName, requestNum := range s.InstanceRequestNum {
-		if strings.HasPrefix(instanceName, name) && requestNum < minRequestNum {
-			minRequestNum = s.InstanceRequestNum[instanceName]
+		if strings.HasPrefix(instanceName, name) && requestNum < minInstanceRequestNum {
+			minInstanceRequestNum = s.InstanceRequestNum[instanceName]
 			minRequestInstanceName = instanceName
 		}
 	}
@@ -175,26 +183,28 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 		log.ErrorLog("Could not find a suitable instance for " + name)
 		os.Exit(1)
 	}
-	// 取出该实例
-	pod := s.Instance[minRequestInstanceName]
-	serverless := s.Serverless[name]
-	// 增加该实例处理的请求数量
+
+	// 增加该实例处理的请求数量，重置该实例的最后一次处理请求所经过的周期
+	s.Lock.Lock()
 	s.InstanceRequestNum[minRequestInstanceName]++
-	// 重置该实例的最后一次处理请求所经过的周期
 	s.InstanceLastRequestTime[minRequestInstanceName] = 0
+	s.Lock.Unlock()
+
 	// 转发给 apiServer 运行 Pod 中的容器
 	url := config.APIServerURL() + config.PodExecURI
-	url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
-	url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
-	url = strings.Replace(url, config.ContainerReplace, pod.Spec.Containers[0].Name, -1)
-	url = strings.Replace(url, config.ParamReplace, serverless.Command+" "+param, -1)
+	url = strings.Replace(url, config.NameSpaceReplace, "serverless", -1)
+	url = strings.Replace(url, config.NameReplace, minRequestInstanceName, -1)
+	url = strings.Replace(url, config.ContainerReplace, minRequestInstanceName, -1)
+	url = strings.Replace(url, config.ParamReplace, s.Serverless[name].Command+" "+param, -1)
 	response, err := httprequest.GetMsg(url)
 	if err != nil {
 		log.ErrorLog("Could not post the message." + err.Error())
 		os.Exit(1)
 	}
 	// 减少该实例处理的请求数量
+	s.Lock.Lock()
 	s.InstanceRequestNum[minRequestInstanceName]--
+	s.Lock.Unlock()
 	// 返回结果
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -204,24 +214,28 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	result := string(body)
 	// 去掉result中首尾的引号
 	result = result[1 : len(result)-1]
-	log.InfoLog("Run function " + name + " with param " + param + " result: " + result)
+	log.InfoLog("Run function " + name + " in " + minRequestInstanceName + " with param " + param + " result: " + result)
 	return result
 }
 
 // AddPod 添加一个Pod
 func (s *ScaleManagerImpl) AddPod(pod apiObject.Pod) {
 	log.DebugLog("Add pod " + pod.Metadata.Name)
+	s.Lock.Lock()
 	s.Pod[pod.Metadata.Name] = pod
 	s.FunctionInstanceNum[pod.Metadata.Name] = 0
 	s.FunctionRequestNum[pod.Metadata.Name] = 0
+	s.Lock.Unlock()
 }
 
 // DeletePod 删除一个Pod
 func (s *ScaleManagerImpl) DeletePod(name string) {
 	log.DebugLog("Delete pod " + name)
+	s.Lock.Lock()
 	delete(s.Pod, name)
 	delete(s.FunctionInstanceNum, name)
 	delete(s.FunctionRequestNum, name)
+	s.Lock.Unlock()
 }
 
 // AddServerless 添加一个Serverless
@@ -231,7 +245,14 @@ func (s *ScaleManagerImpl) AddServerless(serverless apiObject.Serverless) {
 
 // DeleteServerless 删除一个Serverless
 func (s *ScaleManagerImpl) DeleteServerless(name string) {
+	log.DebugLog("Delete serverless " + name)
 	delete(s.Serverless, name)
+	// 删除该 Serverless 对应的所有实例
+	for instanceName := range s.Instance {
+		if strings.HasPrefix(instanceName, name) {
+			s.DecreaseInstance(instanceName)
+		}
+	}
 }
 
 // GetAllServerless 获取所有的Serverless

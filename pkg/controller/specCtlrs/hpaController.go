@@ -81,6 +81,7 @@ func (hc *HpaControllerImpl) handleHPA(hpa apiObject.HPA, pods []apiObject.Pod) 
 		}
 	}
 	log.DebugLog("selectedPods: " + strconv.Itoa(len(selectedPods)))
+	HpaControllerTimeGap = []time.Duration{min(HpaControllerTimeGap[0], time.Duration(hpa.Spec.AdjustInterval))}
 	hpa.Status.CurrentReplicas = int32(len(selectedPods))
 	if hpa.Status.CurrentReplicas == 0 {
 		log.ErrorLog("handleHPA: " + hpa.Metadata.Namespace + "/" + hpa.Metadata.Name + " no pod selected")

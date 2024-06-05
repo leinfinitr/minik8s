@@ -75,6 +75,13 @@ func DeleteServerless(c *gin.Context) {
 		return
 	}
 
+	// 检查该 Serverless 是否存在
+	if _, ok := manager.ScaleManager.Serverless[serverlessName]; !ok {
+		log.ErrorLog("DeleteServerless: " + serverlessName + " does not exist")
+		c.JSON(400, "Serverless "+serverlessName+" does not exist")
+		return
+	}
+
 	// 从 etcd 中删除 serverless 对象
 	key := config.EtcdServerlessPrefix + "/" + serverlessName
 	err := etcdclient.EtcdStore.Delete(key)

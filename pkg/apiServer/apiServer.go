@@ -27,10 +27,10 @@ type ApiServer struct {
 	Router *gin.Engine
 }
 
-// 方法-------------------------------------------------------------
-
 // Run 启动ApiServer
 func (a *ApiServer) Run() {
+	log.InfoLog("ApiServer is running on " + a.Address + ":" + fmt.Sprint(a.Port))
+
 	go func() {
 		a.Register()
 		err := a.Router.Run(a.Address + ":" + fmt.Sprint(a.Port))
@@ -86,7 +86,7 @@ func (a *ApiServer) Register() {
 
 	// 获取指定Pod的状态
 	a.Router.GET(config.PodStatusURI, handlers.GetPodStatus)
-	// 更新Pod的状态
+	// 更新Pod的状态，该请求来自于 kubelet
 	a.Router.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
 
 	// 执行指定Pod和container的命令
@@ -154,21 +154,24 @@ func (a *ApiServer) Register() {
 	a.Router.PUT(config.JobCodeURI, handlers.UpdateJobCode)
 
 	a.Router.GET(config.DNSsURI, handlers.GetDNSs)
+	// 获取指定DNS
 	a.Router.GET(config.DNSURI, handlers.GetDNS)
+	// 添加DNS
 	a.Router.POST(config.DNSsURI, handlers.AddDNS)
+	// 删除DNS
 	a.Router.DELETE(config.DNSURI, handlers.DeleteDNS)
-
-	a.Router.GET(config.GlobalDnsRequestURI, handlers.GetGlobalDnsRequests)
+	// 删除所有DNS
 	a.Router.DELETE(config.DnsRequestURI, handlers.DeleteDnsRequest)
-	// 创建指定PV
+
+	// 获取全局所有DNSs
+	a.Router.GET(config.GlobalDnsRequestURI, handlers.GetGlobalDnsRequests)
 
 	// 创建持久化卷
 	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
-	// 创建指定PVC
+
 	// 创建持久化卷声明
 	a.Router.POST(config.PersistentVolumeClaimURI, handlers.CreatePVC)
 
-	// 增加monitor的处理函数
 	// 首次注册节点
 	a.Router.PUT(config.MonitorNodeURL, handlers.RegisterNodeMonitor)
 	// 节点失联后，删除相关配置
@@ -203,8 +206,6 @@ func ScanNodeStatus() {
 	}
 
 }
-
-// 函数-------------------------------------------------------------
 
 // NewApiServer 使用配置文件创建并返回一个新的ApiServer
 func NewApiServer() *ApiServer {

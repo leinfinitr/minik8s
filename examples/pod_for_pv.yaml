@@ -12,7 +12,7 @@ spec:
   containers:
     - name: pv-container
       image: python:3.7-alpine
-      command: ["/bin/sh", "-c", "mkdir test && echo \"Hello World!\" > example.txt && sleep 3600"]
+      command: ["/bin/sh", "-c", "while true; do sleep 1000; done"]
       workingDir: /mnt
       volumeMounts:
         - name: persistent-volume

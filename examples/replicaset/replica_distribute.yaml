@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ReplicaSet
+metadata:
+  name: pod-replica
+  namespace: default
+spec:
+  replicas: 2
+  minReadySeconds: 10
+  selector:
+    app: my-app
+  template:
+    metadata:
+      name: my-app-pod
+      namespace: default
+      labels:
+        app: my-app
+    spec:
+      containers:
+        - name: webserver
+          image: jackhel0/httpserver:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "export IFCONFIG_RESULT=$(ifconfig) &&
+          echo \"The ifconfig result is: $IFCONFIG_RESULT\" &&python server.py"]
+          ports:
+            - containerPort: 7080
+            - hostPort: 7080

@@ -1,6 +1,6 @@
 image: python:3.7-alpine
-name: read_text
+name: convert_num
 hostPath: /root/minik8s/examples/serverless
 requirements: requirements.txt
-functionFile: read_text.py
-command: python read_text.py
+functionFile: convert_num.py
+command: python convert_num.py

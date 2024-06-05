@@ -31,7 +31,7 @@ func NewDnsController() (DnsController, error) {
 	return &DnsControllerImpl{}, nil
 }
 
-var(
+var (
 	DnsControllerDelay   = 0 * time.Second
 	DnsControllerTimeGap = []time.Duration{5 * time.Second}
 )
@@ -65,23 +65,23 @@ func (dc *DnsControllerImpl) syncDns() {
 		err = json.NewDecoder(res.Body).Decode(&dns)
 		requestType := dnsRequest.Action
 		switch requestType {
-			case "Create":
-				err = dc.CreateDnsHandler(dns)
-			case "Delete":
-				err = dc.DeleteDnsHandler(dns)
-			case "Update":
-				err = dc.DeleteDnsHandler(dns)
-				if err != nil {
-					log.ErrorLog("syncDns: " + err.Error())
-					return
-				}
-				err = dc.CreateDnsHandler(dns)
+		case "Create":
+			err = dc.CreateDnsHandler(dns)
+		case "Delete":
+			err = dc.DeleteDnsHandler(dns)
+		case "Update":
+			err = dc.DeleteDnsHandler(dns)
+			if err != nil {
+				log.ErrorLog("syncDns: " + err.Error())
+				return
+			}
+			err = dc.CreateDnsHandler(dns)
 		}
 		if err != nil {
 			log.ErrorLog("syncDns: " + err.Error())
 			return
 		}
-		_,err = httprequest.DelMsg(url,dns)
+		_, err = httprequest.DelMsg(url, dns)
 		if err != nil {
 			log.ErrorLog("syncDns: " + err.Error())
 			return
@@ -91,26 +91,25 @@ func (dc *DnsControllerImpl) syncDns() {
 
 func GetAllDnsRequest() (dnsRequests []apiObject.DnsRequest, err error) {
 	// 1. 获取所有的DnsRequest
-	url := config.APIServerURL() +config.GlobalDnsRequestURI
-	res,err := http.Get(url)
-	if err != nil{
-		log.ErrorLog("GetAllDnsRequest: "+err.Error())
-		return dnsRequests,err
+	url := config.APIServerURL() + config.GlobalDnsRequestURI
+	res, err := http.Get(url)
+	if err != nil {
+		log.ErrorLog("GetAllDnsRequest: " + err.Error())
+		return dnsRequests, err
 	}
-	if res.StatusCode != 200{
-		log.ErrorLog("GetAllDnsRequest: "+res.Status)
-		return dnsRequests,err
+	if res.StatusCode != 200 {
+		log.ErrorLog("GetAllDnsRequest: " + res.Status)
+		return dnsRequests, err
 	}
 	err = json.NewDecoder(res.Body).Decode(&dnsRequests)
-	if err != nil{
-		log.ErrorLog("GetAllDnsRequest: "+err.Error())
-		return dnsRequests,err
+	if err != nil {
+		log.ErrorLog("GetAllDnsRequest: " + err.Error())
+		return dnsRequests, err
 	}
-	return dnsRequests,nil
+	return dnsRequests, nil
 }
 
-
-func (dc *DnsControllerImpl)CreateDnsHandler(dns apiObject.Dns) error {
+func (dc *DnsControllerImpl) CreateDnsHandler(dns apiObject.Dns) error {
 	if dns.Spec.Host == "" {
 		log.ErrorLog("CreateDnsHandler: Host is empty")
 		return nil
@@ -122,10 +121,10 @@ func (dc *DnsControllerImpl)CreateDnsHandler(dns apiObject.Dns) error {
 	hostEntry := dc.nginxSvcIp + " " + dns.Spec.Host
 	dc.hostList = append(dc.hostList, hostEntry)
 	hostRequest := apiObject.HostRequest{
-		Action:  "Create",
+		Action:    "Create",
 		DnsObject: dns,
 		DnsConfig: nginxConf,
-		HostList: dc.hostList,
+		HostList:  dc.hostList,
 	}
 	err := BroadcastProxy(hostRequest)
 	if err != nil {
@@ -135,7 +134,7 @@ func (dc *DnsControllerImpl)CreateDnsHandler(dns apiObject.Dns) error {
 	return nil
 }
 
-func (dc *DnsControllerImpl)DeleteDnsHandler(dns apiObject.Dns) error {
+func (dc *DnsControllerImpl) DeleteDnsHandler(dns apiObject.Dns) error {
 	// 1. 删除Dns
 	// 2. 创建DnsRequest
 	return nil
@@ -148,33 +147,33 @@ func BroadcastProxy(hostRequest apiObject.HostRequest) error {
 	return nil
 }
 
-func (dc *DnsControllerImpl)CreateNginx() {
+func (dc *DnsControllerImpl) CreateNginx() {
 	filePath := config.NginxPodYamlPath
-	content,err := os.ReadFile(filePath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
-		log.ErrorLog("CreateNginx: "+err.Error())
+		log.ErrorLog("CreateNginx: " + err.Error())
 		return
 	}
 	nginxPod := apiObject.Pod{}
-	err = json.Unmarshal(content,&nginxPod)
+	err = json.Unmarshal(content, &nginxPod)
 	if err != nil {
-		log.ErrorLog("CreateNginx: "+err.Error())
+		log.ErrorLog("CreateNginx: " + err.Error())
 		return
 	}
 	if nginxPod.Metadata.Namespace == "" {
 		nginxPod.Metadata.Namespace = "default"
 	}
 	url := config.APIServerURL() + config.PodsURI
-	url = strings.Replace(url,config.NameSpaceReplace,nginxPod.Metadata.Namespace,-1)
-	nginxPod.Metadata.Name += "-"+stringops.GenerateRandomString(5)
-	nginxPod.Spec.NodeName,err = host.GetHostname()
+	url = strings.Replace(url, config.NameSpaceReplace, nginxPod.Metadata.Namespace, -1)
+	nginxPod.Metadata.Name += "-" + stringops.GenerateRandomString(5)
+	nginxPod.Spec.NodeName, err = host.GetHostname()
 	if err != nil {
-		log.ErrorLog("CreateNginx: "+err.Error())
+		log.ErrorLog("CreateNginx: " + err.Error())
 		return
 	}
-	code,_,err := netRequest.PostRequestByTarget(url,&nginxPod)
+	code, _, err := netRequest.PostRequestByTarget(url, &nginxPod)
 	if err != nil {
-		log.ErrorLog("CreateNginx: "+err.Error())
+		log.ErrorLog("CreateNginx: " + err.Error())
 		return
 	}
 	if code != http.StatusCreated {
@@ -184,7 +183,7 @@ func (dc *DnsControllerImpl)CreateNginx() {
 	log.InfoLog("CreateNginx: success")
 }
 
-func (dc *DnsControllerImpl)UpdateNginxIp() {
+func (dc *DnsControllerImpl) UpdateNginxIp() {
 	//TODO
 	// 1. 获取Nginx的SvcName和SvcIp
 	// 2. 更新本地Nginx的SvcName和SvcIp

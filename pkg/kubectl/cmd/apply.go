@@ -317,7 +317,7 @@ func DnsHandler(content []byte) {
 		log.ErrorLog("The name of the dns is required.")
 		os.Exit(1)
 	}
-	url := config.APIServerURL() + config.DNSURI
+	url := config.APIServerURL() + config.DNSsURI
 	url = strings.Replace(url, config.NameSpaceReplace, dns.Metadata.Namespace, -1)
 	log.DebugLog("PUT " + url)
 	resp, err := httprequest.PostObjMsg(url, dns)
@@ -327,6 +327,7 @@ func DnsHandler(content []byte) {
 	}
 	ApplyResultDisplay(Dns, resp)
 }
+
 func ApplyResultDisplay(kind ApplyObject, resp *http.Response) {
 	if resp.StatusCode == http.StatusCreated {
 		fmt.Printf("%s created\n", kind)

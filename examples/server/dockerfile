@@ -1,0 +1,11 @@
+# 使用官方Python 3.7 Alpine镜像作为基础镜像
+FROM python:3.7-alpine
+
+# 设置工作目录
+WORKDIR /app
+
+# 将server.py文件复制到容器的工作目录中
+COPY server.py /app
+
+# 告诉Docker容器在启动时要运行的命令
+CMD [ "sh", "-c", "while true; do sleep 1; done" ]

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -336,6 +337,28 @@ func UpdatePodStatus(c *gin.Context) {
 		return
 	}
 
+	if pod.Metadata.Labels[config.DNS_Label_Key] == config.DNS_Label_Value {
+		// 说明是DNS 用来转发的Pod服务，在Etcd中更新DNS的状态
+		var nginx apiObject.Nginx
+		nginx.PodIP = pod.Status.PodIP
+		nginx.Phase = pod.Status.Phase
+		nginx.Namespace = pod.Metadata.Namespace
+		nginx.Name = pod.Metadata.Name
+		nginx.ContainerName = pod.Spec.Containers[0].Name
+		if resjson, err := json.Marshal(nginx); err == nil {
+			err = etcdclient.EtcdStore.Put(config.EtcdNginxPrefix, string(resjson))
+			if err != nil {
+				log.ErrorLog("UpdateNginxStatus: " + err.Error())
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+		} else {
+			log.ErrorLog("UpdateNginxStatus: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
 	log.DebugLog("UpdatePodStatus: " + namespace + "/" + name)
 	c.JSON(200, gin.H{"data": resJson})
 }
@@ -396,6 +419,7 @@ func CreatePod(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Pod already exists"})
 		return
 	}
+
 	// 若pod使用了volume，则对其进行处理
 	if pod.Spec.Volumes != nil {
 		for _, volume := range pod.Spec.Volumes {
@@ -692,16 +716,10 @@ func UpdatePodProps(new *apiObject.Pod) {
 	updateUri := url + config.PodURI
 	updateUri = strings.Replace(updateUri, config.NameSpaceReplace, new.Metadata.Namespace, -1)
 	updateUri = strings.Replace(updateUri, config.NameReplace, new.Metadata.Name, -1)
-	resp, err := httprequest.PutObjMsg(updateUri, podBytes)
+	_, err = httprequest.PutObjMsg(updateUri, podBytes)
 	if err != nil {
 		log.ErrorLog("UpdatePodProps: " + err.Error())
 		return
-	}
-	// 将resp中更新的pod信息存入new
-	new = &apiObject.Pod{}
-	err = json.NewDecoder(resp.Body).Decode(new)
-	if err != nil {
-		log.ErrorLog("UpdatePodProps: " + err.Error())
 	}
 }
 
@@ -732,12 +750,19 @@ func ExecPod(c *gin.Context) {
 	containerID := ""
 	for _, containers := range pod.Spec.Containers {
 		if containers.Name == container {
-			containerID = containers.ContainerID
-			break
+			// 如果存在该container但是containerID为空，说明正在启动中
+			// 循环十次等待containerID不为空，每次等待1s
+			for i := 0; i < 10; i++ {
+				containerID = containers.ContainerID
+				if containerID != "" {
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
 		}
 	}
 	if containerID == "" {
-		log.ErrorLog("ExecPod: containerID is empty")
+		log.ErrorLog("ExecPod: container " + container + " ID is empty")
 		c.JSON(400, "containerID is empty")
 		return
 	}

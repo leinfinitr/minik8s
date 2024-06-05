@@ -204,7 +204,7 @@ func (i *iptableManager) setIPTableForClusterIP(serviceName string, clusterIP st
 
 // 注意，NodePort的实现和ClusterIP的实现存在差异，会多出一条链
 func (i *iptableManager) setIPtableForNodePort(serviceName string, NodeIP string, port int32, targetPort int32, nodePort int32, protocol apiObject.Protocol, podsIPList []string) error {
-	log.InfoLog("[KUBEPROXY]: NodePort  serviceName:" + serviceName + " clusterIP:" + NodeIP + " port:" + fmt.Sprintf("%d", port) + " targetPort:" + fmt.Sprintf("%d", targetPort) + " nodePort:" + fmt.Sprintf("%d", nodePort))
+	log.InfoLog("[KUBEPROXY]: NodePort  serviceName:" + serviceName + " port:" + fmt.Sprintf("%d", port) + " targetPort:" + fmt.Sprintf("%d", targetPort) + " nodePort:" + fmt.Sprintf("%d", nodePort))
 
 	// 为该Service Port创建一个独有的KUBE—SVC链
 	kubeSvc := "KUBE-SVC-" + randomString()
@@ -222,7 +222,7 @@ func (i *iptableManager) setIPtableForNodePort(serviceName string, NodeIP string
 	}
 
 	// 在KUBE-NODEPORTS链中添加规则，转发至KUBE-SVC链
-	err = i.iptable.Insert("nat", "KUBE-NODEPORTS", 1, "-p", string(protocol), "-d", NodeIP, "-m", "comment", "--comment", serviceName, "--dport", fmt.Sprintf("%d", nodePort), "-j", kubeSvc)
+	err = i.iptable.Insert("nat", "KUBE-NODEPORTS", 1, "-p", string(protocol), "-m", "comment", "--comment", serviceName, "--dport", fmt.Sprintf("%d", nodePort), "-j", kubeSvc)
 	if err != nil {
 		log.ErrorLog("KUBE-NODEPORTS Append error: " + err.Error())
 		return err
@@ -236,7 +236,7 @@ func (i *iptableManager) setIPtableForNodePort(serviceName string, NodeIP string
 	}
 
 	// 在KUBE-SVC链的上一条规则的前面添加规则，标记数据包
-	err = i.iptable.Insert("nat", kubeSvc, 1, "-d", NodeIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "KUBE-MARK-MASQ")
+	err = i.iptable.Insert("nat", kubeSvc, 1, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "KUBE-MARK-MASQ")
 	if err != nil {
 		log.ErrorLog("KUBE-SVC Mark error: " + err.Error())
 		return err
@@ -269,14 +269,14 @@ func (i *iptableManager) setIPtableForNodePort(serviceName string, NodeIP string
 		}
 
 		// 在KUBE-SEP链中添加规则，转发至对应的pod
-		err = i.iptable.Append("nat", kubeSep, "-d", NodeIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "DNAT", "--to-destination", podIP+":"+fmt.Sprintf("%d", targetPort))
+		err = i.iptable.Append("nat", kubeSep, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "DNAT", "--to-destination", podIP+":"+fmt.Sprintf("%d", targetPort))
 		if err != nil {
 			log.ErrorLog("KUBE-SEP DNAT error: " + err.Error())
 			return err
 		}
 
 		// 在KUBE-SEP链中添加规则，标记数据包
-		err = i.iptable.Insert("nat", kubeSep, 1, "-d", NodeIP, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "KUBE-MARK-MASQ")
+		err = i.iptable.Insert("nat", kubeSep, 1, "-p", string(protocol), "--dport", fmt.Sprintf("%d", nodePort), "-j", "KUBE-MARK-MASQ")
 		if err != nil {
 			log.ErrorLog("KUBE-SEP Mark error: " + err.Error())
 			return err
