@@ -158,7 +158,10 @@ func (k *Kubeproxy) createDNS(c *gin.Context) {
 	found := false
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, ip) {
+		if strings.Contains(line, domain) {
+			// 如果找到了域名，删除旧域名
+			continue
+		} else if strings.Contains(line, ip) {
 			// 如果找到了 IP，追加域名
 			line = line + " " + domain
 			found = true

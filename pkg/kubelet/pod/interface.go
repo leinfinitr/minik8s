@@ -289,11 +289,16 @@ func ScanPodStatusRoutine() {
 // ExecPodContainer 用于在 pod 中的容器执行命令
 func ExecPodContainer(c *gin.Context) {
 	containerId := c.Param("container")
-	param := c.Param("param")
+	var cmd apiObject.Command
 	exec := new(apiObject.ExecReq)
 
+	if err := c.ShouldBindJSON(&cmd); err != nil {
+		log.ErrorLog("ExecPodContainer error: " + err.Error())
+		c.JSON(config.HttpErrorCode, err.Error())
+		return
+	}
 	exec.ContainerId = containerId
-	exec.Cmd = []string{param}
+	exec.Cmd = []string{cmd.Cmd}
 	exec.Tty = true
 	exec.Stdin = true
 	exec.Stdout = true
