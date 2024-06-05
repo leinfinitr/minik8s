@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: DistributeHpaService-clusterIP
+  namespace: hpa-distribute
+  labels:
+    app: hpa-distribute-app
+spec:
+  type: ClusterIP
+  ports:
+    - port: 7080
+      targetPort: 7080
+      protocol: TCP
+      name: file-service
+  selector:
+    app: hpa-distribute-app
+  

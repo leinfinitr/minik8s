@@ -54,7 +54,7 @@ func GetHPAs(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": res})
+	c.JSON(200, res)
 }
 
 func AddHPA(c *gin.Context) {
@@ -159,7 +159,7 @@ func UpdateHPAStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
-	log.InfoLog("UpdateHPAStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdateHPAStatus: " + namespace + "/" + name)
 	var status apiObject.HPAStatus
 	err := c.BindJSON(&status)
 	if err != nil {

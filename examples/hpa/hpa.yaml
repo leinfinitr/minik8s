@@ -12,7 +12,7 @@ spec:
   selector:
       app: hpa-pod-app
   minReplicas: 1
-  maxReplicas: 20
+  maxReplicas: 5
   adjustInterval: 10s
   metrics:
     cpuPercent: 0.5
