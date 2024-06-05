@@ -47,3 +47,31 @@ func CreatePV(c *gin.Context) {
 
 	c.JSON(200, gin.H{"data": "Create PersistentVolume " + pvName})
 }
+
+// GetPV 获取PVC绑定的PVKey
+func GetPV(c *gin.Context) {
+	pvName := c.Param("name")
+	pvNamespace := c.Param("namespace")
+	if pvName == "" || pvNamespace == "" {
+		log.ErrorLog("Get PersistentVolume: name or namespace is empty")
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": "name or namespace is empty"})
+		return
+	}
+
+	// 获取pv
+	log.DebugLog("GetPv: " + pvNamespace + "/" + pvName)
+	url := config.PVServerURL() + config.PersistentVolumesURI + "/" + pvNamespace + "/" + pvName
+	res, err := httprequest.GetMsg(url)
+	if err != nil {
+		log.ErrorLog("Could not get the object message." + err.Error())
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	if res.StatusCode != http.StatusOK {
+		log.ErrorLog("Get PersistentVolume: " + res.Status)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": res.Status})
+		return
+	}
+
+	c.JSON(200, res.Body)
+}

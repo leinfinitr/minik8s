@@ -18,7 +18,6 @@ import (
 	"minik8s/tools/log"
 	"minik8s/tools/mount"
 
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
 	httprequest "minik8s/tools/httpRequest"
 )
 
@@ -60,8 +59,33 @@ func CreatePod(c *gin.Context) {
 		for _, volume := range pod.Spec.Volumes {
 			// 处理使用了pvc的volume
 			if volume.PersistentVolumeClaim != nil {
-				pvcKey := config.EtcdPvcPrefix + "/" + pod.Metadata.Namespace + "/" + volume.PersistentVolumeClaim.ClaimName
-				pvcResponse, _ := etcdclient.EtcdStore.Get(pvcKey)
+				// 获取pvc
+				url := config.APIServerURL() + config.PersistentVolumeClaimURI
+				url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, volume.PersistentVolumeClaim.ClaimName, -1)
+				res, err := httprequest.GetMsg(url)
+				if err != nil {
+					log.ErrorLog("Could not post the object message." + err.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				if res == nil {
+					log.ErrorLog("CreatePod: res is nil")
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "res is nil"})
+					return
+				}
+				if res.StatusCode != http.StatusOK {
+					log.ErrorLog("CreatePod: " + res.Status)
+					c.JSON(res.StatusCode, gin.H{"error": res.Status})
+					return
+				}
+				// 解析pvc
+				pvcResponse := ""
+				err = json.NewDecoder(res.Body).Decode(&pvcResponse)
+				if err != nil {
+					log.ErrorLog("CreatePod: " + err.Error())
+					c.JSON(500, gin.H{"error": err.Error()})
+					return
+				}
 				// 若pvc不存在，则返回错误
 				if pvcResponse == "" {
 					log.ErrorLog("CreatePod: PVC not found")
@@ -82,10 +106,10 @@ func CreatePod(c *gin.Context) {
 					return
 				}
 				// 将pod绑定到pvc
-				url := config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = config.APIServerURL() + config.PersistentVolumeClaimURI
 				url = strings.Replace(url, config.NameSpaceReplace, pod.Metadata.Namespace, -1)
 				url = strings.Replace(url, config.NameReplace, pod.Metadata.Name, -1)
-				res, err := httprequest.PostObjMsg(url, pvc)
+				res, err = httprequest.PutObjMsg(url, pvc)
 				if err != nil {
 					log.ErrorLog("Could not post the object message." + err.Error())
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -101,7 +125,7 @@ func CreatePod(c *gin.Context) {
 					return
 				}
 				// 获取pvKey
-				url = config.PVServerURL() + config.PersistentVolumeClaimURI
+				url = config.APIServerURL() + config.PersistentVolumeURI
 				url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
 				url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
 				res, err = httprequest.GetMsg(url)

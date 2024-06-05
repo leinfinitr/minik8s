@@ -160,9 +160,15 @@ func (a *ApiServer) Register() {
 
 	// 创建持久化卷
 	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
+	// 根据PVC的信息获取指定持久化卷
+	a.Router.GET(config.PersistentVolumeURI, handlers.GetPV)
 
 	// 创建持久化卷声明
 	a.Router.POST(config.PersistentVolumeClaimURI, handlers.CreatePVC)
+	// 将Pod绑定到持久化卷声明
+	a.Router.PUT(config.PersistentVolumeClaimURI, handlers.BindPVC)
+	// 获取指定持久化卷声明
+	a.Router.GET(config.PersistentVolumeClaimURI, handlers.GetPVC)
 
 	// 首次注册节点
 	a.Router.PUT(config.MonitorNodeURL, handlers.RegisterNodeMonitor)

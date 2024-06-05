@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -68,6 +69,9 @@ func (pc *PvControllerImpl) Run() {
 
 // Register 注册路由
 func (pc *PvControllerImpl) Register() {
+	// 获取PersistentVolumeClaim绑定的PersistentVolume
+	pc.Router.GET(config.PersistentVolumeURI, pc.GetPvcBind)
+
 	// 创建PersistentVolume
 	pc.Router.POST(config.PersistentVolumesURI, pc.CreatePv)
 
@@ -78,8 +82,8 @@ func (pc *PvControllerImpl) Register() {
 	pc.Router.POST(config.PersistentVolumeClaimURI, pc.BindPodToPvc)
 	// 解绑pod和PersistentVolumeClaim
 	pc.Router.DELETE(config.PersistentVolumeClaimURI, pc.UnbindPodToPvc)
-	// 获取PersistentVolumeClaim绑定的PersistentVolume
-	pc.Router.GET(config.PersistentVolumeClaimURI, pc.GetPvcBind)
+	// 获取PersistentVolumeClaim
+	pc.Router.GET(config.PersistentVolumeClaimURI, pc.GetPvc)
 }
 
 // CreatePv 创建PersistentVolume
@@ -120,6 +124,27 @@ func (pc *PvControllerImpl) CreatePvc(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"data": "Create PersistentVolumeClaim " + pvc.Metadata.Name})
+}
+
+// GetPvc 获取PersistentVolumeClaim
+func (pc *PvControllerImpl) GetPvc(c *gin.Context) {
+	key := config.EtcdPvcPrefix + "/" + c.Param("namespace") + "/" + c.Param("name")
+	pvc := &apiObject.PersistentVolumeClaim{}
+	response, err := etcdclient.EtcdStore.Get(key)
+	if err != nil {
+		log.ErrorLog("Get PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = json.Unmarshal([]byte(response), pvc)
+	if err != nil {
+		log.ErrorLog("Get PersistentVolumeClaim: " + err.Error())
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, pvc)
 }
 
 // BindPodToPvc 绑定PersistentVolumeClaim
@@ -220,6 +245,32 @@ func (pc *PvControllerImpl) addPv(pv *apiObject.PersistentVolume) error {
 		log.ErrorLog("Create PersistentVolume: pv already exists" + response)
 		return err
 	}
+	// 将本地目录 /pvclient 挂载到服务器目录 /pvserver
+	mountCmd := "mount " + config.NFSServer + ":" + config.PVServerPath + " " + config.PVClientPath
+	cmd := exec.Command("sh", "-c", mountCmd)
+	err = cmd.Run()
+	if err != nil {
+		log.ErrorLog("Create PersistentVolume: " + err.Error())
+		return err
+	}
+	log.DebugLog("Bind to NFS server: " + config.NFSServer + ":" + config.PVServerPath)
+	// 在目录 /pvclient 创建目录 /:namespace/:name 作为PersistentVolume
+	mkdirCmd := "mkdir -p " + config.PVClientPath + "/" + pv.Metadata.Namespace + "/" + pv.Metadata.Name
+	cmd = exec.Command("sh", "-c", mkdirCmd)
+	err = cmd.Run()
+	if err != nil {
+		log.ErrorLog("Create PersistentVolume: " + err.Error())
+		return err
+	}
+	log.DebugLog("Create PersistentVolume: " + pvNamespace + "/" + pvName)
+	// 清空目录 /pvclient/:namespace/:name
+	rmCmd := "rm -rf " + config.PVClientPath + "/" + pv.Metadata.Namespace + "/" + pv.Metadata.Name + "/*"
+	cmd = exec.Command("sh", "-c", rmCmd)
+	err = cmd.Run()
+	if err != nil {
+		log.ErrorLog("Create PersistentVolume: " + err.Error())
+		return err
+	}
 	// 修改pv的状态
 	pv.Status.Phase = apiObject.VolumeAvailable
 	// 将pv存入map
@@ -260,7 +311,6 @@ func (pc *PvControllerImpl) addPvc(pvc *apiObject.PersistentVolumeClaim) error {
 	if err != nil {
 		log.ErrorLog("Create PersistentVolumeClaim: " + err.Error())
 		return err
-
 	}
 	err = etcdclient.EtcdStore.Put(key, string(pvcJson))
 	if err != nil {
@@ -284,6 +334,11 @@ func (pc *PvControllerImpl) getPvcBind(pvcName string) string {
 
 // bindPodToPvc 绑定Pod到PersistentVolumeClaim
 func (pc *PvControllerImpl) bindPodToPvc(pvc *apiObject.PersistentVolumeClaim, podName string) error {
+	// 检查pvc是否已经绑定
+	if pvc.Status.Phase != apiObject.ClaimBound || pvc.Status.IsBound {
+		log.ErrorLog("CreatePod: PVC can't be used")
+		return fmt.Errorf("PVC can't be used")
+	}
 	// 修改pvc的状态
 	pvc.Status.IsBound = true
 	pvc.Status.BoundPodName = podName
@@ -402,7 +457,7 @@ func (pc *PvControllerImpl) newPV(pvc *apiObject.PersistentVolumeClaim) *apiObje
 			APIVersion: "v1",
 		},
 		Metadata: apiObject.ObjectMeta{
-			Name:      pvc.Metadata.Name,
+			Name:      pvc.Metadata.Name + "-pv",
 			Namespace: pvc.Metadata.Namespace,
 		},
 		Spec: apiObject.PersistentVolumeSpec{
