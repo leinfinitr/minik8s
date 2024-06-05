@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os/exec"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -219,32 +218,6 @@ func (pc *PvControllerImpl) addPv(pv *apiObject.PersistentVolume) error {
 	response, err := etcdclient.EtcdStore.Get(key)
 	if response != "" {
 		log.ErrorLog("Create PersistentVolume: pv already exists" + response)
-		return err
-	}
-	// 将本地目录 /pvclient 挂载到服务器目录 /pvserver
-	mountCmd := "mount " + config.NFSServer + ":" + config.PVServerPath + " " + config.PVClientPath
-	cmd := exec.Command("sh", "-c", mountCmd)
-	err = cmd.Run()
-	if err != nil {
-		log.ErrorLog("Create PersistentVolume: " + err.Error())
-		return err
-	}
-	log.DebugLog("Bind to NFS server: " + config.NFSServer + ":" + config.PVServerPath)
-	// 在目录 /pvclient 创建目录 /:namespace/:name 作为PersistentVolume
-	mkdirCmd := "mkdir -p " + config.PVClientPath + "/" + pv.Metadata.Namespace + "/" + pv.Metadata.Name
-	cmd = exec.Command("sh", "-c", mkdirCmd)
-	err = cmd.Run()
-	if err != nil {
-		log.ErrorLog("Create PersistentVolume: " + err.Error())
-		return err
-	}
-	log.DebugLog("Create PersistentVolume: " + pvNamespace + "/" + pvName)
-	// 清空目录 /pvclient/:namespace/:name
-	rmCmd := "rm -rf " + config.PVClientPath + "/" + pv.Metadata.Namespace + "/" + pv.Metadata.Name + "/*"
-	cmd = exec.Command("sh", "-c", rmCmd)
-	err = cmd.Run()
-	if err != nil {
-		log.ErrorLog("Create PersistentVolume: " + err.Error())
 		return err
 	}
 	// 修改pv的状态
