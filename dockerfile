@@ -7,5 +7,5 @@ RUN cp /minik8s/pkg/gpu/task_server /bin/server
 
 FROM ubuntu:22.04
 COPY --from=builder /bin/server /bin/server
-RUN echo "nameserver 223.5.5.5" >  /etc/resolv.conf
+# RUN echo "nameserver 223.5.5.5" >  /etc/resolv.conf
 CMD [ "sh", "-c", "while true; do sleep 1; done" ]
