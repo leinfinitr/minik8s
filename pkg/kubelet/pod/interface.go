@@ -79,22 +79,8 @@ func CreatePod(c *gin.Context) {
 					return
 				}
 				// 解析pvc
-				pvcResponse := ""
-				err = json.NewDecoder(res.Body).Decode(&pvcResponse)
-				if err != nil {
-					log.ErrorLog("CreatePod: " + err.Error())
-					c.JSON(500, gin.H{"error": err.Error()})
-					return
-				}
-				// 若pvc不存在，则返回错误
-				if pvcResponse == "" {
-					log.ErrorLog("CreatePod: PVC not found")
-					c.JSON(400, gin.H{"error": "PVC not found"})
-					return
-				}
-				// 若pvc存在，则检查pvc的状态是否为Bound、是否已经绑定到pod
-				pvc := &apiObject.PersistentVolumeClaim{}
-				err = json.Unmarshal([]byte(pvcResponse), pvc)
+				var pvc apiObject.PersistentVolumeClaim
+				err = json.NewDecoder(res.Body).Decode(&pvc)
 				if err != nil {
 					log.ErrorLog("CreatePod: " + err.Error())
 					c.JSON(500, gin.H{"error": err.Error()})

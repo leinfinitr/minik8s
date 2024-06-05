@@ -60,8 +60,8 @@ func BindPVC(c *gin.Context) {
 		return
 	}
 
-	podName := c.Param("Name")
-	podNamespace := c.Param("Namespace")
+	podName := c.Param("name")
+	podNamespace := c.Param("namespace")
 	if podName == "" || podNamespace == "" {
 		log.ErrorLog("BindPVC: name or namespace is empty")
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
@@ -89,8 +89,8 @@ func BindPVC(c *gin.Context) {
 
 // GetPVC 获取指定持久化卷声明
 func GetPVC(c *gin.Context) {
-	pvcName := c.Param("Name")
-	pvcNamespace := c.Param("Namespace")
+	pvcName := c.Param("name")
+	pvcNamespace := c.Param("namespace")
 	if pvcName == "" || pvcNamespace == "" {
 		log.ErrorLog("GetPVC: name or namespace is empty")
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
