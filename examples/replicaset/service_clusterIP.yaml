@@ -4,14 +4,14 @@ metadata:
   name: replicaService-clusterIP
   namespace: default
   labels:
-    app: my-app
+    app: replica-distribute-app
 spec:
   type: ClusterIP
   ports:
     - port: 7080
       targetPort: 7080
       protocol: TCP
-      name: file-service
+      name: replicaService
   selector:
-    app: my-app
+    app: replica-distribute-app
   

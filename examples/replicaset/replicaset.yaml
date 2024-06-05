@@ -1,19 +1,19 @@
 apiVersion: v1
 kind: ReplicaSet
 metadata:
-  name: pod-replica
-  namespace: pod-replica-namespace
+  name: replica
+  namespace: replica-namespace
 spec:
   replicas: 3
   minReadySeconds: 10
   selector:
-    app: my-app
+    app: replica-app
   template:
     metadata:
-      name: my-app-pod
-      namespace: my-app-pod-namespace
+      name: replica-app-pod
+      namespace: replica-app-pod-namespace
       labels:
-        app: my-app
+        app: replica-app
     spec:
       containers:
         - name: fileserver

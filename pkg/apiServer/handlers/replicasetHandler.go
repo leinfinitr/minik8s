@@ -238,7 +238,7 @@ func UpdateReplicaSetStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "namespace or name is empty"})
 		return
 	}
-	log.InfoLog("UpdateReplicaSetStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdateReplicaSetStatus: " + namespace + "/" + name)
 	var status apiObject.ReplicaSetStatus
 	err := c.ShouldBindJSON(&status)
 	if err != nil {
@@ -274,5 +274,5 @@ func UpdateReplicaSetStatus(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"data": string(resJson)})
-	log.InfoLog("UpdateReplicaSetStatus: " + namespace + "/" + name + " success")
+	log.DebugLog("UpdateReplicaSetStatus: " + namespace + "/" + name + " success")
 }
