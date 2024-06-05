@@ -19,9 +19,7 @@ spec:
         - name: webserver
           image: jackhel0/httpserver:latest
           imagePullPolicy: IfNotPresent
-          command: ["/bin/sh", "-c", "POD_IP=$(hostname -i) &&
-            echo \"Running HTTP server on $POD_IP\" &&
-            python server.py"]
+          command: ["/bin/sh", "-c", "python server.py"]
           ports:
             - containerPort: 7080
             - hostPort: 7080

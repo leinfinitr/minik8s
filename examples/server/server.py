@@ -1,11 +1,16 @@
 import http.server
 import os
+import subprocess
 
 class CustomHTTPHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write('This is the Pod IP: '.encode() + os.environ['POD_IP'].encode())
+        try:
+            ifconfig_output = subprocess.check_output(['ifconfig'], text=True)
+            self.wfile.write(f'This is the ifconfig output:\n{ifconfig_output}'.encode())
+        except subprocess.CalledProcessError as e:
+            self.wfile.write(f'Error executing ifconfig: {e}'.encode())
 
 if __name__ == '__main__':
     server_address = ('', 7080)
