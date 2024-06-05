@@ -8,4 +8,4 @@ WORKDIR /app
 COPY server.py /app
 
 # 告诉Docker容器在启动时要运行的命令
-CMD ["python", "/app/server.py"]
+CMD [ "sh", "-c", "while true; do sleep 1; done" ]
