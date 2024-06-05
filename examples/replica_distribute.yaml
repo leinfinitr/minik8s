@@ -4,7 +4,7 @@ metadata:
   name: pod-replica
   namespace: default
 spec:
-  replicas: 3
+  replicas: 2
   minReadySeconds: 10
   selector:
     app: my-app
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: webserver
-          image: python:3.7-alpine
+          image: jackhel0/httpserver:latest
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c", "POD_IP=$(hostname -i) &&
             echo \"Running HTTP server on $POD_IP\" &&
