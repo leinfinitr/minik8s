@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: Hpa
 metadata:
-  name: my-hpa2
+  name: hpa-distribute
 spec:
   scaleTargetRef:
     apiVersion: v1
     kind: Pod
     metadata:
       name: httpserver
-      namespace: my-namespace
+      namespace: hpa-distribute-namespace
   selector:
-      app: my-app22
+      app: hpa-distribute-app
   minReplicas: 2
   maxReplicas: 20
   adjustInterval: 10s

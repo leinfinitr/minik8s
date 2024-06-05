@@ -2,11 +2,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: HpaService-clusterIP
-  namespace: my-namespace
+  namespace: hpa-distribute
   labels:
-    app: my-app22
-  annotations:
-    description: "An example service of fileserver and downloader"
+    app: hpa-distribute-app
 spec:
   type: ClusterIP
   ports:
@@ -15,5 +13,5 @@ spec:
       protocol: TCP
       name: file-service
   selector:
-    app: my-app22
+    app: hpa-distribute-app
   
