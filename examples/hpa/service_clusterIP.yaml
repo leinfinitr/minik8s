@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: HpaService-clusterIP
-  namespace: hpa-distribute
+  name: Service-clusterIP
+  namespace: hpa-namespace
   labels:
-    app: hpa-distribute-app
+    app: hpa-pod-app
 spec:
   type: ClusterIP
   ports:
-    - port: 7080
-      targetPort: 7080
+    - port: 7081
+      targetPort: 7081
       protocol: TCP
       name: file-service
   selector:
-    app: hpa-distribute-app
+    app: hpa-pod-app
   
