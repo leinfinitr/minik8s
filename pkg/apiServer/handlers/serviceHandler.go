@@ -4,17 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"minik8s/pkg/apiObject"
-	"minik8s/pkg/config"
-	"minik8s/pkg/entity"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"strings"
-
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/pkg/entity"
+	"minik8s/tools/log"
+
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	httprequest "minik8s/tools/httpRequest"
 )
 
 func RegisterProxy(c *gin.Context) {
@@ -176,7 +177,7 @@ func DeleteService(c *gin.Context) {
 	etcdclient.EtcdStore.Delete(key)
 }
 
-// GetService 获取指定Service
+// PutService 获取指定Service
 func PutService(c *gin.Context) {
 	var serviceEvent entity.ServiceEvent
 
@@ -214,7 +215,12 @@ func PutService(c *gin.Context) {
 		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 		return
 	}
-	etcdclient.EtcdStore.Put(key, string(resJson))
+	err = etcdclient.EtcdStore.Put(key, string(resJson))
+	if err != nil {
+		log.WarnLog("GetNodes: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
 	log.InfoLog("PutService: " + newServiceNamespace + "/" + newServiceName)
 
 	nodes := GetALLNodes()
@@ -254,7 +260,7 @@ func GetServiceStatus(c *gin.Context) {
 	println("GetServiceStatus: " + namespace + "/" + name)
 }
 
-// 从etcd中获取所有和service相关的pod
+// Selector 从etcd中获取所有和service相关的pod
 func Selector(service *apiObject.Service) *[]apiObject.Endpoint {
 	var endpoints []apiObject.Endpoint
 	selector := service.Spec.Selector

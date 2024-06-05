@@ -2,13 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
-	"minik8s/pkg/apiObject"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
-	"minik8s/pkg/config"
-	"minik8s/tools/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
 )
 
 func GetReplicaSet(c *gin.Context) {
@@ -22,6 +24,7 @@ func GetReplicaSet(c *gin.Context) {
 		return
 	}
 	log.InfoLog("GetReplicaSet: " + namespace + "/" + name)
+
 	key := config.EtcdReplicaSetPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
@@ -29,6 +32,7 @@ func GetReplicaSet(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
 	var resJson apiObject.ReplicaSet
 	err = json.Unmarshal([]byte(res), &resJson)
 	if err != nil {
@@ -46,6 +50,7 @@ func GetReplicaSets(c *gin.Context) {
 		namespace = "default"
 	}
 	log.InfoLog("GetReplicaSets: " + namespace)
+
 	key := config.EtcdReplicaSetPrefix + "/" + namespace
 	res, err := etcdclient.EtcdStore.PrefixGet(key)
 	if err != nil {
@@ -53,6 +58,7 @@ func GetReplicaSets(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
 	var replicaSets []apiObject.ReplicaSet
 	for _, v := range res {
 		var rs apiObject.ReplicaSet
@@ -76,6 +82,7 @@ func AddReplicaSet(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+
 	res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdReplicaSetPrefix + "/" + rs.Metadata.Namespace + "/" + rs.Metadata.Name)
 	if err != nil {
 		log.ErrorLog("AddReplicaSet: " + err.Error())
@@ -87,6 +94,7 @@ func AddReplicaSet(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "replicaSet already exists"})
 		return
 	}
+
 	rs.Metadata.UUID = uuid.New().String()
 	resJson, err := json.Marshal(rs)
 	if err != nil {
@@ -113,6 +121,7 @@ func DeleteReplicaSet(c *gin.Context) {
 		return
 	}
 	log.InfoLog("DeleteReplicaSet: " + namespace + "/" + name)
+
 	key := config.EtcdReplicaSetPrefix + "/" + namespace + "/" + name
 	err := etcdclient.EtcdStore.Delete(key)
 	if err != nil {
@@ -135,6 +144,7 @@ func UpdateReplicaSet(c *gin.Context) {
 		return
 	}
 	log.InfoLog("UpdateReplicaSet: " + namespace + "/" + name)
+
 	key := config.EtcdReplicaSetPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
 	if res == "" || err != nil {
@@ -142,6 +152,7 @@ func UpdateReplicaSet(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
 	rs := &apiObject.ReplicaSet{}
 	err = c.ShouldBindJSON(rs)
 	if err != nil {

@@ -31,7 +31,7 @@ type HostRequest struct {
 	HostList  []string `json:"hostList" yaml:"hostList"`
 }
 
-// Etcd中存储的数据结构，表示一个用于DNS服务的Nginx pod
+// Nginx Etcd中存储的数据结构，表示一个用于DNS服务的Nginx pod
 type Nginx struct {
 	PodIP         string
 	Phase         PodPhase

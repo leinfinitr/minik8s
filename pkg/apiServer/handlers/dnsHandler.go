@@ -4,11 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"minik8s/pkg/apiObject"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
-	"minik8s/pkg/config"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"os"
 	"os/exec"
 	"strings"
@@ -16,6 +11,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	httprequest "minik8s/tools/httpRequest"
 )
 
 func GetDNS(c *gin.Context) {
@@ -66,7 +68,7 @@ func GetDNSs(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	var dnss []apiObject.Dns
+	var dnsList []apiObject.Dns
 	for _, v := range res {
 		var dns apiObject.Dns
 		err = json.Unmarshal([]byte(v), &dns)
@@ -75,9 +77,9 @@ func GetDNSs(c *gin.Context) {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		dnss = append(dnss, dns)
+		dnsList = append(dnsList, dns)
 	}
-	c.JSON(200, gin.H{"data": dnss})
+	c.JSON(200, gin.H{"data": dnsList})
 }
 
 func AddDNS(c *gin.Context) {
@@ -156,11 +158,16 @@ func AddDNS(c *gin.Context) {
 	// 更新每个节点的hosts文件
 	Nodes := GetALLNodes()
 	for _, node := range Nodes {
-		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.DNSURI
+		url := config.HttpSchema + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.DNSURI
 		res, err := httprequest.PutObjMsg(url, dns)
-		if err != nil || res.StatusCode != config.HttpSuccessCode {
+		if err != nil {
 			log.ErrorLog("AddDNS: " + err.Error())
 			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if res.StatusCode != config.HttpSuccessCode {
+			log.ErrorLog("AddDNS: " + res.Status)
+			c.JSON(500, gin.H{"error": res.Status})
 			return
 		}
 	}
@@ -234,11 +241,16 @@ func DeleteDNS(c *gin.Context) {
 	// 删除每个节点的hosts文件
 	Nodes := GetALLNodes()
 	for _, node := range Nodes {
-		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.DNSURI
+		url := config.HttpSchema + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.DNSURI
 		res, err := httprequest.DelMsg(url, dns)
-		if err != nil || res.StatusCode != config.HttpSuccessCode {
+		if err != nil {
 			log.ErrorLog("DeleteDNS: " + err.Error())
 			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		if res.StatusCode != config.HttpSuccessCode {
+			log.ErrorLog("DeleteDNS: " + res.Status)
+			c.JSON(500, gin.H{"error": res.Status})
 			return
 		}
 	}
@@ -336,7 +348,12 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.ErrorLog("updateNginxConfig: " + err.Error())
+		}
+	}(file)
 
 	// 一行一行读取，在http块内的最后加上新的server
 	scanner := bufio.NewScanner(file)
@@ -383,7 +400,7 @@ func reloadNginx() error {
 		return err
 	}
 
-	url := "http://" + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodExecURI
+	url := config.HttpSchema + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.PodExecURI
 	url = strings.Replace(url, config.NameSpaceReplace, nginxPod.Namespace, -1)
 	url = strings.Replace(url, config.NameReplace, nginxPod.Name, -1)
 	url = strings.Replace(url, config.ContainerReplace, nginxPod.ContainerName, -1)
@@ -391,9 +408,14 @@ func reloadNginx() error {
 	cmd := apiObject.Command{Cmd: "cp /mnt/nginx.conf /etc/nginx/nginx.conf && nginx -s reload"}
 	log.InfoLog("reloadNginx: " + url)
 	resp, err := httprequest.PostObjMsg(url, cmd)
-	if err != nil || resp.StatusCode != config.HttpSuccessCode {
+	if err != nil {
 		log.ErrorLog("reloadNginx: " + err.Error())
 		return err
+	}
+	if resp.StatusCode != config.HttpSuccessCode {
+		log.ErrorLog("reloadNginx: " + resp.Status)
+		return fmt.Errorf("reloadNginx: " + resp.Status)
+
 	}
 
 	return nil
@@ -408,7 +430,12 @@ func deleteNginxConfig(dns *apiObject.Dns) error {
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.ErrorLog("deleteNginxConfig: " + err.Error())
+		}
+	}(file)
 
 	// 读取文件的每一行，遍历后找到需要被删除的server的前后下标，然后删除
 	scanner := bufio.NewScanner(file)

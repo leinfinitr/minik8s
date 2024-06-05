@@ -2,18 +2,19 @@ package handlers
 
 import (
 	"fmt"
-	"minik8s/pkg/apiObject"
-	Config "minik8s/pkg/config"
-	"minik8s/tools/log"
+	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/yaml.v3"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/tools/log"
+
+	Config "minik8s/pkg/config"
 )
 
 func GetPrometheusConfig() *apiObject.PrometheusConfig {
-
 	// 将nodeIp和端口信息追加到prometheus配置文件中
 	// 1. 读取prometheus配置文件
 	data, err := os.ReadFile(apiObject.PrometheusConfigPath)
@@ -33,7 +34,6 @@ func GetPrometheusConfig() *apiObject.PrometheusConfig {
 }
 
 func PutPrometheusConfig(config *apiObject.PrometheusConfig) error {
-
 	// 保存并写入配置文件
 	newData, err := yaml.Marshal(&config)
 	if err != nil {
@@ -51,7 +51,7 @@ func PutPrometheusConfig(config *apiObject.PrometheusConfig) error {
 
 }
 
-// 在首次注册时，在本地节点的prometheus配置文件中追加一个监控项
+// RegisterNodeMonitor 在首次注册时，在本地节点的prometheus配置文件中追加一个监控项
 func RegisterNodeMonitor(c *gin.Context) {
 	log.InfoLog("Start RegisterMonitor")
 
@@ -65,8 +65,8 @@ func RegisterNodeMonitor(c *gin.Context) {
 	// 2. 获取node的IP
 	nodeIP := node.Status.Addresses[0].Address
 	if nodeIP == Config.APIServerLocalAddress {
-		// 如果是apiserver节点，则不需要监控
-		c.JSON(200, gin.H{"message": "Node is apiserver"})
+		// 如果是apiServer节点，则不需要监控
+		c.JSON(200, gin.H{"message": "Node is apiServer"})
 		return
 	}
 
@@ -134,8 +134,8 @@ func DeleteNodeMonitor(c *gin.Context) {
 	// 2. 获取node的IP
 	nodeIP := node.Status.Addresses[0].Address
 	if nodeIP == Config.APIServerLocalAddress {
-		// 如果是apiserver节点，则不需要监控
-		c.JSON(200, gin.H{"message": "Node is apiserver"})
+		// 如果是apiServer节点，则不需要监控
+		c.JSON(200, gin.H{"message": "Node is apiServer"})
 		return
 	}
 

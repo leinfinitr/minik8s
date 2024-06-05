@@ -3,14 +3,16 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"minik8s/pkg/apiObject"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
-	"minik8s/pkg/config"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	httprequest "minik8s/tools/httpRequest"
 )
 
 // GetNodes 获取所有节点
@@ -62,9 +64,15 @@ func CreateNode(c *gin.Context) {
 		// 新节点，需要注册
 		// 注册monitor
 		url := config.APIServerURL() + config.MonitorNodeURL
-		if resp, err := httprequest.PutObjMsg(url, node); err != nil || resp.StatusCode != config.HttpSuccessCode {
+		resp, err := httprequest.PutObjMsg(url, node)
+		if err != nil {
 			log.WarnLog("CreateNode: " + err.Error())
 			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			return
+		}
+		if resp.StatusCode != config.HttpSuccessCode {
+			log.WarnLog("CreateNode: " + resp.Status)
+			c.JSON(config.HttpErrorCode, gin.H{"error": resp.Status})
 			return
 		}
 
@@ -109,13 +117,18 @@ func CreateNode(c *gin.Context) {
 
 	// 把pods信息发送到给kubelet，同步pods信息
 	if len(pods) > 0 {
-		log.InfoLog("Start Sync Pods Infomation with Node: " + node.Metadata.Name)
+		log.InfoLog("Start Sync Pods Information with Node: " + node.Metadata.Name)
 		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.PodsSyncURI
 		resp, err := httprequest.PostObjMsg(url, pods)
-		if err != nil || resp.StatusCode != config.HttpSuccessCode {
+		if err != nil {
 			log.WarnLog("CreateNode: " + err.Error())
 			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 			return
+		}
+		if resp.StatusCode == config.HttpSuccessCode {
+			log.DebugLog("Sync Pods Information with Node: " + node.Metadata.Name + " success")
+		} else {
+			log.WarnLog("Sync Pods Information with Node: " + node.Metadata.Name + " failed")
 		}
 	}
 
@@ -216,13 +229,13 @@ func PingNodeStatus(c *gin.Context) {
 	times := 0
 	success := false
 	for times < 3 {
-		url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.NodeStatusURI
+		url := config.HttpSchema + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeletAPIPort) + config.NodeStatusURI
 		url = strings.Replace(url, config.NameReplace, node.Metadata.Name, -1)
 		resp, err := httprequest.GetMsg(url)
 		if err != nil || resp.StatusCode != config.HttpSuccessCode {
 			// 无法联通，说明节点不可用
 			log.WarnLog("PingNodeStatus: Node can't be connected")
-			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			c.JSON(config.HttpErrorCode, gin.H{"error": "Node can't be connected"})
 		} else {
 			success = true
 			newNodeStatus := apiObject.NodeStatus{}
@@ -239,7 +252,12 @@ func PingNodeStatus(c *gin.Context) {
 				c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
 				return
 			}
-			etcdclient.EtcdStore.Put(config.EtcdNodePrefix+"/"+node.Metadata.Name, string(nodeJSON))
+			err = etcdclient.EtcdStore.Put(config.EtcdNodePrefix+"/"+node.Metadata.Name, string(nodeJSON))
+			if err != nil {
+				log.ErrorLog("PingNodeStatus: " + err.Error())
+				c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+				return
+			}
 			break
 		}
 		times++
@@ -256,7 +274,7 @@ func PingNodeStatus(c *gin.Context) {
 		resp, err := httprequest.DelMsg(url, node)
 		if err != nil || resp.StatusCode != config.HttpSuccessCode {
 			log.ErrorLog("PingNodeStatus failed")
-			c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+			c.JSON(config.HttpErrorCode, gin.H{"error": "PingNodeStatus failed"})
 			return
 		}
 		//删除该节点信息

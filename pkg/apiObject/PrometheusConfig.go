@@ -9,19 +9,21 @@ const (
 
 // PrometheusConfig represents the structure of the Prometheus config file
 type PrometheusConfig struct {
-	Global struct {
-		ScrapeInterval     string `yaml:"scrape_interval"`
-		EvaluationInterval string `yaml:"evaluation_interval"`
-	} `yaml:"global"`
+	Global   GlobalConfig `yaml:"global"`
 	Alerting struct {
-		Alertmanagers []struct {
+		AlertManagers []struct {
 			StaticConfigs []struct {
 				Targets []string `yaml:"targets"`
 			} `yaml:"static_configs"`
-		} `yaml:"alertmanagers"`
+		} `yaml:"alert_managers"`
 	} `yaml:"alerting"`
 	RuleFiles     []string       `yaml:"rule_files"`
 	ScrapeConfigs []ScrapeConfig `yaml:"scrape_configs"`
+}
+
+type GlobalConfig struct {
+	ScrapeInterval     string `yaml:"scrape_interval"`
+	EvaluationInterval string `yaml:"evaluation_interval"`
 }
 
 type ScrapeConfig struct {

@@ -70,7 +70,7 @@ type Condition struct {
 	Status string `json:"status" yaml:"status"`
 }
 
-// pod信息的子集，用来实现service和pod的映射，给Kubeproxy使用
+// Endpoint pod信息的子集，用来实现service和pod的映射，给Kubeproxy使用
 type Endpoint struct {
 	PodUUID string
 	IP      string
