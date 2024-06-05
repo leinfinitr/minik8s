@@ -337,6 +337,10 @@ func getHpaHandler(namespace string) {
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		log.ErrorLog("GetHpa: " + resp.Status)
+		os.Exit(1)
+	}
 	err = json.NewDecoder(resp.Body).Decode(&hpas)
 	if err != nil {
 		log.ErrorLog("GetHpa: " + err.Error())

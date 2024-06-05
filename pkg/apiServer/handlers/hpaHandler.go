@@ -54,7 +54,20 @@ func GetHPAs(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, res)
+
+	var hpaList []apiObject.HPA
+	for _, v := range res {
+		hpa := apiObject.HPA{}
+		err = json.Unmarshal([]byte(v), &hpa)
+		if err != nil {
+			log.ErrorLog("GetHPAs: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		hpaList = append(hpaList, hpa)
+	}
+
+	c.JSON(200, hpaList)
 }
 
 func AddHPA(c *gin.Context) {
