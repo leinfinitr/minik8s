@@ -32,25 +32,26 @@
 
 
 ## 文档仓库
-主要存放我们在开发过程中的相关文档：
+主要存放我们在开发过程中的相关文档，相关的飞书链接我们已经公开。
 
 ### 功能文档
 
 - 基础功能
-  - [Pod实现]()：包括Pod等对象的抽象实现。
-  - [CRI实现]()：底层与containerd交互的相关实现。
-  - [Service](): Service的设计与支持
-  - [DNS转发](): DNS功能的设计与支持
-  - [Workload](): Workload功能的设计与支持
+  - [Pod抽象](https://kxd3r8u0zxd.feishu.cn/wiki/I8a3w8EXGiFD3YkVaL7cHa9SnMf?from=from_copylink)：包括Pod等对象的抽象实现。
+  - [CRI实现](https://kxd3r8u0zxd.feishu.cn/wiki/YxoNwy0yei9CCaktZFdc9AlgnRg?from=from_copylink)：底层与containerd交互的相关实现。
+  - [Service](https://kxd3r8u0zxd.feishu.cn/wiki/Q3wZwrQdoikn45kLkRzcaoJBneb?from=from_copylink): Service的设计与支持。
+  - [DNS转发](https://kxd3r8u0zxd.feishu.cn/wiki/NuwywPzB2iFpXwkmYSNc5qGSnXl?from=from_copylink): DNS功能的设计与支持。
+  - [ReplicaSet](https://kxd3r8u0zxd.feishu.cn/wiki/UAiJwcyMyi5eAyk9Oydcr2GGnYf?from=from_copylink): Workload功能的设计与支持。
+  - [HPA](https://kxd3r8u0zxd.feishu.cn/wiki/RjomwaFxdiMscYkLX0ScFBNIngc?from=from_copylink)：HPA功能的设计与实现。
 - 进阶功能
-  - [监控与日志]()：通过各种组件来提供对系统的监控与日志功能
-  - [容错]()：分析了可能的各种容错情况以及实现
-  - [PV&PVC]()：关于持久化卷和持久化声明的实现
+  - [监控与日志](https://kxd3r8u0zxd.feishu.cn/wiki/ZI3Sw3pExi4smmkpiYVcTjvlntc?from=from_copylink)：通过各种组件来提供对系统的监控与日志功能。
+  - [容错](https://kxd3r8u0zxd.feishu.cn/wiki/Tb7Kwdw3JiPFt1kxnBFcElIKnEd?from=from_copylink)：分析了可能的各种容错情况以及实现。
+  - [PV&PVC](https://kxd3r8u0zxd.feishu.cn/wiki/E0X5wj2lriDJMZk2ESwcXTkenSf?from=from_copylink)：关于持久化卷和持久化声明的实现。
 
 ### 其他文档
-- [上机测试]()：如果在机器上启动minik8s，以及相关测试流程。
-- [环境配置]()：在启动minik8s前，需要对环境进行配置。
-- [CNI网络配置]()：此处我们采用CNI 插件Flannel来实现全局的网络配置。
+- [上机测试](https://kxd3r8u0zxd.feishu.cn/wiki/L1MTwP7emixvMNkIwhBcZYKfnef?from=from_copylink)：如果在机器上启动minik8s，以及相关测试流程。
+- [环境配置](https://kxd3r8u0zxd.feishu.cn/wiki/Q7dWwAF1BiFruhkTVCucv7QFn0c?from=from_copylink)：在启动minik8s前，需要对环境进行配置。
+- [CNI网络配置](https://kxd3r8u0zxd.feishu.cn/wiki/EKRQwtvUQiPkUAkFI9RcTw9PnPc?from=from_copylink)：此处我们采用CNI 插件Flannel来实现全局的网络配置。
 
 
 ## 软件栈
