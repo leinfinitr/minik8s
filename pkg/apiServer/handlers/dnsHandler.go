@@ -334,7 +334,7 @@ func updateNginxConfig(dns *apiObject.Dns) error {
 
 	configPath := config.LocalConfigPath
 	configPath = strings.Replace(configPath, ":namespace", dns.Metadata.Namespace, -1)
-	configPath = strings.Replace(configPath, ":name", dns.Metadata.Name, -1)
+	configPath = strings.Replace(configPath, ":name", dns.Metadata.Name+"-pv", -1)
 
 	// 增加一个初始化的config到路径下
 	err := exec.Command("cp", config.LocalOriginalPath, configPath).Run()

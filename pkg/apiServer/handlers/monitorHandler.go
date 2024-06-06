@@ -65,11 +65,6 @@ func RegisterNodeMonitor(c *gin.Context) {
 
 	// 2. 获取node的IP
 	nodeIP := node.Status.Addresses[0].Address
-	if nodeIP == Config.APIServerLocalAddress {
-		// 如果是apiServer节点，则不需要监控
-		c.JSON(200, gin.H{"message": "Node is apiServer"})
-		return
-	}
 
 	config := GetPrometheusConfig()
 	if config == nil {

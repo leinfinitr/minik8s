@@ -11,11 +11,11 @@ const (
 type PrometheusConfig struct {
 	Global   GlobalConfig `yaml:"global"`
 	Alerting struct {
-		AlertManagers []struct {
+		Alertmanagers []struct {
 			StaticConfigs []struct {
 				Targets []string `yaml:"targets"`
 			} `yaml:"static_configs"`
-		} `yaml:"alert_managers"`
+		} `yaml:"alertmanagers"`
 	} `yaml:"alerting"`
 	RuleFiles     []string       `yaml:"rule_files"`
 	ScrapeConfigs []ScrapeConfig `yaml:"scrape_configs"`

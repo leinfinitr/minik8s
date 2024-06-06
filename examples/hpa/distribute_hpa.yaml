@@ -16,5 +16,5 @@ spec:
   maxReplicas: 20
   adjustInterval: 10s
   metrics:
-    cpuPercent: 0.7
-    memoryPercent: 0.8
+    cpuPercent: 0.05
+    memoryPercent: 0.2
