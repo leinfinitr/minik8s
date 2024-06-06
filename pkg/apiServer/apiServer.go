@@ -14,6 +14,7 @@ import (
 	"minik8s/pkg/apiObject"
 	"minik8s/pkg/apiServer/handlers"
 	"minik8s/pkg/config"
+	"minik8s/pkg/entity"
 	"minik8s/tools/log"
 
 	etcdclient "minik8s/pkg/apiServer/etcdClient"
@@ -41,7 +42,8 @@ func (a *ApiServer) Run() {
 		}
 	}()
 
-	// 开辟一个协程，用于定时扫描所有node的状态
+	// 开辟一个协程，用于定时扫描更新Service2Endpoint
+	go ScanServiceStatus()
 	ScanNodeStatus()
 }
 
@@ -211,5 +213,64 @@ func NewApiServer() *ApiServer {
 		Address: config.APIServerLocalAddress,
 		Port:    config.APIServerLocalPort,
 		Router:  gin.New(),
+	}
+}
+
+func ScanServiceStatus() {
+	// 定时操作搜索的Service2Endpoint，如果有Pod更新变化，则更新Service的Endpoints
+	for {
+		time.Sleep(10 * time.Second)
+
+		// 获取所有的Service2Endpoint
+		res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdService2EndpointPrefix)
+		if err != nil {
+			log.WarnLog("ScanServiceStatus: " + err.Error())
+		}
+		for _, v := range res {
+			var oldServiceEvent entity.ServiceEvent
+			var newServiceEvent entity.ServiceEvent
+			err = json.Unmarshal([]byte(v), &oldServiceEvent)
+			if err != nil {
+				log.WarnLog("ScanServiceStatus: " + err.Error())
+			}
+			// 获取Service对应的所有Pod
+			newServiceEvent.Service = oldServiceEvent.Service
+			newServiceEvent.Endpoints = *handlers.Selector(&oldServiceEvent.Service)
+			if len(newServiceEvent.Endpoints) == len(oldServiceEvent.Endpoints) {
+				isSame := true
+				for i := 0; i < len(newServiceEvent.Endpoints); i++ {
+					if newServiceEvent.Endpoints[i].IP != oldServiceEvent.Endpoints[i].IP {
+						newServiceEvent.Action = entity.UpdateEvent
+						isSame = false
+						break
+					}
+				}
+				if isSame {
+					continue
+				}
+			}
+
+			// 获取所有的Node信息
+			newServiceEvent.Action = entity.UpdateEvent
+			res, err := etcdclient.EtcdStore.PrefixGet(config.EtcdNodePrefix)
+			if err != nil {
+				log.WarnLog("ScanServiceStatus: " + err.Error())
+			}
+			for _, v := range res {
+				var node apiObject.Node
+				err = json.Unmarshal([]byte(v), &node)
+				if err != nil {
+					log.WarnLog("ScanServiceStatus: " + err.Error())
+				}
+				url := "http://" + node.Status.Addresses[0].Address + ":" + fmt.Sprint(config.KubeproxyAPIPort) + config.ServiceURI
+				url = strings.Replace(url, config.NameSpaceReplace, newServiceEvent.Service.Metadata.Namespace, -1)
+				url = strings.Replace(url, config.NameReplace, newServiceEvent.Service.Metadata.Name, -1)
+				res, err := httprequest.PostObjMsg(url, newServiceEvent)
+				if err != nil || res.StatusCode != config.HttpSuccessCode {
+					log.ErrorLog("ScanServiceStatus: " + err.Error())
+				}
+			}
+
+		}
 	}
 }
