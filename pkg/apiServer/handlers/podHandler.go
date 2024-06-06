@@ -204,7 +204,7 @@ func DeletePod(c *gin.Context) {
 	}
 	if needMonitor {
 		// 删除监控
-		monitorUri := config.MonitorPodURL
+		monitorUri := config.HttpSchema + config.APIServerLocalAddress + ":" + fmt.Sprint(config.APIServerLocalPort) + config.MonitorPodURL
 		resp, err := httprequest.DelMsg(monitorUri, monitorPod)
 		if err != nil {
 			log.ErrorLog("DeletePods: " + err.Error())
