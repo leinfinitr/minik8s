@@ -30,6 +30,47 @@
 - **Nginx Pod**：提供在系统的DNS服务，实现域名下的子路径到Service的流量转发。
 - **GPU-ServerPod**：提供远程调用GPU运行程序的支持。
 
+## 代码架构
+```sh
+├── README.md
+├── cleanup.sh : 清除状态值的脚本
+├── curl_loop.sh : 用于压力测试增加负载的脚本
+├── docs : 主要存放相关文档
+├── examples : 主要存放用于测试的yaml文件样例
+│   ├── dns : DNS相关的测试包
+│   ├── hpa : HPA相关的测试包
+│   ├── monitor.py :
+│   ├── pv : 持久化卷的相关测试包
+│   ├── replicaset : ReplicaSet的相关测试包
+│   ├── server : HPA的辅助脚本
+│   ├── serverless : Serverless的相关测试包
+│   ├── service : Service的相关测试包
+│   └── volumn_pod_test.yaml : 容器挂载卷的测试包
+├── pkg
+│   ├── apiObject : 存放所有的资源抽象
+│   ├── apiServer :
+│   │   ├── etcdClient :
+│   │   ├── handlers : 包括Pod、DNS、service、node、pod、PV、pvc等资源的handler
+│   ├── config
+│   ├── controller
+│   │   └── specCtlrs : 包括dns、hpa、pvc、ReplicaSet等对象的controller
+│   ├── entity : 存放一些非官方的实体类
+│   ├── etcd : etcdClient的实现
+│   ├── kubectl
+│   │   ├── cmd : 包括apply、create、delete、describe等命令的实现
+│   │   └── translator : 用来解析yaml文件的包
+│   ├── kubelet
+│   │   ├── pod : Pod生命周期管理
+│   │   ├── runtime : 调用底层的CRI接口与containerd交互
+│   │   └── util : 工具函数包
+│   ├── kubeproxy
+│   │   ├── iptableManager : 负责各个节点上的iptable的规则链配置
+│   ├── scheduler : pod等资源的调度器
+│   └── serverless : 
+│       ├── handler : 包括serverless、workflow的handler
+│       ├── manager : 用来实现扩缩容控制的manager
+└── tools
+```
 
 ## 文档仓库
 主要存放我们在开发过程中的相关文档，相关的飞书链接我们已经公开。
