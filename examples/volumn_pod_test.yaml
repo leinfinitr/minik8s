@@ -11,7 +11,7 @@ spec:
   volumes:
     - name: files-volume
       emptyDir:
-        sizeLimit: 1GB
+        sizeLimit: 1Gi
   containers:
     - name: downloader
       image: 7143192/downloader:latest

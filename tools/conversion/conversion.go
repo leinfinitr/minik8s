@@ -1,9 +1,10 @@
 package conversion
 
 import (
-	"strings"
+	"strconv"
 
 	"minik8s/pkg/apiObject"
+	"minik8s/tools/log"
 
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
@@ -44,19 +45,6 @@ func ServerlessToPod(serverless apiObject.Serverless) apiObject.Pod {
 	return pod
 }
 
-// PodToServerless 将一个 Pod 对象转换为 Serverless 对象
-func PodToServerless(pod apiObject.Pod) apiObject.Serverless {
-	serverless := apiObject.Serverless{
-		Name: pod.Metadata.Name,
-	}
-	for _, container := range pod.Spec.Containers {
-		serverless.Image = container.Image
-		serverless.HostPath = container.Mounts[0].HostPath
-		serverless.Command = strings.Join(container.Command, " ")
-	}
-	return serverless
-}
-
 // MountsToMounts 将一个 Mount 对象数组转换为 ContainerConfig.Mounts 对象数组
 func MountsToMounts(mounts []*apiObject.Mount) []*runtimeapi.Mount {
 	configMounts := make([]*runtimeapi.Mount, 0)
@@ -71,24 +59,34 @@ func MountsToMounts(mounts []*apiObject.Mount) []*runtimeapi.Mount {
 	return configMounts
 }
 
-// AddMountsToContainer 将一个 Mount 对象添加到 Container.Mounts
-func AddMountsToContainer(pod *apiObject.Pod, volume apiObject.Volume, hostPath string) {
-	for i, container := range pod.Spec.Containers {
-		for _, volumeMount := range container.VolumeMounts {
-			if volumeMount.Name == volume.Name {
-				// 为容器添加Mount
-				if container.Mounts == nil {
-					container.Mounts = make([]*apiObject.Mount, 0)
-				}
-				mount := &apiObject.Mount{
-					HostPath:      hostPath,
-					ContainerPath: volumeMount.MountPath,
-					ReadOnly:      false,
-				}
-				container.Mounts = append(container.Mounts, mount)
-			}
+// ResourcesConvert 将一个 Resources 转化为单位为 KB 的大小
+func ResourcesConvert(resources string) int {
+	// resources 中第一个非数字字符之后的部分都是单位
+	unit := ""
+	number := ""
+	for _, r := range resources {
+		if r >= '0' && r <= '9' {
+			number += string(r)
+		} else {
+			unit += string(r)
 		}
-		// 替换pod中的容器
-		pod.Spec.Containers[i] = container
+	}
+	// 将资源转化为 KB
+	switch unit {
+	case "Ki":
+		numberInt, _ := strconv.Atoi(number)
+		return 1 * numberInt
+	case "Mi":
+		numberInt, _ := strconv.Atoi(number)
+		return 1024 * numberInt
+	case "Gi":
+		numberInt, _ := strconv.Atoi(number)
+		return 1024 * 1024 * numberInt
+	case "Ti":
+		numberInt, _ := strconv.Atoi(number)
+		return 1024 * 1024 * 1024 * numberInt
+	default:
+		log.ErrorLog("Unknown unit: " + unit)
+		return 0
 	}
 }

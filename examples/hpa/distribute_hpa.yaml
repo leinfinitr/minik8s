@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Hpa
+metadata:
+  name: hpa-distribute
+  namespace: hpa-distribute-namespace
+spec:
+  scaleTargetRef:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: httpserver
+      namespace: hpa-distribute-namespace
+  selector:
+      app: hpa-distribute-app
+  minReplicas: 2
+  maxReplicas: 20
+  adjustInterval: 10s
+  metrics:
+    cpuPercent: 0.05
+    memoryPercent: 0.2

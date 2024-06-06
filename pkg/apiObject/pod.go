@@ -28,25 +28,6 @@ const (
 	PodTerminating = "Terminating"
 )
 
-const (
-	// HostPathUnset 如果未设置，则保持为空以保持向后兼容
-	HostPathUnset HostPathType = ""
-	// HostPathDirectoryOrCreate 如果给定路径上没有任何内容，则将根据需要创建一个空目录，文件模式为0755，具有与Kubelet相同的组和所有权。
-	HostPathDirectoryOrCreate HostPathType = "DirectoryOrCreate"
-	// HostPathDirectory 给定路径必须是一个目录
-	HostPathDirectory HostPathType = "Directory"
-	// HostPathFileOrCreate 如果给定路径上没有任何内容，则将根据需要创建一个空文件，文件模式为0644，具有与Kubelet相同的组和所有权。
-	HostPathFileOrCreate HostPathType = "FileOrCreate"
-	// HostPathFile 给定路径必须是一个文件
-	HostPathFile HostPathType = "File"
-	// HostPathSocket 给定路径必须是一个socket
-	HostPathSocket HostPathType = "Socket"
-	// HostPathCharDev 给定路径必须是一个字符设备
-	HostPathCharDev HostPathType = "CharDevice"
-	// HostPathBlockDev 给定路径必须是一个块设备
-	HostPathBlockDev HostPathType = "BlockDevice"
-)
-
 type Pod struct {
 	// Pod对应的PodSandboxId，供查找podSandboxStatus时使用
 	PodSandboxId string
@@ -94,11 +75,7 @@ type EmptyDirVolumeSource struct {
 type HostPathVolumeSource struct {
 	// 主机路径
 	Path string `json:"path" yaml:"path"`
-	// 主机路径类型
-	Type HostPathType `json:"type" yaml:"type"`
 }
-
-type HostPathType string
 
 type PersistentVolumeClaimVolumeSource struct {
 	// 持久化卷声明的名称

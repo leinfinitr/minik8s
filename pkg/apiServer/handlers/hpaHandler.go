@@ -2,13 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
-	"minik8s/pkg/apiObject"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
-	"minik8s/pkg/config"
-	"minik8s/tools/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
 )
 
 func GetHPA(c *gin.Context) {
@@ -24,6 +26,7 @@ func GetHPA(c *gin.Context) {
 		return
 	}
 	log.InfoLog("GetHPA: " + namespace + "/" + name)
+
 	res, err := etcdclient.EtcdStore.Get(config.EtcdHpaPrefix + "/" + namespace + "/" + name)
 	if err != nil {
 		log.ErrorLog("GetHPA: " + err.Error())
@@ -54,7 +57,20 @@ func GetHPAs(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"data": res})
+
+	var hpaList []apiObject.HPA
+	for _, v := range res {
+		hpa := apiObject.HPA{}
+		err = json.Unmarshal([]byte(v), &hpa)
+		if err != nil {
+			log.ErrorLog("GetHPAs: " + err.Error())
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		hpaList = append(hpaList, hpa)
+	}
+
+	c.JSON(200, hpaList)
 }
 
 func AddHPA(c *gin.Context) {
@@ -63,6 +79,7 @@ func AddHPA(c *gin.Context) {
 		namespace = "default"
 	}
 	log.InfoLog("AddHPA: " + namespace)
+
 	var hpa apiObject.HPA
 	err := c.BindJSON(&hpa)
 	if err != nil {
@@ -113,6 +130,7 @@ func DeleteHPA(c *gin.Context) {
 		namespace = "default"
 	}
 	log.InfoLog("DeleteHPA: " + namespace)
+
 	name := c.Param("name")
 	if name == "" {
 		log.ErrorLog("DeleteHPA name is empty")
@@ -120,6 +138,7 @@ func DeleteHPA(c *gin.Context) {
 		return
 	}
 	log.InfoLog("DeleteHPA: " + namespace + "/" + name)
+
 	err := etcdclient.EtcdStore.Delete(config.EtcdHpaPrefix + "/" + namespace + "/" + name)
 	if err != nil {
 		log.ErrorLog("DeleteHPA: " + err.Error())
@@ -137,6 +156,7 @@ func GetGlobalHPAs(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
 	var hpaList []apiObject.HPA
 	for _, v := range res {
 		hpa := apiObject.HPA{}
@@ -159,7 +179,8 @@ func UpdateHPAStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "name or namespace is empty"})
 		return
 	}
-	log.InfoLog("UpdateHPAStatus: " + namespace + "/" + name)
+	log.DebugLog("UpdateHPAStatus: " + namespace + "/" + name)
+
 	var status apiObject.HPAStatus
 	err := c.BindJSON(&status)
 	if err != nil {
@@ -167,6 +188,7 @@ func UpdateHPAStatus(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+
 	key := config.EtcdHpaPrefix + "/" + namespace + "/" + name
 	res, err := etcdclient.EtcdStore.Get(key)
 	if err != nil {
@@ -174,6 +196,7 @@ func UpdateHPAStatus(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
 	hpa := apiObject.HPA{}
 	err = json.Unmarshal([]byte(res), &hpa)
 	if err != nil {
