@@ -28,3 +28,6 @@ vendor/
 
 # log files
 *.log
+
+# build files
+*.tar

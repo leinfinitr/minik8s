@@ -11,7 +11,7 @@ spec:
       image: jackhel0/httpserver:latest
       imagePullPolicy: IfNotPresent
       command: ["/bin/sh", "-c", "export IFCONFIG_RESULT=$(ifconfig) &&
-      echo \"The ifconfig result is: $IFCONFIG_RESULT\" &&python server.py"]
+      echo \"The ifconfig result is: $IFCONFIG_RESULT\" && python server.py"]
       ports:
-        - containerPort: 7081
-        - hostPort: 7081
+        - containerPort: 7080
+        - hostPort: 7080
