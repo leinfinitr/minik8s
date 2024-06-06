@@ -6,4 +6,4 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  resources: 8GB
+  resources: 8Gi

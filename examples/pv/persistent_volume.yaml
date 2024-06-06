@@ -4,7 +4,7 @@ metadata:
   name: pv1
   namespace: default
 spec:
-  capacity: 5GB
+  capacity: 5Gi
   accessModes:
     - ReadWriteOnce
   reclaimPolicy: Recycle
