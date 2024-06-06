@@ -3,6 +3,7 @@ package specctlrs
 import (
 	"encoding/json"
 	"fmt"
+	"minik8s/tools/conversion"
 	"net/http"
 	"os/exec"
 	"time"
@@ -376,8 +377,14 @@ func (pc *PvControllerImpl) bindPvcToPv(pvc *apiObject.PersistentVolumeClaim) er
 	// 从PvMap中找到一个未绑定的pv，并绑定
 	for _, v := range pc.PvMap {
 		if v.Status.Phase == apiObject.VolumeAvailable {
-			pv = v
-			break
+			pvcResource := pvc.Spec.Resources
+			pvResource := v.Spec.Capacity
+			pvcSize := conversion.ResourcesConvert(pvcResource)
+			pvSize := conversion.ResourcesConvert(pvResource)
+			if pvcSize <= pvSize {
+				pv = v
+				break
+			}
 		}
 	}
 	// 若没有找到合适的pv，则创建一个新的pv
