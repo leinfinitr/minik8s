@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/gin-gonic/gin"
 
@@ -263,13 +264,18 @@ func DeletePodMonitor(c *gin.Context) {
 	}
 
 	// 2. 在制定的job后面把同属于的pod的全部删除，默认“pods”job是用来监控所有pod的
-	for _, scrapeConfig := range config.ScrapeConfigs {
+	for j, scrapeConfig := range config.ScrapeConfigs {
 		if scrapeConfig.JobName == "pods" {
 			for i, uri := range scrapeConfig.StaticConfigs {
 				if uri.Labels["instance"] == monitorPod.PodName {
+					// 删除这一个instance
 					scrapeConfig.StaticConfigs = append(scrapeConfig.StaticConfigs[:i], scrapeConfig.StaticConfigs[i+1:]...)
 					break
 				}
+			}
+			if len(scrapeConfig.StaticConfigs) == 0 {
+				// 如果这个job没有instance了，就删除这个job
+				config.ScrapeConfigs = append(config.ScrapeConfigs[:j], config.ScrapeConfigs[j+1:]...)
 			}
 		}
 	}

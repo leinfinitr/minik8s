@@ -193,6 +193,7 @@ func DeletePod(c *gin.Context) {
 	// 如果是一个自定义Metrics的pod，则需要对该pod的监控配置进行删除
 	needMonitor := false
 	var monitorPod apiObject.MonitorPod
+	monitorPod.PodName = name
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
 			if port.Metrics != "" {
