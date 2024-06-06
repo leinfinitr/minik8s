@@ -6,16 +6,18 @@ package apiServer
 import (
 	"encoding/json"
 	"fmt"
-	"minik8s/pkg/apiObject"
-	etcdclient "minik8s/pkg/apiServer/etcdClient"
-	"minik8s/pkg/apiServer/handlers"
-	"minik8s/pkg/config"
-	httprequest "minik8s/tools/httpRequest"
-	"minik8s/tools/log"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"minik8s/pkg/apiObject"
+	"minik8s/pkg/apiServer/handlers"
+	"minik8s/pkg/config"
+	"minik8s/tools/log"
+
+	etcdclient "minik8s/pkg/apiServer/etcdClient"
+	httprequest "minik8s/tools/httpRequest"
 )
 
 type ApiServer struct {
@@ -90,7 +92,7 @@ func (a *ApiServer) Register() {
 	a.Router.PUT(config.PodStatusURI, handlers.UpdatePodStatus)
 
 	// 执行指定Pod和container的命令
-	a.Router.GET(config.PodExecURI, handlers.ExecPod)
+	a.Router.POST(config.PodExecURI, handlers.ExecPod)
 
 	// 获取所有Pod
 	a.Router.GET(config.PodsURI, handlers.GetPods)
@@ -158,9 +160,15 @@ func (a *ApiServer) Register() {
 
 	// 创建持久化卷
 	a.Router.POST(config.PersistentVolumeURI, handlers.CreatePV)
+	// 根据PVC的信息获取指定持久化卷
+	a.Router.GET(config.PersistentVolumeURI, handlers.GetPV)
 
 	// 创建持久化卷声明
 	a.Router.POST(config.PersistentVolumeClaimURI, handlers.CreatePVC)
+	// 将Pod绑定到持久化卷声明
+	a.Router.PUT(config.PersistentVolumeClaimURI, handlers.BindPVC)
+	// 获取指定持久化卷声明
+	a.Router.GET(config.PersistentVolumeClaimURI, handlers.GetPVC)
 
 	// 首次注册节点
 	a.Router.PUT(config.MonitorNodeURL, handlers.RegisterNodeMonitor)

@@ -186,7 +186,7 @@ func (k *Kubelet) registerKubeletAPI() {
 	k.KubeletAPIRouter.GET(config.PodStatusURI, pod.GetPodStatus)
 
 	// 执行指定Pod和container的命令
-	k.KubeletAPIRouter.GET(config.PodExecURI, pod.ExecPodContainer)
+	k.KubeletAPIRouter.POST(config.PodExecURI, pod.ExecPodContainer)
 
 	// 获取所有Pod
 	k.KubeletAPIRouter.GET(config.PodsURI, pod.GetPods)

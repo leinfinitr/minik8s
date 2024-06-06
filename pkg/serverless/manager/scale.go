@@ -195,8 +195,8 @@ func (s *ScaleManagerImpl) RunFunction(name string, param string) string {
 	url = strings.Replace(url, config.NameSpaceReplace, "serverless", -1)
 	url = strings.Replace(url, config.NameReplace, minRequestInstanceName, -1)
 	url = strings.Replace(url, config.ContainerReplace, minRequestInstanceName, -1)
-	url = strings.Replace(url, config.ParamReplace, s.Serverless[name].Command+" "+param, -1)
-	response, err := httprequest.GetMsg(url)
+	cmd := apiObject.Command{Cmd: s.Serverless[name].Command + " " + param}
+	response, err := httprequest.PostObjMsg(url, cmd)
 	if err != nil {
 		log.ErrorLog("Could not post the message." + err.Error())
 		os.Exit(1)

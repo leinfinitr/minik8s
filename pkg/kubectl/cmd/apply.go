@@ -87,6 +87,7 @@ func applyHandler(cmd *cobra.Command, args []string) {
 		}
 	}
 }
+
 func PodHandler(content []byte) {
 	var pod apiObject.Pod
 	err := translator.ParseApiObjFromYaml(content, &pod)
@@ -152,6 +153,8 @@ func PersistentVolumeHandler(content []byte) {
 	}
 
 	url := config.APIServerURL() + config.PersistentVolumeURI
+	url = strings.Replace(url, config.NameReplace, persistentVolume.Metadata.Name, -1)
+	url = strings.Replace(url, config.NameSpaceReplace, persistentVolume.Metadata.Namespace, -1)
 	resp, err := httprequest.PostObjMsg(url, persistentVolume)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())
@@ -169,6 +172,8 @@ func PersistentVolumeClaimHandler(content []byte) {
 	}
 
 	url := config.APIServerURL() + config.PersistentVolumeClaimURI
+	url = strings.Replace(url, config.NameSpaceReplace, pvc.Metadata.Namespace, -1)
+	url = strings.Replace(url, config.NameReplace, pvc.Metadata.Name, -1)
 	resp, err := httprequest.PostObjMsg(url, pvc)
 	if err != nil {
 		log.ErrorLog("Could not post the object message." + err.Error())

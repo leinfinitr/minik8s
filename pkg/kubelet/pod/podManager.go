@@ -233,5 +233,7 @@ func (p *podManagerImpl) SyncPods(pods *[]apiObject.Pod) error {
 	for _, pod := range *pods {
 		p.PodMapByUUID[pod.GetPodUUID()] = &pod
 	}
+
+	log.InfoLog("Sync pods success!")
 	return nil
 }

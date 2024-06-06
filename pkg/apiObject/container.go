@@ -13,17 +13,6 @@ const (
 	ContainerUnknown   ContainerStatus = 3
 )
 
-const (
-	// CPU, 单位 cores. (500m = .5 cores)
-	ResourceCPU ResourceName = "cpu"
-	// Memory, 单位 bytes. (500Gi = 500GiB = 500 * 1024 * 1024 * 1024)
-	ResourceMemory ResourceName = "memory"
-	// storage, 单位 bytes (e,g. 5Gi = 5GiB = 5 * 1024 * 1024 * 1024)
-	ResourceStorage ResourceName = "storage"
-	// 本地临时存储, 单位 bytes. (500Gi = 500GiB = 500 * 1024 * 1024 * 1024)
-	ResourceEphemeralStorage ResourceName = "ephemeral-storage"
-)
-
 type Container struct {
 	// 容器的ID
 	ContainerID string
@@ -44,8 +33,6 @@ type Container struct {
 	Ports []ContainerPort `json:"ports" yaml:"ports"`
 	// 容器的环境变量
 	Env []EnvVar `json:"env" yaml:"env"`
-	// 容器的资源限制
-	Resources ResourceRequirements `json:"resources" yaml:"resources"`
 	// 容器的存储卷挂载
 	VolumeMounts []VolumeMount `json:"volumeMounts" yaml:"volumeMounts"`
 	// 容器与主机的挂载
@@ -69,15 +56,13 @@ type ContainerPort struct {
 	Metrics string
 	// 容器端口
 	ContainerPort int32 `json:"containerPort" yaml:"containerPort"`
-	// 端口协议
-	Protocol Protocol `json:"protocol" yaml:"protocol"`
 	// 主机端口
 	HostPort int32 `json:"hostPort" yaml:"hostPort"`
 	// 主机IP
 	HostIP string `json:"hostIP" yaml:"hostIP"`
 }
 
-// 端口协议
+// Protocol 端口协议
 type Protocol string
 
 type EnvVar struct {
@@ -86,19 +71,6 @@ type EnvVar struct {
 	// 环境变量的值
 	Value string `json:"value" yaml:"value"`
 }
-
-type ResourceRequirements struct {
-	// 资源限制
-	Limits ResourceList `json:"limits" yaml:"limits"`
-	// 资源请求
-	Requests ResourceList `json:"requests" yaml:"requests"`
-}
-
-// 资源列表
-type ResourceList map[ResourceName]string
-
-// 资源名称，包括CPU、内存
-type ResourceName string
 
 type VolumeMount struct {
 	// 存储卷的名称

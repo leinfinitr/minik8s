@@ -9,7 +9,7 @@ const (
 
 	PodURI        = "/api/v1/namespaces/:namespace/pods/:name"
 	PodStatusURI  = "/api/v1/namespaces/:namespace/pods/:name/status"
-	PodExecURI    = "/api/v1/namespaces/:namespace/pods/:name/exec/:container/:param"
+	PodExecURI    = "/api/v1/namespaces/:namespace/pods/:name/exec/:container/param"
 	PodsURI       = "/api/v1/namespaces/:namespace/pods"
 	PodsGlobalURI = "/api/v1/pods"
 	PodsSyncURI   = "/api/v1/pods/sync"

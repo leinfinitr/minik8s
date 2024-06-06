@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hpa-pod
+  namespace: hpa-namespace
+  labels:
+    app: hpa-pod-app
+spec:
+  containers:
+    - name: webserver
+      image: jackhel0/httpserver:latest
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-c", "export IFCONFIG_RESULT=$(ifconfig) &&
+      echo \"The ifconfig result is: $IFCONFIG_RESULT\" &&python server.py"]
+      ports:
+        - containerPort: 7081
+        - hostPort: 7081
