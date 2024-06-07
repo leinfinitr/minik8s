@@ -112,6 +112,7 @@
   - [监控与日志](https://kxd3r8u0zxd.feishu.cn/wiki/ZI3Sw3pExi4smmkpiYVcTjvlntc?from=from_copylink)：通过各种组件来提供对系统的监控与日志功能。
   - [容错](https://kxd3r8u0zxd.feishu.cn/wiki/Tb7Kwdw3JiPFt1kxnBFcElIKnEd?from=from_copylink)：分析了可能的各种容错情况以及实现。
   - [PV&PVC](https://kxd3r8u0zxd.feishu.cn/wiki/E0X5wj2lriDJMZk2ESwcXTkenSf?from=from_copylink)：关于持久化卷和持久化声明的实现。
+  - [Serverless](https://kxd3r8u0zxd.feishu.cn/wiki/X9B9wi8gIiJCEGkxf2Lc4AbYn2c?from=from_copylink)：支持通过挂载函数文件执行 Serverless 服务 
 
 ### 其他文档
 - [上机测试](https://kxd3r8u0zxd.feishu.cn/wiki/L1MTwP7emixvMNkIwhBcZYKfnef?from=from_copylink)：如果在机器上启动minik8s，以及相关测试流程。
