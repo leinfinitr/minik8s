@@ -21,7 +21,7 @@ type JobControllerImpl struct {
 var (
 	JobControllerDelay   = 3 * time.Second
 	JobControllerTimeGap = []time.Duration{14 * time.Second}
-	ServerImage = "jackhel0/task-server:latest"
+	ServerImage          = "task-server:latest"
 )
 
 func NewJobController() (JobController, error) {
@@ -45,13 +45,13 @@ func (jc *JobControllerImpl) syncJob() {
 	for _, job := range jobs {
 		log.InfoLog("syncJob: " + job.Metadata.Name)
 		//未处理的Job没有Status信息
-		if job.Status == emptyStatus{
+		if job.Status == emptyStatus {
 			jc.CreateJob(job)
 		}
 	}
 
 }
-func (jc *JobControllerImpl) CreateJob(job apiObject.Job){
+func (jc *JobControllerImpl) CreateJob(job apiObject.Job) {
 	// cmd := []string{"/bin/server", "-jobNname", job.Metadata.Name, "-jobNamespace", job.Metadata.Namespace,"-serverAddr",config.APIServerURL()}
 	cmd := []string{"/bin/sh", "-c", `echo "nameserver 223.5.5.5" > /etc/resolv.conf &&
     /bin/server -jobName ` + job.Metadata.Name + ` -jobNamespace ` + job.Metadata.Namespace + ` -serverAddr ` + config.APIServerURL()}
@@ -61,14 +61,14 @@ func (jc *JobControllerImpl) CreateJob(job apiObject.Job){
 			APIVersion: "v1",
 		},
 		Metadata: apiObject.ObjectMeta{
-			Name: job.Metadata.Name,
+			Name:      job.Metadata.Name,
 			Namespace: job.Metadata.Namespace,
 		},
 		Spec: apiObject.PodSpec{
 			Containers: []apiObject.Container{
 				{
-					Name:  "server"+job.Metadata.UUID,
-					Image: ServerImage,
+					Name:    "server" + job.Metadata.UUID,
+					Image:   ServerImage,
 					Command: cmd,
 				},
 			},
@@ -77,7 +77,7 @@ func (jc *JobControllerImpl) CreateJob(job apiObject.Job){
 	}
 	url := config.APIServerURL() + config.PodsURI
 	url = strings.Replace(url, config.NameSpaceReplace, job.Metadata.Namespace, -1)
-	code,_,err := netRequest.PostRequestByTarget(url,pod)
+	code, _, err := netRequest.PostRequestByTarget(url, pod)
 	if err != nil {
 		log.ErrorLog("CreateJob: " + err.Error())
 		return

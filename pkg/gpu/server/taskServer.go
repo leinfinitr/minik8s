@@ -73,7 +73,7 @@ func (ts *TaskServer) InitializeTaskServer() error {
 		return err
 	}
 	scriptContent := ts.GenerateScript()
-	_,err = ts.client.WriteFile(path.Join(ts.config.RemoteBaseDir, ts.TaskPath()), scriptContent)
+	_, err = ts.client.WriteFile(path.Join(ts.config.RemoteBaseDir, ts.TaskPath()), scriptContent)
 	if err != nil {
 		log.ErrorLog("WriteFile: " + err.Error())
 		return err
@@ -90,7 +90,7 @@ func (ts *TaskServer) GenerateScript() string {
 	scriptContent += fmt.Sprintf("#SBATCH --gres=gpu:%d\n", ts.config.GPUNum)
 	scriptContent += "#SBATCH -N 1\n"
 	scriptContent += ts.FormatRunCmd()
-	
+
 	return scriptContent
 }
 
@@ -160,12 +160,14 @@ func (ts *TaskServer) CheckAndUpdateStatus(taskId string) int {
 			log.ErrorLog("PostRequestByTarget: code is not 200")
 			return 2
 		}
-		return 1
+		if status.State == "COMPLETED" {
+			return 1
+		}
 	}
 	return 0
 }
 
-func (ts *TaskServer)ProcessResult() error{
+func (ts *TaskServer) ProcessResult() error {
 	remoteOutputPath := path.Join(ts.config.RemoteBaseDir, ts.config.OutputPath)
 	remoteErrorPath := path.Join(ts.config.RemoteBaseDir, ts.config.ErrorPath)
 	log.InfoLog("ProcessResult: " + remoteOutputPath)
@@ -182,12 +184,12 @@ func (ts *TaskServer)ProcessResult() error{
 		log.ErrorLog("DownloadFile: " + err.Error())
 		return err
 	}
-	outputContent,err := os.ReadFile(localOutputPath)
+	outputContent, err := os.ReadFile(localOutputPath)
 	if err != nil {
 		log.ErrorLog("ReadFile: " + err.Error())
 		return err
 	}
-	errorContent,err := os.ReadFile(localErrorPath)
+	errorContent, err := os.ReadFile(localErrorPath)
 	if err != nil {
 		log.ErrorLog("ReadFile: " + err.Error())
 		return err
@@ -209,7 +211,7 @@ func (ts *TaskServer)ProcessResult() error{
 		log.ErrorLog("PostRequestByTarget: code is not 200")
 		return err
 	}
-	_,err = ts.client.RmDir(ts.config.RemoteBaseDir)
+	_, err = ts.client.RmDir(ts.config.RemoteBaseDir)
 	if err != nil {
 		log.ErrorLog("RmDir: " + err.Error())
 		return err
@@ -224,7 +226,7 @@ func (ts *TaskServer) RunTaskServer() {
 		return
 	}
 	//提交作业
-	cmd := fmt.Sprintf(submitSbatch, ts.config.RemoteBaseDir, path.Join(ts.config.RemoteBaseDir,ts.TaskPath()))
+	cmd := fmt.Sprintf(submitSbatch, ts.config.RemoteBaseDir, path.Join(ts.config.RemoteBaseDir, ts.TaskPath()))
 	log.InfoLog("RunTaskServer: " + cmd)
 	res, err := ts.client.RunCmd(cmd)
 	if err != nil {
