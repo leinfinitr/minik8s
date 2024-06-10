@@ -7,6 +7,6 @@ spec:
   containers:
     - name: server523613
       image: jackhel0/task-server:latest
-      imagePullPolicy: Always
+      imagePullPolicy: IfNotPresent
       command: ["/bin/sh", "-c","echo \"nameserver 223.5.5.5\" > /etc/resolv.conf &&
           /bin/server -jobName job-example1 -jobNamespace test-job-namespace -serverAddr http://192.168.1.12:7000"]

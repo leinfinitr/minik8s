@@ -20,7 +20,7 @@ type JobControllerImpl struct {
 
 var (
 	JobControllerDelay   = 3 * time.Second
-	JobControllerTimeGap = []time.Duration{10 * time.Second}
+	JobControllerTimeGap = []time.Duration{14 * time.Second}
 	ServerImage = "jackhel0/task-server:latest"
 )
 

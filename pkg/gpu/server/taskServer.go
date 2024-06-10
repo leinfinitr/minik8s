@@ -245,7 +245,7 @@ func (ts *TaskServer) RunTaskServer() {
 			log.InfoLog("Task processing")
 			return false
 		case 1:
-			time.Sleep(8 * time.Second)
+			time.Sleep(2 * time.Second)
 			log.InfoLog("Task finished")
 			err := ts.ProcessResult()
 			if err != nil {
