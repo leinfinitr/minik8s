@@ -175,6 +175,10 @@ func DeleteService(c *gin.Context) {
 		}
 	}
 	etcdclient.EtcdStore.Delete(key)
+
+	// 删除service2endpoint
+	key = config.EtcdService2EndpointPrefix + "/" + namespace + "/" + name
+	etcdclient.EtcdStore.Delete(key)
 }
 
 // PutService 获取指定Service
@@ -222,6 +226,20 @@ func PutService(c *gin.Context) {
 		return
 	}
 	log.InfoLog("PutService: " + newServiceNamespace + "/" + newServiceName)
+
+	// 将service存入etcd
+	service2Endpoint, err := json.Marshal(serviceEvent)
+	if err != nil {
+		log.WarnLog("GetNodes: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
+	key = config.EtcdService2EndpointPrefix + "/" + newServiceNamespace + "/" + newServiceName
+	if err = etcdclient.EtcdStore.Put(key, string(service2Endpoint)); err != nil {
+		log.WarnLog("GetNodes: " + err.Error())
+		c.JSON(config.HttpErrorCode, gin.H{"error": err.Error()})
+		return
+	}
 
 	nodes := GetALLNodes()
 
