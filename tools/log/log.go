@@ -62,7 +62,7 @@ func InfoLog(msg string) {
 func DebugLog(msg string) {
 	if ifDebug {
 		logStr := WriteLogToFile(msg)
-		if ifPrint {
+		if ifDebug {
 			color.Blue(logStr)
 		}
 	}
@@ -71,7 +71,7 @@ func DebugLog(msg string) {
 // WarnLog 警告日志
 func WarnLog(msg string) {
 	logStr := WriteLogToFile(msg)
-	if ifPrint {
+	if ifDebug {
 		color.Yellow(logStr)
 	}
 }
@@ -79,7 +79,7 @@ func WarnLog(msg string) {
 // ErrorLog 错误日志
 func ErrorLog(msg string) {
 	logStr := WriteLogToFile(msg)
-	if ifPrint {
+	if ifDebug {
 		color.Red(logStr)
 	}
 }

@@ -281,24 +281,24 @@ func getSpecJobHandler(namespace string, name string) {
 		os.Exit(1)
 	}
 	printJobsResult([]apiObject.Job{job})
-	// if job.Status.State == "COMPLETED"{
-	url = config.APIServerURL() + config.JobCodeURI
-	url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
-	url = strings.Replace(url, config.NameReplace, name, -1)
-	var code apiObject.JobCode
-	resp, err = http.Get(url)
-	if err != nil {
-		log.ErrorLog("GetJobCode: " + err.Error())
-		os.Exit(1)
+	if job.Status.State == "COMPLETED" {
+		url = config.APIServerURL() + config.JobCodeURI
+		url = strings.Replace(url, config.NameSpaceReplace, namespace, -1)
+		url = strings.Replace(url, config.NameReplace, name, -1)
+		var code apiObject.JobCode
+		resp, err = http.Get(url)
+		if err != nil {
+			log.ErrorLog("GetJobCode: " + err.Error())
+			os.Exit(1)
+		}
+		defer resp.Body.Close()
+		err = json.NewDecoder(resp.Body).Decode(&code)
+		if err != nil {
+			log.ErrorLog("GetJobCode: " + err.Error())
+			os.Exit(1)
+		}
+		printJobOutputResult(code)
 	}
-	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(&code)
-	if err != nil {
-		log.ErrorLog("GetJobCode: " + err.Error())
-		os.Exit(1)
-	}
-	printJobOutputResult(code)
-	// }
 }
 func printJobOutputResult(code apiObject.JobCode) {
 	writer := table.NewWriter()
