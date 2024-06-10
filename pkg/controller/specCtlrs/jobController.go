@@ -21,7 +21,7 @@ type JobControllerImpl struct {
 var (
 	JobControllerDelay   = 3 * time.Second
 	JobControllerTimeGap = []time.Duration{14 * time.Second}
-	ServerImage          = "task-server:latest"
+	ServerImage          = "jackhel0/task-server:latest"
 )
 
 func NewJobController() (JobController, error) {
